@@ -1,8 +1,8 @@
 <?php
 
-namespace Mds\Mmb\Handlers; #auto
+namespace Mmb\Handlers; #auto
 
-use Mds\Mmb\Exceptions\MmbException;
+use Mmb\Exceptions\MmbException;
 
 class StartHandler {
 

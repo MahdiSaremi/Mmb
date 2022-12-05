@@ -1,6 +1,6 @@
 <?php
 
-namespace Mds\Mmb\Db; #auto
+namespace Mmb\Db; #auto
 
 abstract class QueryResult {
 
@@ -83,7 +83,7 @@ abstract class QueryResult {
     /**
      * تبدیل خروجی به کوئری کول
      *
-     * @return \Mds\Mmb\Db\QueryCol
+     * @return \Mmb\Db\QueryCol
      */
     public abstract function toQueryCol();
 

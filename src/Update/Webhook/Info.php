@@ -1,9 +1,9 @@
 <?php
 
-namespace Mds\Mmb\Update\Webhook; #auto
+namespace Mmb\Update\Webhook; #auto
 
-use Mds\Mmb\Mmb;
-use Mds\Mmb\MmbBase;
+use Mmb\Mmb;
+use Mmb\MmbBase;
 
 class Info extends MmbBase
 {

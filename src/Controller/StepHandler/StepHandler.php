@@ -1,9 +1,9 @@
 <?php
 
-namespace Mds\Mmb\Controller\StepHandler; #auto
+namespace Mmb\Controller\StepHandler; #auto
 
-use Mds\Mmb\Controller\Handler\Handler;
-use Mds\Mmb\Listeners\Listeners;
+use Mmb\Controller\Handler\Handler;
+use Mmb\Listeners\Listeners;
 
 abstract class StepHandler implements Handlable
 {
@@ -69,11 +69,11 @@ abstract class StepHandler implements Handlable
     /**
      * افزودن ستون استپ
      *
-     * @param \Mds\Mmb\Db\QueryCol $table
+     * @param \Mmb\Db\QueryCol $table
      * @param string $column
      * @return void
      */
-    public static function column(\Mds\Mmb\Db\QueryCol $table, $column)
+    public static function column(\Mmb\Db\QueryCol $table, $column)
     {
         $table->text($column)->nullable();
     }

@@ -1,9 +1,9 @@
 <?php
 
-namespace Mds\Mmb\Handlers; #auto
+namespace Mmb\Handlers; #auto
 
-use Mds\Mmb\Debug\Debug;
-use Mds\Mmb\Update\Chat\Chat;
+use Mmb\Debug\Debug;
+use Mmb\Update\Chat\Chat;
 
 class ErrorHandler {
 

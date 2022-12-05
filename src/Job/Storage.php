@@ -1,8 +1,8 @@
 <?php
 
-namespace Mds\Mmb\Job; #auto
+namespace Mmb\Job; #auto
 
-class Storage extends \Mds\Mmb\Storage\Storage
+class Storage extends \Mmb\Storage\Storage
 {
 
     

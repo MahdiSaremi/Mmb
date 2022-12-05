@@ -1,8 +1,8 @@
 <?php
 
-namespace Mds\Mmb\Handlers; #auto
+namespace Mmb\Handlers; #auto
 
-use Mds\Mmb\Mmb;
+use Mmb\Mmb;
 
 /**
  * کلاسی که اطلاعات درخواست های ام ام بی به تلگرام را در خود دارد

@@ -1,8 +1,8 @@
 <?php
 
-namespace Mds\Mmb\Db\Table; #auto
+namespace Mmb\Db\Table; #auto
 
-use Mds\Mmb\Db\QueryCol;
+use Mmb\Db\QueryCol;
 use Handler\Defaultable;
 
 /**

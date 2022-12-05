@@ -1,12 +1,12 @@
 <?php
 
-namespace Mds\Mmb\Update\Message; #auto
+namespace Mmb\Update\Message; #auto
 
-use Mds\Mmb\Mmb;
-use Mds\Mmb\MmbBase;
-use Mds\Mmb\Update\User\User;
+use Mmb\Mmb;
+use Mmb\MmbBase;
+use Mmb\Update\User\User;
 
-class PollAnswer extends MmbBase implements \Mds\Mmb\Update\Interfaces\IUserID 
+class PollAnswer extends MmbBase implements \Mmb\Update\Interfaces\IUserID 
 {
     
     /**

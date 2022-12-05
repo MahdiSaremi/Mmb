@@ -1,8 +1,8 @@
 <?php
 
-namespace Mds\Mmb\Db\Driver\MySql; #auto
+namespace Mmb\Db\Driver\MySql; #auto
 
-class MySql extends \Mds\Mmb\Db\Driver {
+class MySql extends \Mmb\Db\Driver {
 
     public $queryCompiler = Query::class;
 

@@ -2,9 +2,9 @@
 
 namespace Models; #auto
 
-use Mds\Mmb\Controller\StepHandler\StepHandler;
-use Mds\Mmb\Db\QueryCol;
-use Mds\Mmb\Db\Table\Table;
+use Mmb\Controller\StepHandler\StepHandler;
+use Mmb\Db\QueryCol;
+use Mmb\Db\Table\Table;
 
 class User extends Table
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace Mds\Mmb\Handlers; #auto
+namespace Mmb\Handlers; #auto
 
 /**
  * کلاسی برای مدیریت و شخصی سازی قسمت های مختلف ام ام بی

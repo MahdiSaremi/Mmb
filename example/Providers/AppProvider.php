@@ -1,8 +1,8 @@
 <?php
 
 namespace Providers; #auto
-use Mds\Mmb\Mmb;
-use Mds\Mmb\Provider\Provider;
+use Mmb\Mmb;
+use Mmb\Provider\Provider;
 
 class AppProvider extends Provider
 {

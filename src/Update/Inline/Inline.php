@@ -2,13 +2,13 @@
 
 // Copyright (C): t.me/MMBlib
 
-namespace Mds\Mmb\Update\Inline; #auto
+namespace Mmb\Update\Inline; #auto
 
-use Mds\Mmb\Mmb;
-use Mds\Mmb\MmbBase;
-use Mds\Mmb\Update\User\User;
+use Mmb\Mmb;
+use Mmb\MmbBase;
+use Mmb\Update\User\User;
 
-class Inline extends MmbBase implements \Mds\Mmb\Update\Interfaces\IInlineID, \Mds\Mmb\Update\Interfaces\IUserID 
+class Inline extends MmbBase implements \Mmb\Update\Interfaces\IInlineID, \Mmb\Update\Interfaces\IUserID 
 {
     
     /**

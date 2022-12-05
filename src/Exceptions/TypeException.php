@@ -1,6 +1,6 @@
 <?php
 
-namespace Mds\Mmb\Exceptions; #auto
+namespace Mmb\Exceptions; #auto
 
 class TypeException extends MmbException
 {

@@ -1,6 +1,6 @@
 <?php
 
-use Mds\Mmb\Db\Table\Table;
+use Mmb\Db\Table\Table;
 
 require __DIR__ . '/load.php';
 

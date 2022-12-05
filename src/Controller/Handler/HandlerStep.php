@@ -1,9 +1,9 @@
 <?php
 
-namespace Mds\Mmb\Controller\Handler; #auto
+namespace Mmb\Controller\Handler; #auto
 
-use Mds\Mmb\Controller\StepHandler\Handlable;
-use Mds\Mmb\Controller\StepHandler\StepHandler;
+use Mmb\Controller\StepHandler\Handlable;
+use Mmb\Controller\StepHandler\StepHandler;
 
 class HandlerStep extends Handler
 {

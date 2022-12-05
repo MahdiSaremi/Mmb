@@ -1,6 +1,6 @@
 <?php
 
-namespace Mds\Mmb\Db; #auto
+namespace Mmb\Db; #auto
 
 class QueryCol {
 

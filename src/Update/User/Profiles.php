@@ -1,11 +1,11 @@
 <?php
 
-namespace Mds\Mmb\Update\User; #auto
+namespace Mmb\Update\User; #auto
 
 use ArrayAccess;
-use Mds\Mmb\Mmb;
-use Mds\Mmb\MmbBase;
-use Mds\Mmb\Update\Message\Data\Media;
+use Mmb\Mmb;
+use Mmb\MmbBase;
+use Mmb\Update\Message\Data\Media;
 
 class Profiles extends MmbBase implements ArrayAccess
 {

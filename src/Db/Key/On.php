@@ -1,6 +1,6 @@
 <?php
 
-namespace Mds\Mmb\Db\Key; #auto
+namespace Mmb\Db\Key; #auto
 
 trait On {
 

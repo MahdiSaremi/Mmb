@@ -1,8 +1,8 @@
 <?php
 
 namespace App\Home; #auto
-use Mds\Mmb\Controller\Controller;
-use Mds\Mmb\Controller\Menu;
+use Mmb\Controller\Controller;
+use Mmb\Controller\Menu;
 
 class Start extends Controller
 {

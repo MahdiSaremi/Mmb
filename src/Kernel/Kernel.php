@@ -1,12 +1,12 @@
 <?php
 
-namespace Mds\Mmb\Kernel; #auto
+namespace Mmb\Kernel; #auto
 
-use Mds\Mmb\Controller\Handler\Handler;
-use Mds\Mmb\Controller\StepHandler\Handlable;
-use Mds\Mmb\Controller\StepHandler\StepHandler;
-use Mds\Mmb\Provider\Provider;
-use Mds\Mmb\Update\Upd;
+use Mmb\Controller\Handler\Handler;
+use Mmb\Controller\StepHandler\Handlable;
+use Mmb\Controller\StepHandler\StepHandler;
+use Mmb\Provider\Provider;
+use Mmb\Update\Upd;
 use Providers\UpdProvider;
 
 class Kernel 

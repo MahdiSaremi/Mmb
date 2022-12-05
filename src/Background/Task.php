@@ -1,8 +1,8 @@
 <?php
 
-namespace Mds\Mmb\Background; #auto
+namespace Mmb\Background; #auto
 
-use Mds\Mmb\Tools\Staticable;
+use Mmb\Tools\Staticable;
 
 class Task
 {

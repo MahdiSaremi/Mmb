@@ -1,8 +1,8 @@
 <?php
 
-namespace Mds\Mmb\Db; #auto
+namespace Mmb\Db; #auto
 
-use Mds\Mmb\Exceptions\MmbException;
+use Mmb\Exceptions\MmbException;
 
 abstract class QueryCompiler {
 
@@ -65,7 +65,7 @@ abstract class QueryCompiler {
     /**
      * ستون
      *
-     * @var \Mds\Mmb\Db\SingleCol
+     * @var \Mmb\Db\SingleCol
      */
     public $col;
 

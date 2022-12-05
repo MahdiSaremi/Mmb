@@ -1,10 +1,10 @@
 <?php
 
-namespace Mds\Mmb\Listeners; #auto
+namespace Mmb\Listeners; #auto
 
 use Closure;
-use Mds\Mmb\Exceptions\TypeException;
-use Mds\Mmb\Kernel\Instance;
+use Mmb\Exceptions\TypeException;
+use Mmb\Kernel\Instance;
 
 class Listeners
 {

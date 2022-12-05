@@ -1,8 +1,8 @@
 <?php
 
-namespace Mds\Mmb\Db\Driver\MySql; #auto
+namespace Mmb\Db\Driver\MySql; #auto
 
-class Result extends \Mds\Mmb\Db\QueryResult {
+class Result extends \Mmb\Db\QueryResult {
 
     /**
      * خروجی
@@ -52,7 +52,7 @@ class Result extends \Mds\Mmb\Db\QueryResult {
     public function toQueryCol()
     {
         
-        $qcol = new \Mds\Mmb\Db\QueryCol;
+        $qcol = new \Mmb\Db\QueryCol;
 
         while($row = $this->fetch()) {
 

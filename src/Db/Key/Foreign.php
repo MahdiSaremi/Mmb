@@ -1,8 +1,8 @@
 <?php
 
-namespace Mds\Mmb\Db\Key; #auto
+namespace Mmb\Db\Key; #auto
 
-class Foreign extends \Mds\Mmb\Db\SingleKey {
+class Foreign extends \Mmb\Db\SingleKey {
 
     use On;
 

@@ -2,21 +2,21 @@
 
 // Copyright (C): t.me/MMBlib
 
-use Mds\Mmb\Debug\Debug;
-use Mds\Mmb\Exceptions\MmbException;
-use Mds\Mmb\Kernel\Instance;
-use Mds\Mmb\Kernel\Kernel;
-use Mds\Mmb\Mmb;
-use Mds\Mmb\Tools\ATool;
-use Mds\Mmb\Tools\InlineResult;
-use Mds\Mmb\Tools\Keyboard;
-use Mds\Mmb\Tools\Optional;
-use Mds\Mmb\Update\Callback\Callback;
-use Mds\Mmb\Update\Chat\Per;
-use Mds\Mmb\Update\Inline\ChosenInline;
-use Mds\Mmb\Update\Inline\Inline;
-use Mds\Mmb\Update\Message\Msg;
-use Mds\Mmb\Update\Upd;
+use Mmb\Debug\Debug;
+use Mmb\Exceptions\MmbException;
+use Mmb\Kernel\Instance;
+use Mmb\Kernel\Kernel;
+use Mmb\Mmb;
+use Mmb\Tools\ATool;
+use Mmb\Tools\InlineResult;
+use Mmb\Tools\Keyboard;
+use Mmb\Tools\Optional;
+use Mmb\Update\Callback\Callback;
+use Mmb\Update\Chat\Per;
+use Mmb\Update\Inline\ChosenInline;
+use Mmb\Update\Inline\Inline;
+use Mmb\Update\Message\Msg;
+use Mmb\Update\Upd;
 
 
 Kernel::$runTime = microtime(true);
@@ -559,11 +559,11 @@ function typeOf($value)
  *
  * @param string|null $name
  * @param mixed|null $value
- * @return \Mds\Mmb\Kernel\Config|mixed|null
+ * @return \Mmb\Kernel\Config|mixed|null
  */
 function config($name = null, $value = null)
 {
-    $config = \Mds\Mmb\Kernel\Config::instance();
+    $config = \Mmb\Kernel\Config::instance();
 
     if(is_null($name))
     {

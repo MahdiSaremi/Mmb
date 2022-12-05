@@ -1,8 +1,8 @@
 <?php
 
-namespace Mds\Mmb\Tools; #auto
+namespace Mmb\Tools; #auto
 
-use Mds\Mmb\Update\Message\Data\Poll;
+use Mmb\Update\Message\Data\Poll;
 
 class Keys
 {

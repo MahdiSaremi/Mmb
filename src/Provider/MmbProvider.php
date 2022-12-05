@@ -1,6 +1,6 @@
 <?php
 
-namespace Mds\Mmb\Provider; #auto
+namespace Mmb\Provider; #auto
 
 class MmbProvider extends Provider
 {

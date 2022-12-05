@@ -1,10 +1,10 @@
 <?php
 
-namespace Mds\Mmb\Controller\Handler; #auto
+namespace Mmb\Controller\Handler; #auto
 
-use Mds\Mmb\Controller\StepHandler\Handlable;
-use Mds\Mmb\Listeners\Listeners;
-use Mds\Mmb\Tools\Staticable;
+use Mmb\Controller\StepHandler\Handlable;
+use Mmb\Listeners\Listeners;
+use Mmb\Tools\Staticable;
 
 abstract class Handler
 {

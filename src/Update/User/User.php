@@ -1,13 +1,13 @@
 <?php
 
-namespace Mds\Mmb\Update\User; #auto
+namespace Mmb\Update\User; #auto
 
-use Mds\Mmb\MmbBase;
-use Mds\Mmb\Mmb;
-use Mds\Mmb\Update\Chat\Member;
-use Mds\Mmb\Update\Message\Msg;
+use Mmb\MmbBase;
+use Mmb\Mmb;
+use Mmb\Update\Chat\Member;
+use Mmb\Update\Message\Msg;
 
-class User extends MmbBase implements \Mds\Mmb\Update\Interfaces\IChatID, \Mds\Mmb\Update\Interfaces\IUserID
+class User extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\Update\Interfaces\IUserID
 {
     
     /**

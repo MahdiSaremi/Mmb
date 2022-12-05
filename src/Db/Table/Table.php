@@ -1,9 +1,9 @@
 <?php
 
-namespace Mds\Mmb\Db\Table; #auto
+namespace Mmb\Db\Table; #auto
 
-use Mds\Mmb\Db\Driver;
-use Mds\Mmb\Db\QueryBuilder;
+use Mmb\Db\Driver;
+use Mmb\Db\QueryBuilder;
 
 class Table
 {
@@ -92,10 +92,10 @@ class Table
     /**
      * این تابع زمان ایجاد جدول صدا زده می شود تا اطلاعات آن را پر کند
      *
-     * @param \Mds\Mmb\Db\QueryCol $table
+     * @param \Mmb\Db\QueryCol $table
      * @return void
      */
-    public static function generate(\Mds\Mmb\Db\QueryCol $table) {
+    public static function generate(\Mmb\Db\QueryCol $table) {
     }
 
     /**
@@ -160,11 +160,11 @@ class Table
     /**
      * ایجاد یک کوئری بیلدر
      *
-     * @return \Mds\Mmb\Db\QueryBuilder
+     * @return \Mmb\Db\QueryBuilder
      */
     public static function query() {
 
-        return (new \Mds\Mmb\Db\QueryBuilder)
+        return (new \Mmb\Db\QueryBuilder)
                 -> table( static::getTable() )
                 -> output( static::class );
 
@@ -173,7 +173,7 @@ class Table
     /**
      * ایجاد یک کوئری بیلدر همراه با شرط این ردیف بودن
      *
-     * @return \Mds\Mmb\Db\QueryBuilder
+     * @return \Mmb\Db\QueryBuilder
      */
     public function queryThis() {
 

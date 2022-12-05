@@ -1,10 +1,10 @@
 <?php
 
-namespace Mds\Mmb\Update\Chat; #auto
+namespace Mmb\Update\Chat; #auto
 
-use Mds\Mmb\Mmb;
-use Mds\Mmb\MmbBase;
-use Mds\Mmb\Update\User\User;
+use Mmb\Mmb;
+use Mmb\MmbBase;
+use Mmb\Update\User\User;
 
 class Invite extends MmbBase
 {

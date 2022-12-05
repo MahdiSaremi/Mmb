@@ -1,8 +1,8 @@
 <?php
 
-namespace Mds\Mmb\Tools; #auto
+namespace Mmb\Tools; #auto
 
-use Mds\Mmb\Listeners\Listeners;
+use Mmb\Listeners\Listeners;
 
 trait SaveInstances
 {

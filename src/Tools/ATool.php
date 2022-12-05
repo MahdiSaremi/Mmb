@@ -1,8 +1,8 @@
 <?php
 
-namespace Mds\Mmb\Tools; #auto
+namespace Mmb\Tools; #auto
 
-use Mds\Mmb\Tools\ATool\Base;
+use Mmb\Tools\ATool\Base;
 
 /**
  * این کلاس برای آرایه های منظم و غیر کلید دار می باشد

@@ -6,7 +6,7 @@
     "homepage": "https://mmblib.ir",
     "autoload": {
         "psr-4": {
-            "Mds\\Mmb\\": "src/"
+            "Mmb\\": "src/"
         },
         "files": [
             "kernel/helpers.php"

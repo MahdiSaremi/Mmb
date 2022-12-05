@@ -1,13 +1,13 @@
 <?php
 
-namespace Mds\Mmb\Update\Inline; #auto
+namespace Mmb\Update\Inline; #auto
 
-use Mds\Mmb\Mmb;
-use Mds\Mmb\MmbBase;
-use Mds\Mmb\Update\Message\Msg;
-use Mds\Mmb\Update\User\User;
+use Mmb\Mmb;
+use Mmb\MmbBase;
+use Mmb\Update\Message\Msg;
+use Mmb\Update\User\User;
 
-class ChosenInline extends MmbBase implements \Mds\Mmb\Update\Interfaces\IUserID, \Mds\Mmb\Update\Interfaces\IMsgID 
+class ChosenInline extends MmbBase implements \Mmb\Update\Interfaces\IUserID, \Mmb\Update\Interfaces\IMsgID 
 {
     
     /**

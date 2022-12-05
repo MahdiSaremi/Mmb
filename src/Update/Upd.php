@@ -2,18 +2,18 @@
 
 // Copyright (C): t.me/MMBlib
 
-namespace Mds\Mmb\Update; #auto
+namespace Mmb\Update; #auto
 
-use Mds\Mmb\Mmb;
-use Mds\Mmb\MmbBase;
-use Mds\Mmb\Update\Callback\Callback;
-use Mds\Mmb\Update\Chat\JoinReq;
-use Mds\Mmb\Update\Chat\MemberUpd;
-use Mds\Mmb\Update\Inline\ChosenInline;
-use Mds\Mmb\Update\Inline\Inline;
-use Mds\Mmb\Update\Message\Data\Poll;
-use Mds\Mmb\Update\Message\Msg;
-use Mds\Mmb\Update\Message\PollAnswer;
+use Mmb\Mmb;
+use Mmb\MmbBase;
+use Mmb\Update\Callback\Callback;
+use Mmb\Update\Chat\JoinReq;
+use Mmb\Update\Chat\MemberUpd;
+use Mmb\Update\Inline\ChosenInline;
+use Mmb\Update\Inline\Inline;
+use Mmb\Update\Message\Data\Poll;
+use Mmb\Update\Message\Msg;
+use Mmb\Update\Message\PollAnswer;
 
 class Upd extends MmbBase implements Interfaces\ICallbackID, Interfaces\IMsgID, Interfaces\IInlineID, Interfaces\IUserID, Interfaces\IChatID {
     

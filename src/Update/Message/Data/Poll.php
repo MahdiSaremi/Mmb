@@ -2,10 +2,10 @@
 
 // Copyright (C): t.me/MMBlib
 
-namespace Mds\Mmb\Update\Message\Data; #auto
+namespace Mmb\Update\Message\Data; #auto
 
-use Mds\Mmb\Mmb;
-use Mds\Mmb\MmbBase;
+use Mmb\Mmb;
+use Mmb\MmbBase;
 
 class Poll extends MmbBase
 {

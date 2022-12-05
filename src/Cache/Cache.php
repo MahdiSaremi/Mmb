@@ -1,6 +1,6 @@
 <?php
 
-namespace Mds\Mmb\Cache; #auto
+namespace Mmb\Cache; #auto
 
 /**
  * حافظه موقت

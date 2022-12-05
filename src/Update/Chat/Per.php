@@ -1,8 +1,8 @@
 <?php
 
-namespace Mds\Mmb\Update\Chat; #auto
+namespace Mmb\Update\Chat; #auto
 
-use Mds\Mmb\MmbBase;
+use Mmb\MmbBase;
 
 class Per extends MmbBase implements \JsonSerializable
 {

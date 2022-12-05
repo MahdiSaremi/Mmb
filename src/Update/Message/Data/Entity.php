@@ -1,10 +1,10 @@
 <?php
 
-namespace Mds\Mmb\Update\Message\Data; #auto
+namespace Mmb\Update\Message\Data; #auto
 
-use Mds\Mmb\Mmb;
-use Mds\Mmb\MmbBase;
-use Mds\Mmb\Update\User\User;
+use Mmb\Mmb;
+use Mmb\MmbBase;
+use Mmb\Update\User\User;
 
 /**
  * برجستگی های متن

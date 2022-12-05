@@ -1,8 +1,8 @@
 <?php
 
-namespace Mds\Mmb\Update\Message\Data; #auto
+namespace Mmb\Update\Message\Data; #auto
 
-use Mds\Mmb\MmbBase;
+use Mmb\MmbBase;
 
 class StickerSet extends MmbBase
 {

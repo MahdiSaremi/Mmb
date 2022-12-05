@@ -1,12 +1,12 @@
 <?php
 
-namespace Mds\Mmb\Provider; #auto
+namespace Mmb\Provider; #auto
 
-use Mds\Mmb\Kernel\Instance;
-use Mds\Mmb\Kernel\Kernel;
-use Mds\Mmb\Listeners\HasListeners;
-use Mds\Mmb\Storage\Storage;
-use Mds\Mmb\Tools\SaveInstances;
+use Mmb\Kernel\Instance;
+use Mmb\Kernel\Kernel;
+use Mmb\Listeners\HasListeners;
+use Mmb\Storage\Storage;
+use Mmb\Tools\SaveInstances;
 
 class Provider
 {

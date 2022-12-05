@@ -1,6 +1,6 @@
 <?php
 
-namespace Mds\Mmb; #auto
+namespace Mmb; #auto
 
 class MmbBase
 {

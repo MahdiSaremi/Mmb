@@ -1,8 +1,8 @@
 <?php
 
-namespace Mds\Mmb\Db\Driver\SqlBase; #auto
+namespace Mmb\Db\Driver\SqlBase; #auto
 
-class SqlQuery extends \Mds\Mmb\Db\QueryCompiler {
+class SqlQuery extends \Mmb\Db\QueryCompiler {
 
     /**
      * درخواست نهایی

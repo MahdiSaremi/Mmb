@@ -1,11 +1,11 @@
 <?php
 
-namespace Mds\Mmb\Update\Message\Data; #auto
+namespace Mmb\Update\Message\Data; #auto
 
-use Mds\Mmb\Mmb;
-use Mds\Mmb\MmbBase;
+use Mmb\Mmb;
+use Mmb\MmbBase;
 
-class Media extends MmbBase implements \Mds\Mmb\Update\Interfaces\IMsgDataID
+class Media extends MmbBase implements \Mmb\Update\Interfaces\IMsgDataID
 {
     /**
      * @var Mmb

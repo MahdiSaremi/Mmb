@@ -1,6 +1,6 @@
 <?php
 
-use Mds\Mmb\Kernel\Kernel;
+use Mmb\Kernel\Kernel;
 use Providers\UpdProvider;
 
 include __DIR__ . '/load.php';

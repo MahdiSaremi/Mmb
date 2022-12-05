@@ -1,9 +1,9 @@
 <?php
 
-namespace Mds\Mmb\Kernel; #auto
+namespace Mmb\Kernel; #auto
 
-use Mds\Mmb\Tools\ATool;
-use Mds\Mmb\Tools\Staticable;
+use Mmb\Tools\ATool;
+use Mmb\Tools\Staticable;
 
 class Config 
 {

@@ -2,14 +2,14 @@
 
 // Copyright (C): t.me/MMBlib
 
-namespace Mds\Mmb\Update\Callback; #auto
+namespace Mmb\Update\Callback; #auto
 
-use Mds\Mmb\Mmb;
-use Mds\Mmb\MmbBase;
-use Mds\Mmb\Update\Message\Msg;
-use Mds\Mmb\Update\User\User;
+use Mmb\Mmb;
+use Mmb\MmbBase;
+use Mmb\Update\Message\Msg;
+use Mmb\Update\User\User;
 
-class Callback extends MmbBase implements \Mds\Mmb\Update\Interfaces\ICallbackID, \Mds\Mmb\Update\Interfaces\IMsgID, \Mds\Mmb\Update\Interfaces\IUserID, \Mds\Mmb\Update\Interfaces\IChatID
+class Callback extends MmbBase implements \Mmb\Update\Interfaces\ICallbackID, \Mmb\Update\Interfaces\IMsgID, \Mmb\Update\Interfaces\IUserID, \Mmb\Update\Interfaces\IChatID
 {
     
     /**

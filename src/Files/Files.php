@@ -1,6 +1,6 @@
 <?php
 
-namespace Mds\Mmb\Files; #auto
+namespace Mmb\Files; #auto
 
 use Closure;
 

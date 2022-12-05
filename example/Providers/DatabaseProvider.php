@@ -1,7 +1,7 @@
 <?php
 
 namespace Providers; #auto
-use Mds\Mmb\Provider\Provider;
+use Mmb\Provider\Provider;
 
 class DatabaseProvider extends Provider
 {
@@ -14,7 +14,7 @@ class DatabaseProvider extends Provider
         $driver::setAsDefault();
 
         $this->onInstance('db', function() {
-            return \Mds\Mmb\Db\Driver::defaultStatic();
+            return \Mmb\Db\Driver::defaultStatic();
         });
     }
 

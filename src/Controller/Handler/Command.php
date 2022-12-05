@@ -1,9 +1,9 @@
 <?php
 
-namespace Mds\Mmb\Controller\Handler; #auto
+namespace Mmb\Controller\Handler; #auto
 
-use Mds\Mmb\Controller\StepHandler\Handlable;
-use Mds\Mmb\Listeners\Listeners;
+use Mmb\Controller\StepHandler\Handlable;
+use Mmb\Listeners\Listeners;
 
 class Command extends Handler
 {

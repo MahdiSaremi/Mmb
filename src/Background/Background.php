@@ -2,7 +2,7 @@
 
 // Copyright (C): t.me/MMBlib
 
-namespace Mds\Mmb\Background; #auto
+namespace Mmb\Background; #auto
 
 use Opis\Closure\SerializableClosure;
 
@@ -119,7 +119,7 @@ class Background {
             $class = $class::instance();
 
         if(!($class instanceof Task))
-            throw new \Mds\Mmb\Exceptions\TypeException("Background::runTask() : Class '\Mds\Mmb\Background\Task' required, '".(get_class($class) ?: gettype($class))."' given.");
+            throw new \Mmb\Exceptions\TypeException("Background::runTask() : Class '\Mmb\Background\Task' required, '".(get_class($class) ?: gettype($class))."' given.");
 
         $id = md5(time() . rand(1, 10000));
         Storage::set('tasks.' . $id, serialize($class));

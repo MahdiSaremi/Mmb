@@ -1,9 +1,9 @@
 <?php
 
-namespace Mds\Mmb\Handlers; #auto
+namespace Mmb\Handlers; #auto
 
-use Mds\Mmb\Controller\Menu;
-use Mds\Mmb\Exceptions\TypeException;
+use Mmb\Controller\Menu;
+use Mmb\Exceptions\TypeException;
 
 class ArgsParser {
 
@@ -79,7 +79,7 @@ class ArgsParser {
             // Invalid
             else {
 
-                throw new \Mds\Mmb\Exceptions\MmbException("Invalid arg '$key' in method '{$request->method}'");
+                throw new \Mmb\Exceptions\MmbException("Invalid arg '$key' in method '{$request->method}'");
 
             }
 
@@ -237,25 +237,25 @@ class ArgsParser {
     public function interfaces() {
 
         static $value = [
-            'from_chat_id'          =>      \Mds\Mmb\Update\Interfaces\IChatID::class,
-            'chat_id'               =>      \Mds\Mmb\Update\Interfaces\IChatID::class,
-            'user_id'               =>      \Mds\Mmb\Update\Interfaces\IUserID::class,
-            'message_id'            =>      \Mds\Mmb\Update\Interfaces\IMsgID::class,
-            'reply_to_message_id'   =>      \Mds\Mmb\Update\Interfaces\IMsgID::class,
-            'photo'                 =>      \Mds\Mmb\Update\Interfaces\IMsgDataID::class,
-            'doc'                   =>      \Mds\Mmb\Update\Interfaces\IMsgDataID::class,
-            'document'              =>      \Mds\Mmb\Update\Interfaces\IMsgDataID::class,
-            'voice'                 =>      \Mds\Mmb\Update\Interfaces\IMsgDataID::class,
-            'audio'                 =>      \Mds\Mmb\Update\Interfaces\IMsgDataID::class,
-            'video'                 =>      \Mds\Mmb\Update\Interfaces\IMsgDataID::class,
-            'media'                 =>      \Mds\Mmb\Update\Interfaces\IMsgDataID::class,
-            'anim'                  =>      \Mds\Mmb\Update\Interfaces\IMsgDataID::class,
-            'animation'             =>      \Mds\Mmb\Update\Interfaces\IMsgDataID::class,
-            'sticker'               =>      \Mds\Mmb\Update\Interfaces\IMsgDataID::class,
-            'videonote'             =>      \Mds\Mmb\Update\Interfaces\IMsgDataID::class,
-            'file_id'               =>      \Mds\Mmb\Update\Interfaces\IMsgDataID::class,
-            'callback_query_id'     =>      \Mds\Mmb\Update\Interfaces\ICallbackID::class,
-            'inline_query_id'       =>      \Mds\Mmb\Update\Interfaces\IInlineID::class,
+            'from_chat_id'          =>      \Mmb\Update\Interfaces\IChatID::class,
+            'chat_id'               =>      \Mmb\Update\Interfaces\IChatID::class,
+            'user_id'               =>      \Mmb\Update\Interfaces\IUserID::class,
+            'message_id'            =>      \Mmb\Update\Interfaces\IMsgID::class,
+            'reply_to_message_id'   =>      \Mmb\Update\Interfaces\IMsgID::class,
+            'photo'                 =>      \Mmb\Update\Interfaces\IMsgDataID::class,
+            'doc'                   =>      \Mmb\Update\Interfaces\IMsgDataID::class,
+            'document'              =>      \Mmb\Update\Interfaces\IMsgDataID::class,
+            'voice'                 =>      \Mmb\Update\Interfaces\IMsgDataID::class,
+            'audio'                 =>      \Mmb\Update\Interfaces\IMsgDataID::class,
+            'video'                 =>      \Mmb\Update\Interfaces\IMsgDataID::class,
+            'media'                 =>      \Mmb\Update\Interfaces\IMsgDataID::class,
+            'anim'                  =>      \Mmb\Update\Interfaces\IMsgDataID::class,
+            'animation'             =>      \Mmb\Update\Interfaces\IMsgDataID::class,
+            'sticker'               =>      \Mmb\Update\Interfaces\IMsgDataID::class,
+            'videonote'             =>      \Mmb\Update\Interfaces\IMsgDataID::class,
+            'file_id'               =>      \Mmb\Update\Interfaces\IMsgDataID::class,
+            'callback_query_id'     =>      \Mmb\Update\Interfaces\ICallbackID::class,
+            'inline_query_id'       =>      \Mmb\Update\Interfaces\IInlineID::class,
         ];
 
         return $value;

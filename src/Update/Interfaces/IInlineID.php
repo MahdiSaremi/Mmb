@@ -1,6 +1,6 @@
 <?php
 
-namespace Mds\Mmb\Update\Interfaces; #auto
+namespace Mmb\Update\Interfaces; #auto
 
 interface IInlineID {
 

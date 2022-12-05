@@ -2,22 +2,22 @@
 
 // Copyright (C): t.me/MMBlib
 
-namespace Mds\Mmb\Update\Message; #auto
+namespace Mmb\Update\Message; #auto
 
-use Mds\Mmb\Mmb;
-use Mds\Mmb\MmbBase;
-use Mds\Mmb\Update\Chat\Chat;
-use Mds\Mmb\Update\Message\Data\Contact;
-use Mds\Mmb\Update\Message\Data\Dice;
-use Mds\Mmb\Update\Message\Data\Entity;
-use Mds\Mmb\Update\Message\Data\Location;
-use Mds\Mmb\Update\Message\Data\Media;
-use Mds\Mmb\Update\Message\Data\Poll;
-use Mds\Mmb\Update\Message\Data\Sticker;
-use Mds\Mmb\Update\User\InChat;
-use Mds\Mmb\Update\User\User;
+use Mmb\Mmb;
+use Mmb\MmbBase;
+use Mmb\Update\Chat\Chat;
+use Mmb\Update\Message\Data\Contact;
+use Mmb\Update\Message\Data\Dice;
+use Mmb\Update\Message\Data\Entity;
+use Mmb\Update\Message\Data\Location;
+use Mmb\Update\Message\Data\Media;
+use Mmb\Update\Message\Data\Poll;
+use Mmb\Update\Message\Data\Sticker;
+use Mmb\Update\User\InChat;
+use Mmb\Update\User\User;
 
-class Msg extends MmbBase implements \Mds\Mmb\Update\Interfaces\IMsgID, \Mds\Mmb\Update\Interfaces\IUserID, \Mds\Mmb\Update\Interfaces\IChatID
+class Msg extends MmbBase implements \Mmb\Update\Interfaces\IMsgID, \Mmb\Update\Interfaces\IUserID, \Mmb\Update\Interfaces\IChatID
 {
     
     /**

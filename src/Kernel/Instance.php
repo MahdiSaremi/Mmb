@@ -1,8 +1,8 @@
 <?php
 
-namespace Mds\Mmb\Kernel; #auto
+namespace Mmb\Kernel; #auto
 
-use Mds\Mmb\Listeners\Listeners;
+use Mmb\Listeners\Listeners;
 
 class Instance
 {

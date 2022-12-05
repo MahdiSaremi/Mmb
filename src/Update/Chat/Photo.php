@@ -1,10 +1,10 @@
 <?php
 
-namespace Mds\Mmb\Update\Chat; #auto
+namespace Mmb\Update\Chat; #auto
 
-use Mds\Mmb\Mmb;
-use Mds\Mmb\MmbBase;
-use Mds\Mmb\Update\Message\Data\Media;
+use Mmb\Mmb;
+use Mmb\MmbBase;
+use Mmb\Update\Message\Data\Media;
 
 class Photo extends MmbBase
 {

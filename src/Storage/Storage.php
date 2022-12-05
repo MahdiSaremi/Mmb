@@ -2,12 +2,12 @@
 
 // Copyright (C): t.me/MMBlib
 
-namespace Mds\Mmb\Storage; #auto
+namespace Mmb\Storage; #auto
 
 use Closure;
-use Mds\Mmb\Files\Files;
-use Mds\Mmb\Kernel\Kernel;
-use Mds\Mmb\Tools\ATool;
+use Mmb\Files\Files;
+use Mmb\Kernel\Kernel;
+use Mmb\Tools\ATool;
 
 /**
  * کلاسی با ارث بری از این کلاس بسازید تا دیتا های عمومی خود را راحت در دست بگیرید!

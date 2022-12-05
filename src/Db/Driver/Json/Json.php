@@ -1,7 +1,7 @@
 <?php
 
-namespace Mds\Mmb\Db\Driver\Json; #auto
+namespace Mmb\Db\Driver\Json; #auto
 
-class Json extends \Mds\Mmb\Db\Driver {
+class Json extends \Mmb\Db\Driver {
 
 }

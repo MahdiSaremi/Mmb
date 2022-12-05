@@ -2,8 +2,8 @@
 
 namespace App\Join; #auto
 
-use Mds\Mmb\Controller\Handler\Handler;
-use Mds\Mmb\Update\User\User;
+use Mmb\Controller\Handler\Handler;
+use Mmb\Update\User\User;
 
 class ChannelLock extends Handler
 {

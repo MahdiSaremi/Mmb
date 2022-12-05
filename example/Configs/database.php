@@ -5,7 +5,7 @@ return [
     /**
      * Database driver
      */
-    'driver' => Mds\Mmb\Db\Driver\MySql\MySql::class,
+    'driver' => Mmb\Db\Driver\MySql\MySql::class,
 
 
     /**

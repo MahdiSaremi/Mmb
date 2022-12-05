@@ -1,6 +1,6 @@
 <?php
 
-namespace Mds\Mmb\Listeners; #auto
+namespace Mmb\Listeners; #auto
 
 trait HasListeners
 {

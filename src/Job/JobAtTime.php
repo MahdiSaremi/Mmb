@@ -1,6 +1,6 @@
 <?php
 
-namespace Mds\Mmb\Job; #auto
+namespace Mmb\Job; #auto
 
 class JobAtTime extends Job
 {

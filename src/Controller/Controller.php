@@ -1,11 +1,11 @@
 <?php
 
-namespace Mds\Mmb\Controller; #auto
+namespace Mmb\Controller; #auto
 
-use Mds\Mmb\Controller\Handler\Command;
-use Mds\Mmb\Listeners\Listeners;
-use Mds\Mmb\Tools\Staticable;
-use Mds\Mmb\Update\Message\Data\Poll;
+use Mmb\Controller\Handler\Command;
+use Mmb\Listeners\Listeners;
+use Mmb\Tools\Staticable;
+use Mmb\Update\Message\Data\Poll;
 
 class Controller 
 {

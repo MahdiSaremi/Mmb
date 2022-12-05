@@ -1,8 +1,8 @@
 <?php
 
-namespace Mds\Mmb\Db\Driver\Sqlite; #auto
+namespace Mmb\Db\Driver\Sqlite; #auto
 
-class Sqlite extends \Mds\Mmb\Db\Driver {
+class Sqlite extends \Mmb\Db\Driver {
 
     public function safeString($string)
     {

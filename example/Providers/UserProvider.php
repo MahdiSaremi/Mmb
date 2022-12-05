@@ -1,10 +1,10 @@
 <?php
 
 namespace Providers; #auto
-use Mds\Mmb\Provider\Provider;
-use Mds\Mmb\Update\Chat\Chat;
-use Mds\Mmb\Update\Upd;
-use Mds\Mmb\Update\User\User;
+use Mmb\Provider\Provider;
+use Mmb\Update\Chat\Chat;
+use Mmb\Update\Upd;
+use Mmb\Update\User\User;
 
 class UserProvider extends Provider
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace Mds\Mmb\Handlers; #auto
+namespace Mmb\Handlers; #auto
 
 trait Defaultable {
 

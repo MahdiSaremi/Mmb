@@ -1,18 +1,18 @@
 <?php
 
-namespace Mds\Mmb;
+namespace Mmb;
 
-use Mds\Mmb\Update\Bot\BotCmd;
-use Mds\Mmb\Update\Chat\Chat;
-use Mds\Mmb\Update\Chat\Invite;
-use Mds\Mmb\Update\Chat\Member;
-use Mds\Mmb\Update\Message\Data\StickerSet;
-use Mds\Mmb\Update\Message\Data\TelFile;
-use Mds\Mmb\Update\Message\Msg;
-use Mds\Mmb\Update\Upd;
-use Mds\Mmb\Update\User\Profiles;
-use Mds\Mmb\Update\User\User;
-use Mds\Mmb\Update\Webhook\Info as WebhookInfo;
+use Mmb\Update\Bot\BotCmd;
+use Mmb\Update\Chat\Chat;
+use Mmb\Update\Chat\Invite;
+use Mmb\Update\Chat\Member;
+use Mmb\Update\Message\Data\StickerSet;
+use Mmb\Update\Message\Data\TelFile;
+use Mmb\Update\Message\Msg;
+use Mmb\Update\Upd;
+use Mmb\Update\User\Profiles;
+use Mmb\Update\User\User;
+use Mmb\Update\Webhook\Info as WebhookInfo;
 
 // Telegram IP
 if(isset($_SERVER['REMOTE_ADDR'])){

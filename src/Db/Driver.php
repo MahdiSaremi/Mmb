@@ -1,9 +1,9 @@
 <?php
 
-namespace Mds\Mmb\Db; #auto
+namespace Mmb\Db; #auto
 
-use Mds\Mmb\Exceptions\MmbException;
-use Mds\Mmb\Handlers\Defaultable;
+use Mmb\Exceptions\MmbException;
+use Mmb\Handlers\Defaultable;
 
 class Driver {
 

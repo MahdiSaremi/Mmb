@@ -1,8 +1,8 @@
 <?php
 
-namespace Mds\Mmb\Background; #auto
+namespace Mmb\Background; #auto
 
-use Mds\Mmb\Storage\Storage as StorageBase;
+use Mmb\Storage\Storage as StorageBase;
 
 /**
  * حافظه بکگراند

@@ -2,12 +2,12 @@
 
 // Copyright (C): t.me/MMBlib
 
-namespace Mds\Mmb\Update\Chat; #auto
+namespace Mmb\Update\Chat; #auto
 
-use Mds\Mmb\MmbBase;
-use Mds\Mmb\Update\User\User;
+use Mmb\MmbBase;
+use Mmb\Update\User\User;
 
-class MemberUpd extends MmbBase implements \Mds\Mmb\Update\Interfaces\IChatID, \Mds\Mmb\Update\Interfaces\IUserID
+class MemberUpd extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\Update\Interfaces\IUserID
 {
     
     /**

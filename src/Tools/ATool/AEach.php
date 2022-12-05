@@ -1,6 +1,6 @@
 <?php
 
-namespace Mds\Mmb\Tools\ATool; #auto
+namespace Mmb\Tools\ATool; #auto
 
 class AEach extends Base
 {

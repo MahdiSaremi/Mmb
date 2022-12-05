@@ -1,6 +1,6 @@
 <?php
 
-namespace Mds\Mmb\Tools; #auto
+namespace Mmb\Tools; #auto
 
 class Keyboard
 {

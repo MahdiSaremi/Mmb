@@ -1,12 +1,12 @@
 <?php
 
-namespace Mds\Mmb\Update\User; #auto
+namespace Mmb\Update\User; #auto
 
-use Mds\Mmb\Mmb;
-use Mds\Mmb\MmbBase;
-use Mds\Mmb\Update\Chat\Member;
+use Mmb\Mmb;
+use Mmb\MmbBase;
+use Mmb\Update\Chat\Member;
 
-class InChat extends MmbBase implements \Mds\Mmb\Update\Interfaces\IChatID, \Mds\Mmb\Update\Interfaces\IUserID
+class InChat extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\Update\Interfaces\IUserID
 {
 
     /**
@@ -40,10 +40,10 @@ class InChat extends MmbBase implements \Mds\Mmb\Update\Interfaces\IChatID, \Mds
 
         $this->_base = $base;
         $this->user = $user;
-        if($user instanceof \Mds\Mmb\Update\Interfaces\IUserID)
+        if($user instanceof \Mmb\Update\Interfaces\IUserID)
             $this->user = $user->IUserID();
         $this->chat = $chat;
-        if($chat instanceof \Mds\Mmb\Update\Interfaces\IChatID)
+        if($chat instanceof \Mmb\Update\Interfaces\IChatID)
             $this->chat = $chat->IChatID();
 
     }

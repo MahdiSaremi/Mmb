@@ -1,6 +1,6 @@
 <?php
 
-namespace Mds\Mmb\Db\Table; #auto
+namespace Mmb\Db\Table; #auto
 
 class Unknown extends Table {
 
@@ -11,7 +11,7 @@ class Unknown extends Table {
 	 */
 	public static function getTable() {
 
-        throw new \Mds\Mmb\Exceptions\MmbException("Unknown table");
+        throw new \Mmb\Exceptions\MmbException("Unknown table");
 
 	}
 

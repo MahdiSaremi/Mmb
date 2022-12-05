@@ -1,8 +1,8 @@
 <?php
 
-namespace Mds\Mmb\Db\Driver\MySql; #auto
+namespace Mmb\Db\Driver\MySql; #auto
 
-class Query extends \Mds\Mmb\Db\Driver\SqlBase\SqlQuery {
+class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery {
 
     protected $supports = [ 'select', 'delete', 'update', 'insert', 'insert_multi', 'createTable', 'getTable', 'editColumn', 'editColumn2', 'addColumn', 'removeColumn', 'removeIndex', 'removePrimaryKey' ];
 
@@ -215,10 +215,10 @@ class Query extends \Mds\Mmb\Db\Driver\SqlBase\SqlQuery {
     /**
      * ستون
      *
-     * @param \Mds\Mmb\Db\SingleCol $col
+     * @param \Mmb\Db\SingleCol $col
      * @return void
      */
-    public function column(\Mds\Mmb\Db\SingleCol $col, \Mds\Mmb\Db\SingleCol $old = null) {
+    public function column(\Mmb\Db\SingleCol $col, \Mmb\Db\SingleCol $old = null) {
 
         $this->query .= "`{$col->name}` {$col->type}";
 

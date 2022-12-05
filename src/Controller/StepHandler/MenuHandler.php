@@ -1,10 +1,10 @@
 <?php
 
-namespace Mds\Mmb\Controller\StepHandler; #auto
+namespace Mmb\Controller\StepHandler; #auto
 
-use Mds\Mmb\Exceptions\TypeException;
-use Mds\Mmb\Listeners\Listeners;
-use Mds\Mmb\Update\Upd;
+use Mmb\Exceptions\TypeException;
+use Mmb\Listeners\Listeners;
+use Mmb\Update\Upd;
 
 class MenuHandler extends StepHandler
 {

@@ -1,10 +1,10 @@
 <?php
 
-namespace Mds\Mmb\Controller; #auto
+namespace Mmb\Controller; #auto
 
-use Mds\Mmb\Controller\StepHandler\Handlable;
-use Mds\Mmb\Controller\StepHandler\MenuHandler;
-use Mds\Mmb\Tools\ATool;
+use Mmb\Controller\StepHandler\Handlable;
+use Mmb\Controller\StepHandler\MenuHandler;
+use Mmb\Tools\ATool;
 
 class Menu implements Handlable
 {

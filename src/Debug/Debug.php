@@ -1,9 +1,9 @@
 <?php
 
-namespace Mds\Mmb\Debug; #auto
+namespace Mmb\Debug; #auto
 
-use Mds\Mmb\Exceptions\MmbException;
-use Mds\Mmb\Update\Chat\Chat;
+use Mmb\Exceptions\MmbException;
+use Mmb\Update\Chat\Chat;
 
 class Debug
 {

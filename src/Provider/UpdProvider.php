@@ -1,9 +1,9 @@
 <?php
 
-namespace Mds\Mmb\Provider; #auto
+namespace Mmb\Provider; #auto
 
-use Mds\Mmb\Controller\Handler\HandlerStep;
-use Mds\Mmb\Controller\StepHandler\StepHandler;
+use Mmb\Controller\Handler\HandlerStep;
+use Mmb\Controller\StepHandler\StepHandler;
 
 class UpdProvider extends Provider
 {
@@ -11,7 +11,7 @@ class UpdProvider extends Provider
     /**
      * گرفتن آپدیت
      * 
-     * @return \Mds\Mmb\Update\Upd|bool|null
+     * @return \Mmb\Update\Upd|bool|null
      */
     public function getUpdate()
     {

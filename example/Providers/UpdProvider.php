@@ -2,15 +2,15 @@
 
 namespace Providers; #auto
 
-use Mds\Mmb\Provider\UpdProvider as Provider;
-use Mds\Mmb\Controller\Handler\Handler;
-use Mds\Mmb\Controller\Handler\HandlerStep;
-use Mds\Mmb\Controller\StepHandler\StepHandler;
-use Mds\Mmb\Update\Chat\Chat;
-use Mds\Mmb\Update\Chat\JoinReq;
-use Mds\Mmb\Update\Inline\ChosenInline;
-use Mds\Mmb\Update\Inline\Inline;
-use Mds\Mmb\Update\Upd;
+use Mmb\Provider\UpdProvider as Provider;
+use Mmb\Controller\Handler\Handler;
+use Mmb\Controller\Handler\HandlerStep;
+use Mmb\Controller\StepHandler\StepHandler;
+use Mmb\Update\Chat\Chat;
+use Mmb\Update\Chat\JoinReq;
+use Mmb\Update\Inline\ChosenInline;
+use Mmb\Update\Inline\Inline;
+use Mmb\Update\Upd;
 
 class UpdProvider extends Provider
 {

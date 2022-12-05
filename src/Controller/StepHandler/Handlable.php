@@ -1,6 +1,6 @@
 <?php
 
-namespace Mds\Mmb\Controller\StepHandler; #auto
+namespace Mmb\Controller\StepHandler; #auto
 
 interface Handlable
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace Mds\Mmb\Db; #auto
+namespace Mmb\Db; #auto
 
 class QueryBuilder {
 
@@ -650,7 +650,7 @@ class QueryBuilder {
      * ساخت جدول جدید
      *
      * @param string $name
-     * @param callable $column_initialize `function(\Mds\Mmb\Db\QueryCol $query) { }`
+     * @param callable $column_initialize `function(\Mmb\Db\QueryCol $query) { }`
      * @return bool
      */
     public function createTable($name, $column_initialize = null) {
@@ -668,7 +668,7 @@ class QueryBuilder {
      * ساخت یا جدول
      *
      * @param string $name
-     * @param callable $column_initialize `function(\Mds\Mmb\Db\QueryCol $query) { }`
+     * @param callable $column_initialize `function(\Mmb\Db\QueryCol $query) { }`
      * @return bool
      */
     public function createOrEditTable($name, $column_initialize = null) {
@@ -738,7 +738,7 @@ class QueryBuilder {
      * گرفتن اطلاعات جدول
      *
      * @param string $name
-     * @return \Mds\Mmb\Db\QueryCol
+     * @return \Mmb\Db\QueryCol
      */
     public function getTable($name) {
 
@@ -758,10 +758,10 @@ class QueryBuilder {
      *
      * @param string $table
      * @param string $before_name
-     * @param \Mds\Mmb\Db\SingleCol $col
+     * @param \Mmb\Db\SingleCol $col
      * @return bool
      */
-    public function editColumn($table, $before_name, \Mds\Mmb\Db\SingleCol $col) {
+    public function editColumn($table, $before_name, \Mmb\Db\SingleCol $col) {
 
         $this->table = $table;
         $this->colName = $before_name;
@@ -775,15 +775,15 @@ class QueryBuilder {
      * ویرایش ستون
      *
      * @param string $table
-     * @param \Mds\Mmb\Db\SingleCol $old
-     * @param \Mds\Mmb\Db\SingleCol $new
+     * @param \Mmb\Db\SingleCol $old
+     * @param \Mmb\Db\SingleCol $new
      * @return bool
      */
-    public function editColumn2($table, \Mds\Mmb\Db\SingleCol $old, \Mds\Mmb\Db\SingleCol $new) {
+    public function editColumn2($table, \Mmb\Db\SingleCol $old, \Mmb\Db\SingleCol $new) {
 
         $this->table = $table;
 
-        /** @var \Mds\Mmb\Db\SingleCol */
+        /** @var \Mmb\Db\SingleCol */
         $newCloned = unserialize(serialize($new));
         
         if($old->primaryKey != $new->primaryKey) {
@@ -821,10 +821,10 @@ class QueryBuilder {
      * افزودن ستون
      *
      * @param string $table
-     * @param \Mds\Mmb\Db\SingleCol $col
+     * @param \Mmb\Db\SingleCol $col
      * @return bool
      */
-    public function addColumn($table, \Mds\Mmb\Db\SingleCol $col) {
+    public function addColumn($table, \Mmb\Db\SingleCol $col) {
 
         $this->table = $table;
         $this->col = $col;
