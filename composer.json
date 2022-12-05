@@ -1,5 +1,5 @@
 {
-    "name": "mds/mmb",
+    "name": "mmb/framework",
     "description": "Telegram bot framework",
     "license": "mit",
     "type": "library",
