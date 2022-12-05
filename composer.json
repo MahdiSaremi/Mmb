@@ -1,0 +1,22 @@
+{
+    "name": "mds/mmb",
+    "description": "Telegram bot framework",
+    "license": "mit",
+    "type": "library",
+    "homepage": "https://mmblib.ir",
+    "autoload": {
+        "psr-4": {
+            "Mds\\Mmb\\": "src/"
+        },
+        "files": [
+            "kernel/helpers.php"
+        ]
+    },
+    "authors": [
+        {
+            "name": "Mahdi Saremi",
+            "email": "mahdisarmi00@gmail.com"
+        }
+    ],
+    "require": {}
+}
