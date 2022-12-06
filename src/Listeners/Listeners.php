@@ -55,6 +55,29 @@ class Listeners
         return $continue;
     }
 
+    public static function invokeMethod($class, $method, array $args = [])
+    {
+
+        if (is_string($class))
+            $class = app($class);
+
+        return self::callMethod([$class, $method], $args);
+
+    }
+
+    public static function invokeMethod2($method, array $args = [])
+    {
+
+        if (!is_array($method))
+            return self::callMethod($method, $args);
+
+        if (count($method) == 1)
+            return self::callMethod($method, $args);
+        
+        return self::invokeMethod($method[0], $method[1], $args);
+
+    }
+
     public static function callMethod($method, array $args = [])
     {
         $mustInstance = false;

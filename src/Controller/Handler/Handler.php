@@ -113,7 +113,7 @@ abstract class Handler
     /**
      * @var bool
      */
-    public $forceRun = true;
+    public $forceRun = false;
     
     /**
      * اجبار اجرای هندلر بدون در نظر گرفتن موانع

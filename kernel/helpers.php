@@ -467,6 +467,81 @@ function maybeArray(array $array, ...$ignore) {
 }
 
 /**
+ * پردازش آرایه و انجام دادن عملیات های ابزارها
+ * 
+ * * `این تابع، تابع کمکی است! تابع اصلی: ATool::parse`
+ *
+ * @param array $array
+ * @param boolean $assoc
+ * @return array
+ */
+function aParse(array $array, $assoc = false) {
+    return ATool::parse($array, $assoc);
+}
+
+/**
+ * این ایزار برای افزودن مقدار ها به این قسمت آرایست
+ *
+ * * اگر کالبک خالی باشد، بصورت خام آرایه قرار می گیرد
+ * * callback: `function ($value [, $key])`
+ * * return value: `$value` or `[$key, $value]`
+ * 
+ * * `این تابع، تابع کمکی است! کلاس اصلی: AEach`
+ * 
+ * @param array $array
+ * @param callable $callback
+ * @return \Mmb\Tools\ATool\AEach
+ */
+function aEach($array, $callback = null)
+{
+    return new \Mmb\Tools\ATool\AEach($array, $callback);
+}
+
+/**
+ * این ابزار برای افزودن یک جنراتور به آرایه ست
+ * 
+ * روش های تعریف:
+ * * 1: `function() { yield 1; yield 2; ... }`
+ * * 2: `[1, 2, ...]`
+ * 
+ * * `این تابع، تابع کمکی است! کلاس اصلی: AIter`
+ *
+ * @param array|Generator|Callable|Closure $function
+ * @return \Mmb\Tools\ATool\AIter
+ */
+function aIter($value)
+{
+    return new \Mmb\Tools\ATool\AIter($value);
+}
+
+/**
+ * با این ابزار می توانید یک مقدار را در صورت صحیح بودن شرط قرار دهید
+ * 
+ * * `این تابع، تابع کمکی است! کلاس اصلی: AIf`
+ *
+ * @param bool|mixed $condision
+ * @param mixed $value
+ * @return \Mmb\Tools\ATool\AIf
+ */
+function aIf($condision, $value)
+{
+    return new \Mmb\Tools\ATool\AIf($condision, $value);
+}
+
+/**
+ * این ایزار برای زمانیست که نمی خواهید در این ایندکس مقداری قرار بگیرد
+ * 
+ * * Example: `aParse([0, 1, $num >= 2 ? 2 : aNone()]);`
+ * * `این تابع، تابع کمکی است! کلاس اصلی: ANone`
+ * 
+ * @return \Mmb\Tools\ATool\ANone
+ */
+function aNone() {
+    return new \Mmb\Tools\ATool\ANone;
+}
+
+
+/**
  * بررسی می کند حالت برنامه روی دیباگ است یا خیر
  * 
  * برای تنظیم حالت دیباگ از کد زیر استفاده کنید:

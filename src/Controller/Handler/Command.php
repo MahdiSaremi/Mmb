@@ -18,7 +18,7 @@ class Command extends Handler
      */
     public static function command($command, $controller, $method = null)
     {
-        return new Command ($command, $controller, $method);
+        return new static ($command, $controller, $method);
     }
 
     private $commands;
@@ -64,10 +64,10 @@ class Command extends Handler
     
 	public function check()
     {
-
-        if (parent::check())
+        
+        if (!parent::check())
             return false;
-
+        
         $msg = msg();
         if (!$msg || $msg->type != 'text')
             return false;
@@ -106,7 +106,7 @@ class Command extends Handler
     public function handle()
     {
 
-        return Listeners::callMethod($this->controller);
+        return Listeners::invokeMethod2($this->controller);
 
     }
 

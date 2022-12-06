@@ -71,6 +71,7 @@ class Request {
         curl_setopt($request, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($request, CURLOPT_POSTFIELDS, $this->args);
 
+        $this->curlSetup($request);
 
         $responce = curl_exec($request);
         if (curl_error($request)) {
@@ -85,6 +86,10 @@ class Request {
 
         }
 
+    }
+
+    public function curlSetup($curl)
+    {
     }
 
     /**

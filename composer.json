@@ -1,6 +1,7 @@
 {
     "name": "mmb/framework",
     "description": "Telegram bot framework",
+    "keywords": ["telegram", "bot", "robot", "framework"],
     "license": "mit",
     "type": "library",
     "homepage": "https://mmblib.ir",

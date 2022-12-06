@@ -58,6 +58,7 @@ abstract class StepHandler implements Handlable
         if($res instanceof StepHandler)
         {
             $step = $res;
+            self::set($step);
         }
     }
 

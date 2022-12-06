@@ -2,6 +2,7 @@
 
 namespace Mmb\Tools; #auto
 
+use Mmb\Exceptions\MmbException;
 use Mmb\Tools\ATool\Base;
 
 /**
@@ -458,4 +459,26 @@ class ATool
         return $new;
     }
     
+
+    public static function make2D(array $array, $colCount)
+    {
+        if ($colCount <= 0)
+            throw new \InvalidArgumentException("AToll::make2D() : \$colCount value must be bigger than zero, given $rowCount");
+
+        $res = [];
+        $count = count($array);
+
+        for($i = 0; $i < $count; )
+        {
+            $row = [];
+            for($j = 0; $j < $colCount && $i < $count; $j++, $i++)
+            {
+                $row[] = $array[$i];
+            }
+            $res[] = $row;
+        }
+
+        return $res;
+    }
+
 }

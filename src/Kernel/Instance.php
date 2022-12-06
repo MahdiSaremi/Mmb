@@ -24,6 +24,11 @@ class Instance
             return self::$instances[$class];
         }
 
+        if(property_exists($class, 'this'))
+        {
+            return $class::$this;
+        }
+
         if(!$createOnFail)
         {
             return null;

@@ -272,7 +272,7 @@ class ArgsParser {
      */
     public function parseKey(Request $request, $value, $key)
     {
-
+        
         return [
             'reply_markup' => is_array($value) ? mkey($value) : $value,
         ];

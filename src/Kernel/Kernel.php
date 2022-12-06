@@ -80,6 +80,9 @@ class Kernel
         $last = null;
         foreach($handlers as $handler)
         {
+            
+            if ($handler == null)
+                continue;
 
             $res = $handler->runHandle();
 

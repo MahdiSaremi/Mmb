@@ -137,7 +137,7 @@ class MenuHandler extends StepHandler
         $method = @$key['method'];
         $args = @$key['args'] ?: [];
 
-        return Listeners::callMethod($method, $args);
+        return Listeners::invokeMethod2($method, $args);
 
     }
 
@@ -146,7 +146,7 @@ class MenuHandler extends StepHandler
         if($this->other_method)
         {
 
-            return Listeners::callMethod($this->other_method, $this->other_args);
+            return Listeners::invokeMethod2($this->other_method, $this->other_args);
 
         }
     }
@@ -154,7 +154,7 @@ class MenuHandler extends StepHandler
     public function getKey()
     {
 
-        $key = [];
+        $res = [];
         foreach($this->eachKeysRow() as $y => $row)
         {
             $keyr = [];
@@ -166,10 +166,10 @@ class MenuHandler extends StepHandler
             }
 
             if($keyr)
-                $key[] = $keyr;
+                $res[] = $keyr;
         }
 
-        return $key;
+        return $res;
     }
 
     public function getSingleKey($key)

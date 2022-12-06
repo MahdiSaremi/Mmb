@@ -146,6 +146,8 @@ class Mmb extends MmbBase implements \Serializable
         return false;
     }
 
+    public $loading_update = false;
+
     /**
      * دریافت آپدیت ارسال شده
      *
@@ -164,7 +166,13 @@ class Mmb extends MmbBase implements \Serializable
             return false;
 
         // Load update
-        return new Upd($update, $this);
+        try {
+            $this->loading_update = true;
+            return new Upd($update, $this);
+        }
+        finally {
+            $this->loading_update = false;
+        }
         
     }
 
@@ -235,17 +243,23 @@ class Mmb extends MmbBase implements \Serializable
             'limit' => $limit,
             'filter' => $filter
         ]);
-        if(!$upds) return [];
-        else{
-            $r = [];
-            foreach($upds as $upd){
-                $x = new Upd($upd, $this);
+        if (!$upds)
+            return [];
+
+        try {
+            $this->loading_update = true;
+            $updates = [];
+            foreach ($upds as $upd) {
+                $upd = new Upd($upd, $this);
                 //if(!$this->updListenersRun($x))
                 //    continue;
-                $this->_offset = $x->id + 1;
-                $r[] = $x;
+                $this->_offset = $upd->id + 1;
+                $updates[] = $upd;
             }
-            return $r;
+            return $updates;
+        }
+        finally {
+            $this->loading_update = false;
         }
     }
     
