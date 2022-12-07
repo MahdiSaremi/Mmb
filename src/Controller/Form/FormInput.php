@@ -16,6 +16,11 @@ class FormInput
 
     public $value;
     public $valueSet = false;
+    /**
+     * تنظیم یا گرفتن مقدار اینپوت
+     * @param mixed $value
+     * @return mixed|FormInput
+     */
     public function value($value = null)
     {
         if(!func_get_args())
@@ -28,19 +33,38 @@ class FormInput
         return $this;
     }
 
+    /**
+     * بررسی می کند که مقداری برای این اینپوت تنظیم شده است یا خیر
+     *  
+     * @return bool
+     */
     public function hasValue()
     {
-        return $this->value;
+        return $this->valueSet;
     }
 
     public $skipable = false;
 
+    /**
+     * اجباری بودن اینپوت
+     * 
+     * کاربر نمی تواند از گزینه رد کردن استفاده کند
+     * 
+     * @return $this
+     */
     public function required()
     {
         $this->skipable = false;
         return $this;
     }
 
+    /**
+     * اختیاری بودن اینپوت
+     * 
+     * کاربر می تواند از گزینه رد کردن استفاده کند
+     * 
+     * @return $this
+     */
     public function optional()
     {
         $this->skipable = true;
@@ -49,12 +73,21 @@ class FormInput
 
     public $_options = [];
 
+    /**
+     * تعریف آپشن ها
+     * @param array|\Closure $callback
+     * @return $this
+     */
     public function options($callback)
     {
         $this->_options = $callback;
         return $this;
     }
 
+    /**
+     * گرفتن آپشن ها
+     * @return array<array>
+     */
     public function getOptions()
     {
         $op = $this->_options;
@@ -91,12 +124,23 @@ class FormInput
     
 
     public $min = false;
+    /**
+     * تنظیم حداقل طول/عدد مجاز
+     * @param int $len
+     * @return $this
+     */
     public function min($len)
     {
         $this->min = $len;
         return $this;
     }
+
     public $max = false;
+    /**
+     * تنظیم حداکثر طول/عدد مجاز
+     * @param int $len
+     * @return $this
+     */
     public function max($len)
     {
         $this->max = $len;
@@ -104,67 +148,116 @@ class FormInput
     }
     
 
+    /**
+     * نوع
+     * @var string
+     */
     public $type = 'text';
+
+    /**
+     * تنظیم نوع متن
+     * @return $this
+     */
     public function text()
     {
         $this->type = 'text';
         return $this;
     }
 
+    /**
+     * تنظیم نوع عدد صحیح مثبت
+     * @return $this
+     */
     public function unsignedInteger()
     {
         $this->type = 'int_us';
         return $this;
     }
 
+    /**
+     * تنظیم نوع عدد صحیح
+     * @return $this
+     */
     public function integer()
     {
         $this->type = 'int';
         return $this;
     }
 
+    /**
+     * تنظیم نوع عدد اعشاری مثبت
+     * @return $this
+     */
     public function unsignedFloat()
     {
         $this->type = 'float_us';
         return $this;
     }
 
+    /**
+     * تنظیم نوع عدد اعشاری
+     * @return $this
+     */
     public function float()
     {
         $this->type = 'float';
         return $this;
     }
 
+    /**
+     * تنظیم نوع عدد
+     * @return $this
+     */
     public function number()
     {
         $this->type = 'float';
         return $this;
     }
 
+    /**
+     * تنظیم نوع رسانه
+     * @return $this
+     */
     public function media()
     {
         $this->type = 'media';
         return $this;
     }
 
+    /**
+     * تنظیم نوع تصویر
+     * @return $this
+     */
     public function photo()
     {
         $this->type = 'photo';
         return $this;
     }
 
+    /**
+     * تنظیم نوع پیغام
+     * @return $this
+     */
     public function msg()
     {
         $this->type = 'msg';
         return $this;
     }
 
+    /**
+     * تنظیم نوع آیدی پیام ارسالی
+     * @return $this
+     */
     public function msgid()
     {
         $this->type = 'msgid';
         return $this;
     }
 
+    /**
+     * تنظیم نوع پارامتر های پیام
+     * @return $this
+     */
     public function msgArgs()
     {
         $this->type = 'msgArgs';
@@ -172,12 +265,22 @@ class FormInput
     }
 
     public $supportFa = false;
+    /**
+     * پشتیبانی از اعداد فارسی
+     * @return $this
+     */
     public function supportFaNumber()
     {
         $this->supportFa = true;
         return $this;
     }
 
+    /**
+     * اعمال فیلتر ها بر روی آپدیت
+     * @param Upd $upd
+     * @throws FilterError 
+     * @return mixed
+     */
     public function applyFilters(Upd $upd)
     {
         if ($this->onlyOptions)
@@ -188,6 +291,12 @@ class FormInput
         return $value;
     }
 
+    /**
+     * گرفتن مقدار بر اساس نوع اینپوت
+     * @param Upd $upd
+     * @throws FilterError 
+     * @return mixed
+     */
     protected function matchType(Upd $upd)
     {
         switch($this->type)
@@ -285,6 +394,12 @@ class FormInput
         return optional($upd->msg)->text;
     }
 
+    /**
+     * بررسی فیلتر ها بر روی مقدار اینپوت
+     * @param mixed $value
+     * @throws FilterError 
+     * @return void
+     */
     protected function matchFilters($value)
     {
 
@@ -337,23 +452,45 @@ class FormInput
     }
 
     public $unique = false;
+    /**
+     * یکتا بودن مقدار در دیتابیس
+     * 
+     * @param string $model
+     * @param string|null $column
+     * @return $this
+     */
     public function unique($model, $column = null)
     {
         if (!$column)
             $column = $this->name;
-            
+
         $this->unique = [ $model, $column ];
         return $this;
     }
 
     public $exists = false;
-    public function exists($model, $column)
+    /**
+     * وجود داشتن دیتا در دیتابیس
+     * 
+     * @param string $model
+     * @param string|null $column
+     * @return $this
+     */
+    public function exists($model, $column = null)
     {
+        if (!$column)
+            $column = $this->name;
+
         $this->exists = [ $model, $column ];
         return $this;
     }
 
     public $onlyOptions = false;
+    /**
+     * تنها می توان از گزینه ها استفاده کرد
+     * 
+     * @return $this
+     */
     public function onlyOptions()
     {
         $this->onlyOptions = true;
@@ -361,6 +498,12 @@ class FormInput
     }
 
     public $request = false;
+    /**
+     * درخواست پر کردن اینپوت
+     * 
+     * @param \Closure|null $callback
+     * @return mixed|FormInput
+     */
     public function request($callback = null)
     {
         if($callback === null)
@@ -374,6 +517,13 @@ class FormInput
     }
 
     public $error = false;
+    /**
+     * خطای اینپوت
+     * 
+     * @param \Closure|string $callback
+     * @throws FilterError 
+     * @return FormInput
+     */
     public function error($callback)
     {
         if(!($callback instanceof \Closure))
@@ -386,6 +536,11 @@ class FormInput
     }
 
     public $filled = false;
+    /**
+     * زمان پر شدن مقدار توسط کاربر اجرا می شود
+     * @param \Closure|null $callback
+     * @return mixed|FormInput
+     */
     public function filled($callback = null)
     {
         if($callback === null)
@@ -399,6 +554,12 @@ class FormInput
     }
 
     public $then = false;
+    /**
+     * بعد از پز شدن مقدار اجرا می شود
+     * 
+     * @param \Closure|null $callback
+     * @return mixed|FormInput
+     */
     public function then($callback = null)
     {
         if($callback === null)
@@ -412,6 +573,12 @@ class FormInput
     }
 
     public $cancel = false;
+    /**
+     * زمان لغو شدن فرم اجرا می شود
+     * 
+     * @param \Closure|null $callback
+     * @return mixed|FormInput
+     */
     public function cancel($callback = null)
     {
         if($callback === null)
@@ -425,6 +592,12 @@ class FormInput
     }
 
     public $skip = false;
+    /**
+     * زمان رد کردن اینپوت اجرا می شود
+     * 
+     * @param \Closure|null $callback
+     * @return mixed|FormInput
+     */
     public function skip($callback = null)
     {
         if($callback === null)

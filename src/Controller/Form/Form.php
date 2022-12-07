@@ -21,13 +21,23 @@ abstract class Form implements Handlable
         return $this->handler;
     }
 
-    public function _start()
+    /**
+     * شروع فرم
+     * 
+     * @return mixed
+     */
+    public final function _start()
     {
         $this->startForm();
         $this->go_next = true;
         return $this->_next();
     }
 
+    /**
+     * اجرای فرم
+     * 
+     * @return mixed
+     */
     public function _next()
     {
         $this->current_input = $this->handler->current;
@@ -52,58 +62,112 @@ abstract class Form implements Handlable
             }, $this->inputs);
             if (isset($this->keyboard))
                 $this->handler->key = $this->keyboard;
+            if (isset($this->key))
+                $this->handler->key = $this->key;
         }
         return $this->_finish();
     }
 
+    /**
+     * پایان فرم
+     * 
+     * @return mixed
+     */
     public function _finish()
     {
         $this->endForm();
         return $this->finish();
     }
 
-    public static function request()
+    /**
+     * ایجاد و شروع فرم
+     * 
+     * @return mixed
+     */
+    public static function request($inputs = [])
     {
         $handler = new FormStepHandler(static::class);
+        $handler->inputs = $inputs;
         return $handler->startForm();
     }
 
+    /**
+     * ساخت دکمه ای که زمان کلیک فرم شروع می شود
+     * 
+     * @param string $text
+     * @return array
+     */
     public static function key($text)
     {
         return FormStarter::key($text, 'start', static::class);
     }
 
+    /**
+     * تابعی که زمان شروع فرم صدا زده می شود
+     * @return void
+     */
     public function startForm()
     {
     }
 
+    /**
+     * تابعی که زمان پایان فرم صدا زده می شود
+     * @return void
+     */
     public function endForm()
     {
     }
 
+    /**
+     * تابعی که قبل از اجرای فرم اجرا می شود
+     * @return void
+     */
     public function stepBeforeForm()
     {
     }
 
+    /**
+     * تابعی که بعد از اجرای فرم اجرا می شود
+     * @return void
+     */
     public function stepAfterForm()
     {
     }
 
+    /**
+     * تابعی که زمان لغو فرم صدا زده می شود
+     * @return Handlable|null
+     */
     public function cancelForm()
     {
     }
 
+    /**
+     * تابعی که زمان خطای اینپوت ها صدا زده می شود
+     * @param string $error
+     * @return Handlable|null
+     */
     public function error($error)
     {
         replyText($error);
     }
 
+    /**
+     * لغو کردن فرم
+     * @throws FindingInputFinished 
+     * @return never
+     */
     public function cancel()
     {
         $this->canceled = true;
         throw new FindingInputFinished($this->cancelForm());
     }
 
+    /**
+     * چیدمان کیبورد فرم
+     * @param FormKey $key
+     * @return array
+     */
     public function keyboard(FormKey $key)
     {
         return [
@@ -113,15 +177,28 @@ abstract class Form implements Handlable
         ];
     }
 
-    public function newKey()
-    {
-        return new FormKey($this);
-    }
-
+    /**
+     * زمان مقداردهی فرم صدا زده می شود
+     * 
+     * در این تابع باید اینپوت ها را تعریف کنید
+     * 
+     * @return void
+     */
     public abstract function form();
 
+    /**
+     * زمان پایان فرم صدا زده می شود
+     * 
+     * می توانید با محتویات وارد شده فرم عملیات خود را انجام دهید
+     * 
+     * @return Handlable|null
+     */
     public abstract function finish();
 
+    /**
+     * گرفتن آپشن ها
+     * @return array
+     */
     public function getOptions()
     {
         return optional($this->running_input)->getOptions() ?: [];
@@ -152,12 +229,28 @@ abstract class Form implements Handlable
     /** @var FormInput */
     public $running_input = null;
 
+    /**
+     * تعریف اینپوت اجباری جدید
+     * 
+     * کاربر نمی تواند از گزینه رد کردن استفاده کند
+     * 
+     * @param string $name
+     * @return void
+     */
     public function required($name)
     {
         $input = (new FormInput($name))->required();
         $this->newInput($input);
     }
 
+    /**
+     * تعریف اینپوت اختیاری جدید
+     * 
+     * کاربر می تواند از گزینه رد کردن استفاده کند
+     * 
+     * @param string $name
+     * @return void
+     */
     public function optional($name)
     {
         $input = (new FormInput($name))->optional();

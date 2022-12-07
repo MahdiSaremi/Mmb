@@ -463,7 +463,7 @@ class ATool
     public static function make2D(array $array, $colCount)
     {
         if ($colCount <= 0)
-            throw new \InvalidArgumentException("AToll::make2D() : \$colCount value must be bigger than zero, given $rowCount");
+            throw new \InvalidArgumentException("AToll::make2D() : \$colCount value must be bigger than zero, given $colCount");
 
         $res = [];
         $count = count($array);

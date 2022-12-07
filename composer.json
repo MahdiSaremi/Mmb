@@ -10,7 +10,8 @@
             "Mmb\\": "src/"
         },
         "files": [
-            "kernel/helpers.php"
+            "helpers/helpers.php",
+            "helpers/jdf.php"
         ]
     },
     "authors": [
@@ -19,5 +20,7 @@
             "email": "mahdisarmi00@gmail.com"
         }
     ],
-    "require": {}
+    "require": {
+        "php": "^7.3|^8.0"
+    }
 }

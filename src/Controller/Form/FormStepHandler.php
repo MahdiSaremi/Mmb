@@ -2,6 +2,7 @@
 
 namespace Mmb\Controller\Form; #auto
 
+use Mmb\Controller\StepHandler\Handlable;
 use Mmb\Controller\StepHandler\StepHandler;
 
 class FormStepHandler extends StepHandler
@@ -36,6 +37,10 @@ class FormStepHandler extends StepHandler
         $this->form = $class;
     }
 
+    /**
+     * شروع کردن فرم
+     * @return Handlable|null
+     */
     public function startForm()
     {
         $class = $this->form;
@@ -43,6 +48,10 @@ class FormStepHandler extends StepHandler
         return $form->_start() ?: $this;
     }
 
+    /**
+     * اجرای فرم
+     * @return Handlable|null
+     */
     public function handle()
     {
         $class = $this->form;
@@ -50,6 +59,14 @@ class FormStepHandler extends StepHandler
         return $form->_next();
     }
 
+    /**
+     * گرفتن مقدار وارد شده اینپوت
+     * @param FormInput $input
+     * @param bool $form_option
+     * @param bool $skip
+     * @param bool $cancel
+     * @return mixed
+     */
     public function getValue(FormInput $input, &$form_option, &$skip, &$cancel)
     {
         if($this->key && $btn = FormKey::findMatch(upd(), $this->key))
