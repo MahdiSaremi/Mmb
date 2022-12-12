@@ -23,9 +23,9 @@ class FormKey
      * @param int $colCount
      * @return ATool\AEach
      */
-    public function options($colCount = 1)
+    public function options()
     {
-        return aEach(ATool::make2D($this->form->getOptions(), $colCount));
+        return aEach($this->form->getOptions());
     }
 
     /**

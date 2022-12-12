@@ -41,6 +41,16 @@ class Storage
         return self::$path[static::class] ?? self::$storagePath;
     }
 
+    /**
+     * گرفتن نام فایل بدون پسوند
+     * 
+     * @return string
+     */
+    public static function getFileName()
+    {
+        return strtolower(static::class);
+    }
+
     public static function jsonFlag() 
     {
         return JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE;
@@ -112,7 +122,7 @@ class Storage
             return self::$datas[static::class];
         }
 
-        $target = static::getPath() . '/' . strtolower(static::class) . '.json';
+        $target = static::getPath() . '/' . static::getFileName() . '.json';
         $file = file_exists($target) ? Files::get($target) : false;
         if($file){
             $data = @json_decode($file, true);
@@ -144,7 +154,7 @@ class Storage
             file_put_contents($storage . '/.htaccess', "<IfModule mod_rewrite.c>\nRewriteEngine On\n\nRewriteRule ^ 403.php\n</IfModule>");
         }
 
-        $target = $storage . '/' . strtolower(static::class) . '.json';
+        $target = $storage . '/' . static::getFileName() . '.json';
         Files::editText($target, function($file) use(&$callback) {
             if($file){
                 $data = @json_decode($file, true);
@@ -220,7 +230,7 @@ class Storage
             file_put_contents($storage . '/403.php', '<?php echo "Access danied"; ?>');
             file_put_contents($storage . '/.htaccess', "<IfModule mod_rewrite.c>\nRewriteEngine On\n\nRewriteRule ^ 403.php\n</IfModule>");
         }
-        $target = $storage . '/' . strtolower(static::class) . '.json';
+        $target = $storage . '/' . static::getFileName() . '.json';
         Files::put($target, json_encode($data, static::jsonFlag()));
     }
 

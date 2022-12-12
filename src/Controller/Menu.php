@@ -49,6 +49,14 @@ class Menu implements Handlable
         return $this->handler->getKey();
     }
 
+    /**
+     * تابعی که زمانی که هیچکدام از گزینه ها انتخاب نشد اجرا می شود
+     * 
+     * @param string|array $class
+     * @param string $method
+     * @param mixed ...$args
+     * @return $this
+     */
     public function other($class, $method = null, ...$args)
     {
 
@@ -66,6 +74,8 @@ class Menu implements Handlable
         
         $this->handler->other_method = $class;
         $this->handler->other_args = $args;
+
+        return $this;
 
     }
 

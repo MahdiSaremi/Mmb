@@ -45,6 +45,11 @@ class Instance
             return $class::instance();
         }
 
+        if(property_exists($class, 'this'))
+        {
+            return $class::$this;
+        }
+
         return self::$instances[$class] = Listeners::callMethod([$class], []);
     }
 

@@ -4,6 +4,8 @@ namespace Mmb\Db\Table; #auto
 
 use Mmb\Db\Driver;
 use Mmb\Db\QueryBuilder;
+use Mmb\Listeners\HasListeners;
+use Mmb\Listeners\HasStaticListeners;
 
 class Table
 {

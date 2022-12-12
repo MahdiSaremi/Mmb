@@ -2,6 +2,7 @@
 
 namespace Mmb\Controller\Form; #auto
 
+use Mmb\Update\Message\Data\Poll;
 use Mmb\Update\Upd;
 
 class FormInput
@@ -84,6 +85,67 @@ class FormInput
         return $this;
     }
 
+    public function option($text, $value = null)
+    {
+
+        if(count(func_get_args()) == 1)
+        {
+            return [ 'text' => $text ];
+        }
+
+        return [ 'text' => $text, 'value' => $value ];
+
+    }
+
+    public function optionContact($text)
+    {
+        return [
+            'text' => $text,
+            'contact' => true,
+        ];
+    }
+
+    public function optionLocation($text)
+    {
+        return [
+            'text' => $text,
+            'contact' => true,
+        ];
+    }
+
+    /**
+     * ساخت کلید ارسال نظرسنجی با پاسخی از این کنترلر
+     * 
+     * @param string $text
+     * @param string $method
+     * @param mixed ...$args
+     * @return array
+     */
+    public static function optionPoll($text)
+    {
+        return [
+            'text' => $text,
+            'poll' => [ 'type' => Poll::TYPE_REGULAR ],
+        ];
+    }
+
+    /**
+     * ساخت کلید ارسال نظرسنجی سوالی با پاسخی از این کنترلر
+     * 
+     * @param string $text
+     * @param string $method
+     * @param mixed ...$args
+     * @return array
+     */
+    public static function optionPollQuiz($text)
+    {
+        return [
+            'text' => $text,
+            'poll' => [ 'type' => Poll::TYPE_QUIZ ],
+        ];
+    }
+
+
     /**
      * گرفتن آپشن ها
      * @return array<array>
@@ -102,24 +164,7 @@ class FormInput
             return [];
         }
 
-        $res = [];
-
-        foreach($op as $option)
-        {
-            if(is_array($option))
-            {
-                foreach($option as $text => $value)
-                {
-                    $res[] = [ 'text' => $text, 'value' => $value ];
-                }
-            }
-            else
-            {
-                $res[] = [ 'text' => $option ];
-            }
-        }
-        
-        return $res;
+        return $op;
     }
     
 
@@ -161,6 +206,16 @@ class FormInput
     public function text()
     {
         $this->type = 'text';
+        return $this;
+    }
+
+    /**
+     * تنظیم نوع متن تک خطی
+     * @return $this
+     */
+    public function textSingleLine()
+    {
+        $this->type = 'text_singleline';
         return $this;
     }
 
@@ -284,7 +339,7 @@ class FormInput
     public function applyFilters(Upd $upd)
     {
         if ($this->onlyOptions)
-            throw new FilterError("تنها می توانید از گزینه ها استفاده کنید");
+            throw new FilterError(lang('invalid.options') ?: "تنها می توانید از گزینه ها استفاده کنید");
 
         $value = $this->matchType($upd);
         $this->matchFilters($value);
@@ -306,87 +361,95 @@ class FormInput
 
             case 'text':
                 if (optional($upd->msg)->type != 'text')
-                    throw new FilterError("تنها پیغام متنی قابل قبول است");
+                    throw new FilterError(lang('invalid.text') ?: "تنها پیغام متنی قابل قبول است");
                 return optional($upd->msg)->text;
+
+            case 'text_singleline':
+                if (optional($upd->msg)->type != 'text')
+                    throw new FilterError(lang('invalid.text') ?: "تنها پیغام متنی قابل قبول است");
+                $text = $upd->msg->text;
+                if (strpos($text, "\n"))
+                    throw new FilterError(lang('invalid.single_line') ?: "متن شما باید تک خطی باشد");
+                return $text;
 
             case 'int':
                 if (optional($upd->msg)->type != 'text')
-                    throw new FilterError("تنها پیغام متنی قابل قبول است");
+                    throw new FilterError(lang('invalid.text') ?: "تنها پیغام متنی قابل قبول است");
                 $text = optional($upd->msg)->text;
                 if ($this->supportFa)
                     $text = tr_num($text);
                 if (!is_numeric($text) || strpos($text, '.') !== false)
-                    throw new FilterError("تنها عدد غیر اعشاری قابل قبول است");
+                    throw new FilterError(lang('invalid.int') ?: "تنها عدد غیر اعشاری قابل قبول است");
                 return intval($text);
 
             case 'int_us':
                 if (optional($upd->msg)->type != 'text')
-                    throw new FilterError("تنها پیغام متنی قابل قبول است");
+                    throw new FilterError(lang('invalid.text') ?: "تنها پیغام متنی قابل قبول است");
                 $text = optional($upd->msg)->text;
                 if ($this->supportFa)
                     $text = tr_num($text);
                 if (!is_numeric($text) || strpos($text, '.') !== false)
-                    throw new FilterError("تنها عدد غیر اعشاری قابل قبول است");
+                    throw new FilterError(lang('invalid.int') ?: "تنها عدد غیر اعشاری قابل قبول است");
                 $int = intval($text);
                 if ($int < 0)
-                    throw new FilterError("تنها عدد مثبت قابل قبول است");
+                    throw new FilterError(lang('invalid.unsigned') ?: "تنها عدد مثبت قابل قبول است");
                 return $int;
 
             case 'float':
                 if (optional($upd->msg)->type != 'text')
-                    throw new FilterError("تنها پیغام متنی قابل قبول است");
+                    throw new FilterError(lang('invalid.text') ?: "تنها پیغام متنی قابل قبول است");
                 $text = optional($upd->msg)->text;
                 if ($this->supportFa)
                     $text = tr_num($text);
                 if (!is_numeric($text))
-                    throw new FilterError("تنها عدد قابل قبول است");
+                    throw new FilterError(lang('invalid.number') ?: "تنها عدد قابل قبول است");
                 return floatval($text);
 
             case 'float_us':
                 if (optional($upd->msg)->type != 'text')
-                    throw new FilterError("تنها پیغام متنی قابل قبول است");
+                    throw new FilterError(lang('invalid.text') ?: "تنها پیغام متنی قابل قبول است");
                 $text = optional($upd->msg)->text;
                 if ($this->supportFa)
                     $text = tr_num($text);
                 if (!is_numeric($text))
-                    throw new FilterError("تنها عدد قابل قبول است");
+                    throw new FilterError(lang('invalid.number') ?: "تنها عدد قابل قبول است");
                 $float = floatval($text);
                 if ($float < 0)
-                    throw new FilterError("تنها عدد مثبت قابل قبول است");
+                    throw new FilterError(lang('invalid.unsigned') ?: "تنها عدد مثبت قابل قبول است");
                 return $float;
 
             case 'msg':
                 if (!$upd->msg)
-                    throw new FilterError("تنها پیام قابل قبول است");
+                    throw new FilterError(lang('invalid.msg') ?: "تنها پیام قابل قبول است");
                 return $upd->msg;
 
             case 'msgid':
                 if (!$upd->msg)
-                    throw new FilterError("تنها پیام قابل قبول است");
+                    throw new FilterError(lang('invalid.msg') ?: "تنها پیام قابل قبول است");
                 return $upd->msg->id;
 
             case 'media':
                 if (!$upd->msg)
-                    throw new FilterError("تنها پیام قابل قبول است");
+                    throw new FilterError(lang('invalid.msg') ?: "تنها پیام قابل قبول است");
                 $media = $upd->msg->media;
                 if (!$media)
-                    throw new FilterError("تنها پیام رسانه ای قابل قبول است");
+                    throw new FilterError(lang('invalid.media') ?: "تنها پیام رسانه ای قابل قبول است");
                 return $media;
 
             case 'photo':
                 if (!$upd->msg)
-                    throw new FilterError("تنها پیام قابل قبول است");
+                    throw new FilterError(lang('invalid.msg') ?: "تنها پیام قابل قبول است");
                 $media = $upd->msg->photo;
                 if (!$media)
-                    throw new FilterError("تنها پیام تصویری قابل قبول است");
+                    throw new FilterError(lang('invalid.photo') ?: "تنها پیام تصویری قابل قبول است");
                 return end($media);
 
             case 'msgArgs':
                 if (!$upd->msg)
-                    throw new FilterError("تنها پیام قابل قبول است");
+                    throw new FilterError(lang('invalid.msg') ?: "تنها پیام قابل قبول است");
                 $args = $upd->msg->createArgs();
                 if (!$args)
-                    throw new FilterError("این نوع پیام پشتیبانی نمی شود");
+                    throw new FilterError(lang('invalid.msg_type') ?: "این نوع پیام پشتیبانی نمی شود");
                 return $args;
 
         }
@@ -408,12 +471,12 @@ class FormInput
             if(is_string($value))
             {
                 if (mb_strlen($value) < $this->min)
-                    throw new FilterError("طول متن شما باید حداقل {$this->min} باشد");
+                    throw new FilterError(lang('filter.min_text', [ 'min' => $this->min ]) ?: "طول متن شما باید حداقل {$this->min} باشد");
             }
             elseif(is_numeric($value))
             {
                 if (mb_strlen($value) < $this->min)
-                    throw new FilterError("عدد شما باید حداقل {$this->min} باشد");
+                    throw new FilterError(lang('filter.min_number', [ 'min' => $this->min ]) ?: "عدد شما باید حداقل {$this->min} باشد");
             }
         }
 
@@ -422,12 +485,12 @@ class FormInput
             if(is_string($value))
             {
                 if (mb_strlen($value) > $this->max)
-                    throw new FilterError("طول متن شما باید حداکثر {$this->max} باشد");
+                    throw new FilterError(lang('filter.max_text', [ 'max' => $this->max ]) ?: "طول متن شما باید حداکثر {$this->max} باشد");
             }
             elseif(is_numeric($value))
             {
                 if (mb_strlen($value) > $this->max)
-                    throw new FilterError("عدد شما باید حداکثر {$this->max} باشد");
+                    throw new FilterError(lang('filter.max_number', [ 'max' => $this->max ]) ?: "عدد شما باید حداکثر {$this->max} باشد");
             }
         }
 
@@ -437,7 +500,7 @@ class FormInput
             $column = $this->unique[1];
 
             if ($model::query()->where($column, $value)->exists())
-                throw new FilterError("این مقدار قبلا وجود داشته است");
+                throw new FilterError(lang('filter.unique', [ 'name' => $this->name, 'column' => $column ]) ?: "این مقدار قبلا وجود داشته است");
         }
 
         if($this->exists !== false)
@@ -446,7 +509,7 @@ class FormInput
             $column = $this->exists[1];
 
             if (!$model::query()->where($column, $value)->exists())
-                throw new FilterError("این مقدار وجود ندارد");
+                throw new FilterError(lang('filter.exists', [ 'name' => $this->name, 'column' => $column ]) ?: "این مقدار وجود ندارد");
         }
 
     }
@@ -555,7 +618,7 @@ class FormInput
 
     public $then = false;
     /**
-     * بعد از پز شدن مقدار اجرا می شود
+     * بعد از پر شدن مقدار اجرا می شود
      * 
      * @param \Closure|null $callback
      * @return mixed|FormInput

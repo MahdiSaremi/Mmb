@@ -10,6 +10,13 @@ abstract class StartController extends Controller
 {
 
     /**
+     * نوع کد های استارت که پشتیبانی می شوند
+     * 
+     * @var array<string>
+     */
+    protected $supportedTypes = [];
+
+    /**
      * مدیریت کامند
      * 
      * @return Handlable|null
@@ -17,7 +24,7 @@ abstract class StartController extends Controller
     public function handle()
     {
         $start = StartHandler::defaultStatic()->fromCode(msg()->startCode);
-        if($start && method_exists($this, $start[0]))
+        if($start && in_array($start[0], $this->supportedTypes))
         {
             return $this->invoke(...$start);
         }

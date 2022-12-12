@@ -57,9 +57,10 @@ abstract class Form implements Handlable
         {
             $this->stepAfterForm();
             // Save finally values
-            $this->handler->inputs = array_map(function ($inp) {
-                return $inp->value();
-            }, $this->inputs);
+            foreach($this->inputs as $name => $inp)
+            {
+                $this->handler->inputs[$name] = $inp->value();
+            }
             if (isset($this->keyboard))
                 $this->handler->key = $this->keyboard;
             if (isset($this->key))
@@ -172,8 +173,8 @@ abstract class Form implements Handlable
     {
         return [
             $key->options(),
-            [ $key->skip("رد کردن") ],
-            [ $key->cancel("لغو") ],
+            [ $key->skip(lang('form_keys.skip') ?: "رد کردن") ],
+            [ $key->cancel(lang('form_keys.cancel') ?: "لغو") ],
         ];
     }
 
@@ -215,13 +216,53 @@ abstract class Form implements Handlable
             $res = $this->keyboard($key);
             $res = FormKey::parse($res);
             $this->_key = $res;
-            return $this->$name = FormKey::toKey($res);
+            return FormKey::toKey($this->$name = $res);
         }
 
-        return optional($this->inputs[$name])->value();
+        if(isset($this->inputs[$name]))
+        {
+            return $this->inputs[$name]->value();
+        }
+
+        if(isset($this->handler->inputs[$name]))
+        {
+            return $this->handler->inputs[$name];
+        }
+
+        error_log("Undefined input '$name'", 0);
 
     }
 
+    public function get($name, $default = null)
+    {
+        
+        if(isset($this->inputs[$name]))
+        {
+            return $this->inputs[$name]->value();
+        }
+
+        if(isset($this->handler->inputs[$name]))
+        {
+            return $this->handler->inputs[$name];
+        }
+
+        return $default;
+        
+    }
+
+    public function set($name, $value)
+    {
+        
+        if(isset($this->inputs[$name]))
+        {
+            $this->inputs[$name]->value($value);
+            return;
+        }
+
+        $this->handler->inputs[$name] = $value;
+
+    }
+    
     /** @var FormInput[] */
     private $inputs = [];
     public $go_next = false;

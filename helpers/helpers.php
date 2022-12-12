@@ -2,10 +2,12 @@
 
 // Copyright (C): t.me/MMBlib
 
+use Mmb\Assets\Assets;
 use Mmb\Debug\Debug;
 use Mmb\Exceptions\MmbException;
 use Mmb\Kernel\Instance;
 use Mmb\Kernel\Kernel;
+use Mmb\Lang\Lang;
 use Mmb\Mmb;
 use Mmb\Tools\ATool;
 use Mmb\Tools\InlineResult;
@@ -540,6 +542,16 @@ function aNone() {
     return new \Mmb\Tools\ATool\ANone;
 }
 
+/**
+ * گرفتن فایل از است
+ * 
+ * @param string $path
+ * @return CURLFile
+ */
+function asset($path)
+{
+    return Assets::file($path);
+}
 
 /**
  * بررسی می کند حالت برنامه روی دیباگ است یا خیر
@@ -729,6 +741,18 @@ function chosenInline()
     return ChosenInline::$this;
 }
 
+/**
+ * گرفتن متن با زبان پیشفرض
+ * 
+ * @param string $name
+ * @param array|mixed $args
+ * @param mixed ...$_args
+ * @return string
+ */
+function lang($name, $args = [], ...$_args)
+{
+    return Lang::text($name, $args, ...$_args);
+}
 
 
 /**
@@ -744,3 +768,9 @@ global $f;
 $f = function(...$values) {
     return join(' ', $values);
 };
+
+set_exception_handler(function ($exception) {
+
+    \Mmb\Handlers\ErrorHandler::defaultStatic()->error($exception);
+
+});

@@ -86,6 +86,17 @@ class Listeners
             if(count($method) > 1)
             {
                 $pars = (new \ReflectionMethod(@$method[0], @$method[1]))->getParameters();
+                
+                // Event
+                if(@$method[0] instanceof InvokeEvent)
+                {
+                    $result = null;
+                    if($method[0]->eventInvoke($method[1], $args, $result))
+                    {
+                        return $result;
+                    }
+                }
+
             }
             else
             {
@@ -100,13 +111,19 @@ class Listeners
         }
 
         $finalArgs = [];
+        $argsCount = count($args);
         $i = 0;
         foreach($pars as $par)
         {
             $type = $par->getType();
             $type = "$type";
 
-            if($type && class_exists($type))
+            // if($type && $i < $argsCount && eqi($type, typeOf(@$args[$i])))
+            if($i < $argsCount)
+            {
+                $arg = @$args[$i++];
+            }
+            elseif($type && class_exists($type))
             {
                 $arg = Instance::get($type);
             }
@@ -118,11 +135,15 @@ class Listeners
             }
             else
             {
-                $arg = @$args[$i++];
+                // if ($i >= $argsCount)
+                    continue;
+                // $arg = @$args[$i++];
             }
 
             $finalArgs[] = $arg;
         }
+        while ($i < $argsCount)
+            $finalArgs[] = $args[$i++];
 
         // Result
 
