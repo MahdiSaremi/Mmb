@@ -71,6 +71,70 @@ class Role
         return new static(static::$default);
     }
 
+    private static $constants = [];
+
+    /**
+     * تنظیم نقش های ثابت کاربران
+     * 
+     * @param int|array $id
+     * @param string $role
+     * @return void
+     */
+    public static function constant($id, $role = null)
+    {
+        
+        if(is_array($id))
+        {
+            foreach($id as $id0 => $role)
+            {
+                self::$constants[$id0] = $role;
+            }
+            return;
+        }
+
+        self::$constants[$id] = $role;
+
+    }
+
+    /**
+     * بررسی وجود نقش ثابت کاربر
+     * 
+     * @param int $id
+     * @return bool
+     */
+    public static function issetConstant($id)
+    {
+
+        return isset(self::$constants[$id]);
+
+    }
+
+    /**
+     * گرفتن نقش ثابت کاربر
+     * 
+     * @param int $id
+     * @return string|bool
+     */
+    public static function getConstantOf($id)
+    {
+
+        return self::$constants[$id] ?? false;
+
+    }
+
+    /**
+     * گرفتن کاربری که این نقش ثابت را دارد
+     * 
+     * @param string $role
+     * @return int|bool
+     */
+    public static function getConstantFor($role)
+    {
+
+        return array_search($role, self::$constants);
+
+    }
+
 
     public $name;
     private $setValues = [];

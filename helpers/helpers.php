@@ -11,7 +11,7 @@ use Mmb\Lang\Lang;
 use Mmb\Mmb;
 use Mmb\Tools\ATool;
 use Mmb\Tools\InlineResult;
-use Mmb\Tools\Keyboard;
+use Mmb\Tools\Keys;
 use Mmb\Tools\Optional;
 use Mmb\Update\Callback\Callback;
 use Mmb\Update\Chat\Per;
@@ -36,7 +36,7 @@ Kernel::$runTime = microtime(true);
  */
 function mkey($key, $inline=null, $resize=true, $encode=true, $once=false, $selective=false)
 {
-    return Keyboard::makeKey($key, $inline, $resize, $encode, $once, $selective);
+    return Keys::makeKey($key, $inline, $resize, $encode, $once, $selective);
 }
 
 function mPers($ar)

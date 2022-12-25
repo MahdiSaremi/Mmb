@@ -5,6 +5,7 @@ namespace Mmb\Kernel; #auto
 use Mmb\Controller\Handler\Handler;
 use Mmb\Controller\StepHandler\Handlable;
 use Mmb\Controller\StepHandler\StepHandler;
+use Mmb\Exceptions\TypeException;
 use Mmb\Provider\Provider;
 use Mmb\Update\Upd;
 use Providers\UpdProvider;
@@ -83,6 +84,12 @@ class Kernel
             
             if ($handler == null)
                 continue;
+
+            if (is_string($handler))
+                $handler = new $handler;
+
+            if (!($handler instanceof Handler))
+                throw new TypeException("Handler must be Handler object, given " . typeOf($handler));
 
             $res = $handler->runHandle();
 

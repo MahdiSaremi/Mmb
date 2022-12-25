@@ -18,11 +18,10 @@ class StartHandler {
     public function toCode($name, $data) {
 
         if($name == 'invite')
-            return "$data";
+            return $this->encodeInviteCode($data);
         else
             return "$name-" . base64_encode($data);
             
-
     }
 
     /**
@@ -37,7 +36,7 @@ class StartHandler {
 
         if(count($explode) == 1) {
 
-            return [ 'invite', $code ];
+            return [ 'invite', $this->decodeInviteCode($code) ];
 
         }
         elseif(count($explode) == 2) {
@@ -53,6 +52,32 @@ class StartHandler {
 
         }
 
+    }
+
+    /**
+     * انکد کردن کد لینک دعوت
+     * 
+     * این تابع توسط همین کلاس صدا زده می شود
+     * 
+     * @param string $code
+     * @return string
+     */
+    public function encodeInviteCode($code)
+    {
+        return "$code";
+    }
+
+    /**
+     * دیکد کردن کد لینک دعوت
+     * 
+     * این تابع توسط همین کلاس صدا زده می شود
+     * 
+     * @param string $code
+     * @return string
+     */
+    public function decodeInviteCode($code)
+    {
+        return $code;
     }
 
     /**

@@ -74,6 +74,24 @@ abstract class QueryResult {
     }
 
     /**
+     * گرفتن دو ستون خاص از تمامی ردیف های خروجی به عنوان کلید و مقدار آرایه
+     *
+     * @param string $key
+     * @param string $value
+     * @return array
+     */
+    public function fetchPluckAssoc($key, $value) {
+
+        $array = [];
+        foreach($this->fetchAll() as $row)
+        {
+            $array[$row[$key]] = $row[$value];
+        }
+        return $array;
+
+    }
+
+    /**
      * گرفتن آیدی اینسرت شده
      *
      * @return mixed

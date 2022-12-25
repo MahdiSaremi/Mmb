@@ -53,7 +53,7 @@ class Msg extends MmbBase implements \Mmb\Update\Interfaces\IMsgID, \Mmb\Update\
     /**
      * شناسه پیام برای حالت اینلااین
      *
-     * @var int
+     * @var string
      */
     public $inlineID;
     /**

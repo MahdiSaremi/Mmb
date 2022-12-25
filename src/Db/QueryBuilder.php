@@ -493,6 +493,27 @@ class QueryBuilder {
     }
 
     /**
+     * گرفتن دو ستون خاص از تمامی ردیف های خروجی به عنوان کلید و مقدار آرایه
+     *
+     * @param string $key
+     * @param string $value
+     * @return array
+     */
+    public function pluckAssoc($key, $value) {
+
+        $this->select = [ $key, $value ];
+
+        $res = $this->run('select');
+
+        if(!$res->ok)
+            return [];
+
+
+        return $res->fetchPluckAssoc($key, $value);
+
+    }
+
+    /**
      * گرفتن اولین ردیف
      *
      * @param array|string $select

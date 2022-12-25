@@ -4,6 +4,7 @@ namespace Mmb\Controller\Form; #auto
 
 use Mmb\Controller\Controller;
 use Mmb\Controller\StepHandler\Handlable;
+use Mmb\Exceptions\MmbException;
 
 abstract class Form implements Handlable
 {
@@ -296,6 +297,23 @@ abstract class Form implements Handlable
     {
         $input = (new FormInput($name))->optional();
         $this->newInput($input);
+    }
+
+    public function requiredAgain($name)
+    {
+
+        if($inp = $this->inputs[$name] ?? false)
+        {
+            $this->current_input = null;
+            $this->go_next = true;
+
+            $this->newInput($inp);
+        }
+        else
+        {
+            throw new MmbException("Input '$name' not defined in requiredAgain()");
+        }
+
     }
 
     public $optionSelected = false;

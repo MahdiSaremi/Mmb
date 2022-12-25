@@ -148,7 +148,7 @@ class InlineResult
             mmb_error_throw("Invalid inline query results message data");
         if($media){
             $res['caption'] = $msg['text'] ?? "";
-            if($_ = $msg['parse_mode'] ?? null){
+            if($_ = $msg['mode'] ?? null){
                 $res['parse_mode'] = $_;
             }
         }
@@ -159,13 +159,13 @@ class InlineResult
             if($_ = $msg['disw'] ?? null){
                 $cn['disable_web_page_preview'] = $_;
             }
-            if($_ = $msg['parse_mode'] ?? null){
+            if($_ = $msg['mode'] ?? null){
                 $cn['parse_mode'] = $_;
             }
             $res['input_message_content'] = $cn;
         }
         if($_ = $msg['key'] ?? false)
-            $res['reply_markup'] = Keyboard::makeKey($_, true, true, false);
+            $res['reply_markup'] = Keys::makeKey($_, true, true, false);
     
         if($media){
             if(!$media_id){

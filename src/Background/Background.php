@@ -97,7 +97,7 @@ class Background {
     public static function run($callback) {
 
         $id = md5(time() . rand(1, 10000));
-        Storage::set('closures.' . $id, serializeClosure($callback));
+        BackgroundStorage::set('closures.' . $id, serializeClosure($callback));
         $url = static::getCurrentUrl() . "?" . http_build_query([
             'atom' => 'background',
             'background' => 'closure',
@@ -122,7 +122,7 @@ class Background {
             throw new \Mmb\Exceptions\TypeException("Background::runTask() : Class '\Mmb\Background\Task' required, '".(get_class($class) ?: gettype($class))."' given.");
 
         $id = md5(time() . rand(1, 10000));
-        Storage::set('tasks.' . $id, serialize($class));
+        BackgroundStorage::set('tasks.' . $id, serialize($class));
         $url = static::getCurrentUrl() . "?" . http_build_query([
             'atom' => 'background',
             'background' => 'task',

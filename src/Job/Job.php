@@ -16,7 +16,7 @@ class Job
         $i = null;
         $i = time() . rand(0,9999);
         $job->name = $i;
-        Storage::set('jobs.' . $i, serialize($job));
+        JobStorage::set('jobs.' . $i, serialize($job));
         return $i;
     }
 
@@ -27,7 +27,7 @@ class Job
      */
     public static function runAll()
     {
-        foreach(Storage::get('jobs') as $job) {
+        foreach(JobStorage::get('jobs') as $job) {
             $job = unserialize($job);
             if($job->checkCond())
                 $job->runJob();
@@ -41,7 +41,7 @@ class Job
      */
     public static function runNext()
     {
-        $jobs = Storage::get('jobs');
+        $jobs = JobStorage::get('jobs');
         foreach($jobs as $job) {
             $job = array_values($jobs)[0];
             $job = unserialize($job);
@@ -110,7 +110,7 @@ class Job
      */
     public function delete()
     {
-        Storage::unset('jobs.' . $this->name);
+        JobStorage::unset('jobs.' . $this->name);
     }
 
     /**
@@ -120,7 +120,7 @@ class Job
      */
     public function update()
     {
-        Storage::set('jobs.' . $this->name, serialize($this));
+        JobStorage::set('jobs.' . $this->name, serialize($this));
     }
 
     /**
