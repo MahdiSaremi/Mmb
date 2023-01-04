@@ -13,7 +13,9 @@ use Mmb\Tools\ATool;
 use Mmb\Tools\InlineResult;
 use Mmb\Tools\Keys;
 use Mmb\Tools\Optional;
+use Mmb\Tools\Type;
 use Mmb\Update\Callback\Callback;
+use Mmb\Update\Chat\Chat;
 use Mmb\Update\Chat\Per;
 use Mmb\Update\Inline\ChosenInline;
 use Mmb\Update\Inline\Inline;
@@ -91,7 +93,8 @@ function mmb_error_throw($des, $must_throw_error = false)
  * @param Closure $closure
  * @return string
  */
-function serializeClosure(Closure $closure){
+function serializeClosure(Closure $closure)
+{
     // require_once __DIR__ . '/Opis.php';
     return serialize(new \Opis\Closure\SerializableClosure($closure));
 }
@@ -102,7 +105,8 @@ function serializeClosure(Closure $closure){
  * @param string $closure
  * @return \Opis\Closure\SerializableClosure
  */
-function unserializeClosure(string $closure){
+function unserializeClosure(string $closure)
+{
     // require_once __DIR__ . '/Opis.php';
     return unserialize($closure);
 }
@@ -114,7 +118,8 @@ function unserializeClosure(string $closure){
  * @param string ...$values
  * @return bool
  */
-function eqi($value1, $value2){
+function eqi($value1, $value2)
+{
     return strtolower($value1) == strtolower($value2);
 }
 
@@ -128,7 +133,8 @@ function eqi($value1, $value2){
  * @param int|float $max
  * @return int|float
  */
-function clamp($number, $min, $max) {
+function clamp($number, $min, $max)
+{
     if($number > $max) return $max;
     if($number < $min) return $min;
     return $number;
@@ -140,7 +146,8 @@ function clamp($number, $min, $max) {
  * @param string $dirPath
  * @return bool
  */
-function delDir($dirPath) {
+function delDir($dirPath)
+{
     if(!is_dir($dirPath))
         return false;
 
@@ -163,7 +170,8 @@ function delDir($dirPath) {
  * @param string $text
  * @return string
  */
-function htmlEncode($text){
+function htmlEncode($text)
+{
     return str_replace([
         '&', '<', '>',
     ], [
@@ -177,7 +185,8 @@ function htmlEncode($text){
  * @param string $text
  * @return string
  */
-function markdownEncode($text){
+function markdownEncode($text)
+{
     return str_replace([
         "\\", '_', '*', '`', '['
     ], [
@@ -191,7 +200,8 @@ function markdownEncode($text){
  * @param string $text
  * @return string
  */
-function markdown2Encode($text){
+function markdown2Encode($text)
+{
     return preg_replace('/[\\\\_\*\[\]\(\)~`>\#\+\-=\|\{\}\.\!]/', '\\\\$0', $text);
 }
 
@@ -203,7 +213,8 @@ function markdown2Encode($text){
  * @param boolean $ignoreCase
  * @return bool
  */
-function startsWith($string, $needle, $ignoreCase = false) {
+function startsWith($string, $needle, $ignoreCase = false)
+{
     $s = @substr($string, 0, strlen($needle));
     if($ignoreCase)
         return eqi($s, $needle);
@@ -219,7 +230,8 @@ function startsWith($string, $needle, $ignoreCase = false) {
  * @param boolean $ignoreCase
  * @return bool
  */
-function endsWith($string, $needle, $ignoreCase = false) {
+function endsWith($string, $needle, $ignoreCase = false)
+{
     $s = @substr($string, -strlen($needle));
     if($ignoreCase)
         return eqi($s, $needle);
@@ -231,11 +243,15 @@ function endsWith($string, $needle, $ignoreCase = false) {
  * تغییر نوع آبجکت به کلاسی دیگر
  *
  * @param mixed $object
- * @param string $className
+ * @param string|Type $className
  * @return mixed
  */
-function cast($object, $className) {
-    if(!class_exists($className))
+function cast($object, $className)
+{
+    if ($className instanceof Type)
+        return $className->cast($object);
+
+    if (!class_exists($className))
         throw new InvalidArgumentException("Class '$className' is not exists");
 
     $type = gettype($object);
@@ -263,6 +279,18 @@ function cast($object, $className) {
 }
 
 /**
+ * انسریالایز کردن و تبدیل کردن به کلاس مورد نظر
+ * 
+ * @param string $string
+ * @param string|Type $type
+ * @return mixed
+ */
+function unserializeTo($string, $type)
+{
+    return cast(unserialize($string), $type);
+}
+
+/**
  * دیکد کردن جیسون به کلاس دلخواه
  *
  * @param string $json
@@ -280,7 +308,8 @@ function json_decode2($json, $className) {
  * @param string $sep
  * @return string
  */
-function getAbsPath($path, $sep = '/') {
+function getAbsPath($path, $sep = '/')
+{
     $abs = realpath($path);
     if($abs) {
         $path = $abs;
@@ -319,7 +348,8 @@ function getAbsPath($path, $sep = '/') {
  * @param string $base 
  * @return string
  */
-function getRelPath($path, $base = null) {
+function getRelPath($path, $base = null)
+{
     if($base == null) {
         $base = getAbsPath('.');
     }
@@ -358,7 +388,8 @@ function getRelPath($path, $base = null) {
  * @param string $charlist
  * @return string
  */
-function trim2(string $string, string $charlist = " \t\n\r\0\x0B") {
+function trim2(string $string, string $charlist = " \t\n\r\0\x0B")
+{
     $lines = explode("\n", $string);
     $lines = array_map(function($line) use(&$charlist) {
         return trim($line, $charlist);
@@ -378,7 +409,8 @@ function trim2(string $string, string $charlist = " \t\n\r\0\x0B") {
  * @param integer $roundBase
  * @return string
  */
-function timeFa($time_relative, $roundBase = -1) {
+function timeFa($time_relative, $roundBase = -1)
+{
     // Time
     if($roundBase > -1) {
         $time_relative = round($time_relative / $roundBase) * $roundBase;
@@ -425,7 +457,8 @@ function timeFa($time_relative, $roundBase = -1) {
  * @param mixed ...$args
  * @return mixed
  */
-function objOrFalse($class, $object, ...$args) {
+function objOrFalse($class, $object, ...$args)
+{
 
     if($object === false)
         return false;
@@ -443,7 +476,8 @@ function objOrFalse($class, $object, ...$args) {
  * @param string ...$ignore
  * @return array
  */
-function maybeArray(array $array, ...$ignore) {
+function maybeArray(array $array, ...$ignore)
+{
 
     $res = [];
 
@@ -477,7 +511,8 @@ function maybeArray(array $array, ...$ignore) {
  * @param boolean $assoc
  * @return array
  */
-function aParse(array $array, $assoc = false) {
+function aParse(array $array, $assoc = false)
+{
     return ATool::parse($array, $assoc);
 }
 
@@ -486,7 +521,13 @@ function aParse(array $array, $assoc = false) {
  *
  * * اگر کالبک خالی باشد، بصورت خام آرایه قرار می گیرد
  * * callback: `function ($value [, $key])`
- * * return value: `$value` or `[$key, $value]`
+ * * return value: `$value` or `[$key, $value]` for assoc
+ * * yield value: `$value` or `$key => $value` for assoc
+ * 
+ * می توانید از دو روش ریترن و یلد استفاده کنید
+ * 
+ * `$nums = aParse([ aEach(range(1,3), function($num) { return $num + 0.5; }) ]); // [1.5, 2.5, 3.5]`
+ * `$nums = aParse([ aEach(range(1,3), function($num) { yield $num; yield $num + 0.5; }) ]); // [1, 1.5, 2, 2.5, 3, 3.5]`
  * 
  * * `این تابع، تابع کمکی است! کلاس اصلی: AEach`
  * 
@@ -508,7 +549,7 @@ function aEach($array, $callback = null)
  * 
  * * `این تابع، تابع کمکی است! کلاس اصلی: AIter`
  *
- * @param array|Generator|Callable|Closure $function
+ * @param array|Generator|Callable|Closure $value
  * @return \Mmb\Tools\ATool\AIter
  */
 function aIter($value)
@@ -562,7 +603,8 @@ function asset($path)
  *
  * @return boolean
  */
-function is_debug_mode() {
+function is_debug_mode()
+{
     return Debug::isOn();
 }
 
@@ -573,8 +615,9 @@ function is_debug_mode() {
  * @param array $args
  * @return Msg|false
  */
-function replyText($text, $args = []){
-    return Msg::$this->replyText($text, $args);
+function replyText($text, $args = [])
+{
+    return optional(msg())->replyText($text, $args) ?: false;
 }
 
 /**
@@ -584,8 +627,67 @@ function replyText($text, $args = []){
  * @param array $args
  * @return Msg|false
  */
-function sendMsg($text, $args = []){
-    return Msg::$this->sendMsg($text, $args);
+function sendMsg($text, $args = [])
+{
+    return optional(chat())->sendMsg($text, $args) ?: false;
+}
+
+/**
+ * ویرایش پیام فعلی | تابع کمکی
+ * 
+ * @param string|array $text
+ * @param array $args
+ * @return Msg|false
+ */
+function editText($text, $args = [])
+{
+    return optional(msg())->editText($text, $args) ?: false;
+}
+
+/**
+ * به پیام کاربر پاسخ می دهد، یا پیام فعلی را ویرایش می کند
+ * 
+ * اگر کاربر پیام ارسال کرده باشد ریپلای، و اگر روی دکمه کلیک کرده باشد ویرایش می کند
+ * 
+ * @param string|array $text
+ * @param array $args
+ * @return Msg|bool
+ */
+function replyOrEditText($text, $args = [])
+{
+    if(callback())
+    {
+        return msg()->editText($text, $args);
+    }
+    elseif(msg())
+    {
+        return msg()->replyText($text, $args);
+    }
+
+    return false;
+}
+
+/**
+ * به کاربر پیام ارسال می کند، یا پیام فعلی را ویرایش می کند
+ * 
+ * اگر کاربر پیام ارسال کرده باشد پیام میفرستد، و اگر روی دکمه کلیک کرده باشد ویرایش می کند
+ * 
+ * @param string|array $text
+ * @param array $args
+ * @return Msg|bool
+ */
+function sendOrEditText($text, $args = [])
+{
+    if(callback())
+    {
+        return msg()->editText($text, $args);
+    }
+    elseif(msg())
+    {
+        return msg()->replyText($text, $args);
+    }
+    
+    return false;
 }
 
 /**
@@ -595,8 +697,9 @@ function sendMsg($text, $args = []){
  * @param bool $alert
  * @return bool
  */
-function answer($text = null, $alert = false){
-    return Callback::$this->answer($text, $alert);
+function answer($text = null, $alert = false)
+{
+    return optional(callback())->answer($text, $alert) ?: false;
 }
 
 /**
@@ -606,19 +709,21 @@ function answer($text = null, $alert = false){
  * @param array $args
  * @return bool
  */
-function answerInline($results, $args = []){
-    return Inline::$this->answer($results, $args);
+function answerInline($results, $args = [])
+{
+    return optional(inline())->answer($results, $args) ?: false;
 }
 
 /**
  * اگر مقدار نال یا مشابه فالس باشد، کلاس آپشنال را بر میگرداند که هر متغیر یا تابعی از آن را صدا بزنید کار خواهد کرد
  * 
- * @example `optional(\Msg::$this)->replyText("Send if message is not null");`
+ * `optional(\Msg::$this)->replyText("Send if message is not null");`
  *
  * @param mixed $value
  * @return mixed|Optional
  */
-function optional($value) {
+function optional($value) 
+{
     
     if(!$value)
         return new Optional;
@@ -739,6 +844,16 @@ function inline()
 function chosenInline()
 {
     return ChosenInline::$this;
+}
+
+/**
+ * چت فعلی
+ *
+ * @return Chat|null
+ */
+function chat()
+{
+    return Chat::$this;
 }
 
 /**

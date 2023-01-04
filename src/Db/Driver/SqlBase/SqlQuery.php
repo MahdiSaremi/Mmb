@@ -47,6 +47,10 @@ class SqlQuery extends \Mmb\Db\QueryCompiler {
                     $query .= "`$where[2]` in (" . join(", ", array_map([$this, 'safeString'], $where[3])) . ")";
                 break;
 
+                case 'isnull':
+                    $query .= "`$where[2]` IS NULL";
+                break;
+
             }
 
         }

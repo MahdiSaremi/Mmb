@@ -84,6 +84,48 @@ class QueryBuilder {
     }
 
     /**
+     * افزودن شرط نال بودن
+     *
+     * @param string $col
+     * @return $this
+     */
+    public function whereIsNull($col) {
+
+        $this->where[] = [ 'isnull', 'AND', $col ];
+
+        return $this;
+
+    }
+
+    /**
+     * افزودن شرط نال بودن
+     *
+     * @param string $col
+     * @return $this
+     */
+    public function andWhereIsNull($col) {
+        
+        $this->where[] = [ 'isnull', 'AND', $col ];
+
+        return $this;
+
+    }
+
+    /**
+     * افزودن شرط نال بودن
+     *
+     * @param string $col
+     * @return $this
+     */
+    public function orWhereIsNull($col) {
+        
+        $this->where[] = [ 'isnull', 'OR', $col ];
+
+        return $this;
+
+    }
+
+    /**
      * افزودن شرط بین ستون و مقدار
      *
      * @param string $col ستون موردنظر
@@ -617,10 +659,10 @@ class QueryBuilder {
      * @param array $data آرایه ای شامل کلید=نام ستون و مقدار=مقدار
      * @return Table\Table|false
      */
-    public function insert(array $data) {
+    public function insert(array $data = []) {
 
-        if(!$data)
-            return false;
+        // if(!$data)
+        //     return false;
 
         $this->insert = $data;
         $res = $this->run('insert');
@@ -639,6 +681,33 @@ class QueryBuilder {
         $object->newCreated = true;
         
         return $object;
+
+    }
+
+    /**
+     * ایجاد ردیف
+     * 
+     * این تابع مقدار های شرطی ثابت را هم به دیتا اضافه می کند
+     * 
+     * `$tag = Tag::query()->where('name', 'DEMO'); if(!$tag->exists()) $tag->create();`
+     * 
+     * `$user->posts()->create([ 'title' => "TITLE", 'text' => "TEXT" ]); // For relations`
+     * 
+     * @param array $data
+     * @return Table\Table|false
+     */
+    public function create(array $data = [])
+    {
+        
+        foreach($this->where as $where)
+        {
+            if($where[0] == 'col' && $where[1] == 'AND' && $where[3] == '=')
+            {
+                $data[$where[2]] = $where[4];
+            }
+        }
+
+        return $this->insert($data);
 
     }
 

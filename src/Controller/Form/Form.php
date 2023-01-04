@@ -316,6 +316,51 @@ abstract class Form implements Handlable
 
     }
 
+    /**
+     * فراموش کردن اینپوت ها
+     * 
+     * @param string ...$input
+     * @return void
+     */
+    public function forgot(...$input)
+    {
+        foreach($input as $inp)
+        {
+            unset($this->inputs[$inp]);
+        }
+    }
+
+    /**
+     * فراموش کردن تمامی اینپوت ها
+     * 
+     * @return void
+     */
+    public function forgotAll()
+    {
+        $this->inputs = [];
+    }
+
+    /**
+     * درخواست بررسی و گرفتن تمامی اینپوت ها
+     * 
+     * تنها اگر ورودی اول ترو شود تمامی ورودی های قبلی فراموش می شود، وگرنه باید با تابع فورگات دستی فراموش کرد
+     * 
+     * `$this->required('name'); $this->required('again'); if($this->again) { $this->forgot('again', 'name'); $this->requestAgain(); }`
+     * 
+     * توجه کنید این تابع را تنها باید در تابع فرم اجرا کرد!
+     * 
+     * @param bool $forgotAll
+     * @return void
+     */
+    public function requestAgain($forgotAll = false)
+    {
+        if ($forgotAll)
+            $this->forgotAll();
+
+        $this->form();
+        throw new FindingInputFinished(null);
+    }
+
     public $optionSelected = false;
     public $skipped = false;
     public $canceled = false;

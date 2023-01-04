@@ -465,20 +465,22 @@ class ATool
         if ($colCount <= 0)
             throw new \InvalidArgumentException("AToll::make2D() : \$colCount value must be bigger than zero, given $colCount");
 
-        $res = [];
-        $count = count($array);
+        return array_chunk($array, $colCount);
 
-        for($i = 0; $i < $count; )
-        {
-            $row = [];
-            for($j = 0; $j < $colCount && $i < $count; $j++, $i++)
-            {
-                $row[] = $array[$i];
-            }
-            $res[] = $row;
-        }
+        // $res = [];
+        // $count = count($array);
 
-        return $res;
+        // for($i = 0; $i < $count; )
+        // {
+        //     $row = [];
+        //     for($j = 0; $j < $colCount && $i < $count; $j++, $i++)
+        //     {
+        //         $row[] = $array[$i];
+        //     }
+        //     $res[] = $row;
+        // }
+
+        // return $res;
     }
 
 }

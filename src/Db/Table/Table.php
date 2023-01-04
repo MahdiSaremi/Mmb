@@ -4,6 +4,9 @@ namespace Mmb\Db\Table; #auto
 
 use Mmb\Db\Driver;
 use Mmb\Db\QueryBuilder;
+use Mmb\Db\Relation\OneToMany;
+use Mmb\Db\Relation\OneToOne;
+use Mmb\Db\Relation\Relation;
 use Mmb\Listeners\HasListeners;
 use Mmb\Listeners\HasStaticListeners;
 
@@ -173,6 +176,19 @@ class Table
     }
 
     /**
+     * ایجاد یک کوئری بیلدر با کلاس مورد نظر
+     *
+     * @return \Mmb\Db\QueryBuilder
+     */
+    public static function queryWith($class) {
+
+        return (new $class)
+                -> table( static::getTable() )
+                -> output( static::class );
+
+    }
+
+    /**
      * ایجاد یک کوئری بیلدر همراه با شرط این ردیف بودن
      *
      * @return \Mmb\Db\QueryBuilder
@@ -183,6 +199,143 @@ class Table
 
         return static::query()
                 ->where($primary, $this->$primary);
+
+    }
+
+    public static function __callStatic($name, $arguments)
+    {
+        
+        return static::query()
+                ->$name(...$arguments);
+
+    }
+
+    protected $_invokesValue = [];
+
+    public function __get($name)
+    {
+
+        if(array_key_exists($name, $this->_invokesValue))
+        {
+            return $this->_invokesValue[$name];
+        }
+
+        if(method_exists($this, $name))
+        {
+            $result = $this->$name();
+
+            if($result instanceof Relation)
+                $result = $result->getRelationValue();
+
+            return $this->_invokesValue[$name] = $result;
+        }
+
+        error_log("Undefined property '$name'");
+
+    }
+
+    public function __call($name, $arguments)
+    {
+        
+        throw new \BadMethodCallException("Method '$name' is not exists in model " . static::class);
+
+    }
+
+    
+    /**
+     * گرفتن متعلق بودن به ...
+     * 
+     * رابطه یک به یک / چند به یک
+     * 
+     * `class PayHistory: public $user_id; function user() { return $this->belongsTo(User::class); }`
+     * `class ServiceInformation: public $service_id; function service() { return $this->belongsTo(Service::class, 'service_id', 'id'); }`
+     * 
+     * @param string $class نام کلاس مورد نظر
+     * @param mixed $column نام ستونی که شامل آدرس است
+     * @param mixed $primary_column نام ستونی در کلاس مورد نظر که آدرس را با آن تطابق میدهد
+     * @return OneToOne|QueryBuilder
+     */
+    public function belongsTo($class, $column = null, $primary_column = null)
+    {
+
+        if($primary_column === null)
+        {
+            $primary_column = $class::getPrimaryKey();
+        }
+
+        if($column === null)
+        {
+            $e = explode("\\", strtolower($class));
+            $column = end($e) . "_" . $primary_column;
+        }
+        
+        return $class::queryWith(OneToOne::class)
+                ->where($primary_column, $this->$column);
+
+    }
+
+    /**
+     * گرفتن ردیف هایی که به این ردیف متصلند
+     * 
+     * رابطه یک به چند
+     * 
+     * `class Article: public $hashtag_id; public $author_id;`
+     * `class Hashtag: function user() { return $this->hasMany(Article::class); }`
+     * `class User: public $service_id; function service() { return $this->hasMany(Service::class, 'author_id', 'id'); }`
+     * 
+     * @param string $class نام کلاس مورد نظر
+     * @param mixed $column نام ستونی در کلاس مورد نظر که شامل آدرس این کلاس است
+     * @param mixed $primary_column نام ستونی در این کلاس که آدرس را با آن تطابق میدهد
+     * @return OneToMany|QueryBuilder
+     */
+    public function hasMany($class, $column = null, $primary_column = null)
+    {
+
+        if($primary_column === null)
+        {
+            $primary_column = static::getPrimaryKey();
+        }
+
+        if($column === null)
+        {
+            $e = explode("\\", strtolower(static::class));
+            $column = end($e) . "_" . $primary_column;
+        }
+        
+        return $class::queryWith(OneToMany::class)
+                ->where($column, $this->$primary_column);
+
+    }
+
+    /**
+     * گرفتن ردیفی که به این ردیف متصل است
+     * 
+     * رابطه یک به یک
+     * 
+     * `class User: function userinfo() { return $this->hasOne(UserInfo::class); }`
+     * `class UserInfo: public $user_id; function user() { return $this->belongsTo(User::class); }`
+     * 
+     * @param string $class نام کلاس مورد نظر
+     * @param mixed $column نام ستونی در کلاس مورد نظر که شامل آدرس این کلاس است
+     * @param mixed $primary_column نام ستونی در این کلاس که آدرس را با آن تطابق میدهد
+     * @return OneToMany|QueryBuilder
+     */
+    public function hasOne($class, $column = null, $primary_column = null)
+    {
+
+        if($primary_column === null)
+        {
+            $primary_column = static::getPrimaryKey();
+        }
+
+        if($column === null)
+        {
+            $e = explode("\\", strtolower(static::class));
+            $column = end($e) . "_" . $primary_column;
+        }
+        
+        return $class::queryWith(OneToMany::class)
+                ->where($column, $this->$primary_column);
 
     }
 
