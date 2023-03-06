@@ -6,6 +6,10 @@ use Mmb\Controller\Controller;
 use Mmb\Controller\StepHandler\Handlable;
 use Mmb\Exceptions\MmbException;
 
+/**
+ * @property array $key دکمه های مربوط به اینپوت فعلی
+ * @property array $keyboard دکمه های مربوط به اینپوت فعلی
+ */
 abstract class Form implements Handlable
 {
 

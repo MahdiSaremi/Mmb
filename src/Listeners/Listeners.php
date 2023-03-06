@@ -78,7 +78,7 @@ class Listeners
 
     }
 
-    public static function callMethod($method, array $args = [])
+    public static function callMethod($method, array $args = [], $silentMode = false)
     {
         $mustInstance = false;
         if(is_array($method))
@@ -88,7 +88,7 @@ class Listeners
                 $pars = (new \ReflectionMethod(@$method[0], @$method[1]))->getParameters();
                 
                 // Event
-                if(@$method[0] instanceof InvokeEvent)
+                if(!$silentMode && @$method[0] instanceof InvokeEvent)
                 {
                     $result = null;
                     if($method[0]->eventInvoke($method[1], $args, $result))

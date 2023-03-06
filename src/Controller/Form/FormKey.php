@@ -131,7 +131,18 @@ class FormKey
                 if (!$btn)
                     continue;
 
-                $keyr[] = [ 'text' => @$btn['text'] ];
+                $single = [ 'text' => @$btn['text'] ];
+
+                if (isset($btn['contact']))
+                    $single['contact'] = $btn['contact'];
+
+                if (isset($btn['location']))
+                    $single['location'] = $btn['location'];
+
+                if (isset($btn['poll']))
+                    $single['poll'] = $btn['poll'];
+
+                $keyr[] = $single;
             }
 
             if ($keyr)

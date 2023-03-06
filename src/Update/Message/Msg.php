@@ -33,7 +33,7 @@ class Msg extends MmbBase implements \Mmb\Update\Interfaces\IMsgID, \Mmb\Update\
      * 
      * @var string $acceptStartCode
      */
-    public static $acceptStartCode = '\d\w\-_';
+    public static $acceptStartCode = '^\s\n\r';
     /**
      * @var Mmb
      */

@@ -58,7 +58,7 @@ class ATool
      *
      * @param array $array
      * @param mixed $needle
-     * @param boolean $equals
+     * @param bool $equals
      * @return void
      */
     public static function remove2(array &$array, $needle, $equals = false) {
@@ -122,7 +122,7 @@ class ATool
      * پردازش آرایه و انجام دادن عملیات های ابزارها
      *
      * @param array $array
-     * @param boolean $assoc
+     * @param bool $assoc
      * @return array
      */
     public static function parse(array $array, $assoc = false) {
@@ -185,6 +185,7 @@ class ATool
         $ignoreIsset = $flag == self::SELECTOR_SET;
         $queriesLast = count($queries) - 1;
         $isUnset = $flag == self::SELECTOR_UNSET;
+        $isGet = $flag == self::SELECTOR_GET || $flag == self::SELECTOR_GET_LIST;
 
         // Run queries
         foreach($queries as $query_n => $query) {
@@ -200,6 +201,8 @@ class ATool
                             if($last && $isUnset) {
                                 unset($sel[$i][$key]);
                             }
+                            elseif($isGet && $sel[$i][$key] instanceof AdvancedValue)
+                                $sel[] = Advanced::getRealValue($sel[$i][$key]);
                             else
                                 $sel[] = &$sel[$i][$key];
                         }
@@ -230,6 +233,8 @@ class ATool
                             if($last && $isUnset) {
                                 unset($sel[$i][$key]);
                             }
+                            elseif($isGet && $sel[$i][$key] instanceof AdvancedValue)
+                                $sel[] = Advanced::getRealValue($sel[$i][$key]);
                             else
                                 $sel[] = &$sel[$i][$key];
                         }
@@ -247,6 +252,8 @@ class ATool
                         if($last && $isUnset) {
                             unset($sel[$i][$query]);
                         }
+                        elseif($isGet && $sel[$i][$query] instanceof AdvancedValue)
+                            $sel[$i] = Advanced::getRealValue($sel[$i][$query]);
                         else
                             $sel[$i] = &$sel[$i][$query];
                     }

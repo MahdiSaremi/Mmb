@@ -62,5 +62,19 @@ class Instance
     {
         self::$creators[$class] = $callback;
     }
+
+    public static function changeCacheInstance($class, $object)
+    {
+        $before = self::$instances[$class] ?? null;
+        if($object === null)
+        {
+            unset(self::$instances[$class]);
+        }
+        else
+        {
+            self::$instances[$class] = $object;
+        }
+        return $before;
+    }
     
 }

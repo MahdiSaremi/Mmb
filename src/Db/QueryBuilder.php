@@ -450,9 +450,20 @@ class QueryBuilder {
         return $this;
 
     }
-    
 
 
+    private $db_driver;
+    /**
+     * تنظیم دیتابیس مربوطه
+     *
+     * @param Driver $driver
+     * @return $this
+     */
+    public function db(Driver $driver)
+    {
+        $this->db_driver = $driver;
+        return $this;
+    }
 
     /**
      * اجرای کوئری
@@ -462,35 +473,91 @@ class QueryBuilder {
      */
     private function run($type) {
 
-        $driver = Driver::defaultStatic();
+        $driver = $this->db_driver ?: Driver::defaultStatic();
 
         $compilerClass = $driver->queryCompiler;
         $compiler = new $compilerClass($type);
 
-        $compiler->table = $this->table;
-        $compiler->where = $this->where;
-        $compiler->limit = $this->limit;
-        $compiler->offset = $this->offset;
-        $compiler->order = $this->order;
-        $compiler->groupBy = $this->groupBy;
-        $compiler->select = $this->select;
-        $compiler->insert = $this->insert;
-        $compiler->queryCol = $this->queryCol;
-        $compiler->col = $this->col;
-        $compiler->colName = $this->colName;
-
+        foreach (get_object_vars($this) as $name => $value)
+            $compiler->$name = $value;
+            
         $compiler->start($type);
 
-        return $driver->query($compiler);
+        return $driver->runQuery($compiler);
 
     }
-
+    
+    /**
+     * دیتا های مورد نظر برای انتخاب
+     *
+     * @var string[]
+     */
+    private $selects = [];
+    
     /**
      * ستون های مورد نظر برای انتخاب
      *
      * @var string[]
      */
-    private $select;
+    private $select = [];
+
+    /**
+     * افزودن مقدار انتخابی
+     *
+     * @param string $raw
+     * @param string $as
+     * @return $this
+     */
+    public function select($raw, $as = null)
+    {
+        if($as !== null)
+            $raw .= " as `$as`";
+        $this->selects[] = $raw;
+
+        return $this;
+    }
+
+    /**
+     * افزودن ستون انتخابی
+     *
+     * @param string $col
+     * @param string $as
+     * @return $this
+     */
+    public function selectCol($col, $as = null)
+    {
+        $raw = "`$col`";
+        if($as !== null)
+            $raw .= " as `$as`";
+        $this->selects[] = $raw;
+
+        return $this;
+    }
+
+    /**
+     * افزودن ستون انتخابی
+     *
+     * @param string $query
+     * @param string $as
+     * @return $this
+     */
+    public function selectSub($query, $as)
+    {
+        $this->selects[] = "($query) as `$as`";
+        
+        return $this;
+    }
+
+    /**
+     * حذف مقدار های ثبت شده انتخابی
+     *
+     * @return $this
+     */
+    public function clearSelect()
+    {
+        $this->selects = [];
+        return $this;
+    }
 
     /**
      * گرفتن کل مقدار ها
@@ -498,9 +565,11 @@ class QueryBuilder {
      * @param array|string $select
      * @return Table\Table[]
      */
-    public function all($select = ['*']) {
+    public function all($select = null) {
 
-        if(!is_array($select))
+        if($select === null)
+            $select = $this->selects ?: ['*'];
+        elseif(!is_array($select))
             $select = [ $select ];
         $this->select = $select;
 
@@ -561,9 +630,11 @@ class QueryBuilder {
      * @param array|string $select
      * @return Table\Table|false
      */
-    public function get($select = ['*']) {
+    public function get($select = null) {
 
-        if(!is_array($select))
+        if($select === null)
+            $select = $this->selects ?: ['*'];
+        elseif(!is_array($select))
             $select = [ $select ];
         $this->select = $select;
 
@@ -603,8 +674,8 @@ class QueryBuilder {
      *
      * @return boolean
      */
-    public function exists() {
-
+    public function exists()
+    {
         $this->select = [ 'COUNT(*) as `count`' ];
 
         $this->limit(1);
@@ -615,7 +686,6 @@ class QueryBuilder {
             return 0;
         
         return $res->fetch()['count'] ? true : false;
-
     }
 
     /**
@@ -623,10 +693,9 @@ class QueryBuilder {
      *
      * @return bool
      */
-    public function delete() {
-
+    public function delete()
+    {
         return $this->run('delete')->ok;
-
     }
 
     /**
@@ -647,6 +716,8 @@ class QueryBuilder {
         if(!$data)
             return false;
 
+        $output = $this->output;
+        $data = $output::onUpdateQueryStatic($data);
         $this->insert = $data;
 
         return $this->run('update')->ok;
@@ -661,16 +732,15 @@ class QueryBuilder {
      */
     public function insert(array $data = []) {
 
-        // if(!$data)
-        //     return false;
+        // Listener
+        $output = $this->output;
+        $data = $output::onCreateQuery($data);
 
         $this->insert = $data;
         $res = $this->run('insert');
 
         if(!$res->ok)
             return false;
-
-        $output = $this->output;
 
         $primary = $output::getPrimaryKey();
         if($primary && !isset($data[$primary]) && $value = $res->insertID()) {
@@ -679,6 +749,7 @@ class QueryBuilder {
 
         $object = new $output($data);
         $object->newCreated = true;
+        $object->onCreate();
         
         return $object;
 
@@ -722,6 +793,11 @@ class QueryBuilder {
         if(!$datas)
             return true;
 
+        // Listeners
+        $output = $this->output;
+        foreach($datas as $index => $data)
+            $datas[$index] = $output::onCreateQuery($data);
+
         $this->insert = $datas;
         
         return $this->run('insert_multi')->ok;
@@ -743,15 +819,22 @@ class QueryBuilder {
      * @param callable $column_initialize `function(\Mmb\Db\QueryCol $query) { }`
      * @return bool
      */
-    public function createTable($name, $column_initialize = null) {
-
+    public function createTable($name, $column_initialize = null)
+    {
         $this->table = $name;
         $this->queryCol = new QueryCol;
         if($column_initialize)
             $column_initialize($this->queryCol);
 
-        return $this->run('createTable')->ok;
+        if($this->run('createTable')->ok)
+        {
+            $output = $this->output;
+            $output::onCreateTable();
 
+            return true;
+        }
+
+        return false;
     }
 
     /**

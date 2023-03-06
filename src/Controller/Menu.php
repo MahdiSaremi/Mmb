@@ -11,6 +11,7 @@ class Menu implements Handlable
 
     /** @var MenuHandler */
     private $handler;
+    private $key;
 
     public function __construct()
     {
@@ -41,12 +42,8 @@ class Menu implements Handlable
 
     public function keys(array $keys)
     {
-        $this->handler->keys = $keys;
-    }
-
-    public function getKey()
-    {
-        return $this->handler->getKey();
+        $this->handler->setKeys($keys);
+        $this->key = $keys;
     }
 
     /**
@@ -76,6 +73,38 @@ class Menu implements Handlable
         $this->handler->other_args = $args;
 
         return $this;
+
+    }
+
+    public function getKey()
+    {
+
+        $res = [];
+        foreach($this->key as $row)
+        {
+            $keyr = [];
+
+            if($row)
+            foreach($row as $btn)
+            {
+                if($btn)
+                    $keyr[] = $this->getSingleKey($btn);
+            }
+
+            if($keyr)
+                $res[] = $keyr;
+        }
+
+        return $res;
+    }
+
+    public function getSingleKey($key)
+    {
+
+        unset($key['method']);
+        unset($key['args']);
+
+        return $key;
 
     }
 

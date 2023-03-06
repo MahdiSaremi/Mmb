@@ -2,6 +2,8 @@
 
 namespace Mmb\Controller; #auto
 
+use BadMethodCallException;
+use InvalidArgumentException;
 use Mmb\Controller\Handler\Command;
 use Mmb\Controller\StepHandler\Handlable;
 use Mmb\Controller\StepHandler\NextRun;
@@ -10,6 +12,7 @@ use Mmb\Listeners\Listeners;
 use Mmb\Tools\Staticable;
 use Mmb\Update\Message\Data\Poll;
 use Mmb\Guard\Guard;
+use Mmb\Tools\ATool;
 
 class Controller implements InvokeEvent
 {
@@ -17,6 +20,8 @@ class Controller implements InvokeEvent
 
     /**
      * اجرای تابع
+     * 
+     * در این نوع صدا زدن، دسترسی ها نیز بررسی می شوند
      *
      * @param string $method
      * @param mixed ...$args
@@ -25,6 +30,18 @@ class Controller implements InvokeEvent
     public static function invoke($method, ...$args)
     {
         return Listeners::callMethod([ static::instance(), $method ], $args);
+    }
+
+    /**
+     * تابع مورد نظر را بدون بررسی دسترسی ها و شنونده ها صدا می زند
+     *
+     * @param string $method
+     * @param mixed ...$args
+     * @return mixed
+     */
+    public static function invokeSilent($method, ...$args)
+    {
+        return Listeners::callMethod([ static::instance(), $method ], $args, true);
     }
 
     /**
@@ -136,6 +153,9 @@ class Controller implements InvokeEvent
      */
     public static function key($text, $method, ...$args)
     {
+        if(!method_exists(static::class, $method))
+            throw new BadMethodCallException("Initialize key with undefined method '$method' on '" . static::class . "', require to define: public function $method()");
+
         return [
             'text' => $text,
             'method' => [ static::class, $method ],
@@ -153,6 +173,9 @@ class Controller implements InvokeEvent
      */
     public static function keyContact($text, $method, ...$args)
     {
+        if(!method_exists(static::class, $method))
+            throw new BadMethodCallException("Initialize key with undefined method '$method' on '" . static::class . "', require to define: public function $method()");
+
         return [
             'text' => $text,
             'contact' => true,
@@ -171,6 +194,9 @@ class Controller implements InvokeEvent
      */
     public static function keyLocation($text, $method, ...$args)
     {
+        if(!method_exists(static::class, $method))
+            throw new BadMethodCallException("Initialize key with undefined method '$method' on '" . static::class . "', require to define: public function $method()");
+
         return [
             'text' => $text,
             'location' => true,
@@ -189,6 +215,9 @@ class Controller implements InvokeEvent
      */
     public static function keyType($text, $require, $method, ...$args)
     {
+        if(!method_exists(static::class, $method))
+            throw new BadMethodCallException("Initialize key with undefined method '$method' on '" . static::class . "', require to define: public function $method()");
+
         return [
             'text' => $text,
             $require => true,
@@ -207,6 +236,9 @@ class Controller implements InvokeEvent
      */
     public static function keyPoll($text, $method, ...$args)
     {
+        if(!method_exists(static::class, $method))
+            throw new BadMethodCallException("Initialize key with undefined method '$method' on '" . static::class . "', require to define: public function $method()");
+
         return [
             'text' => $text,
             'poll' => [ 'type' => Poll::TYPE_REGULAR ],
@@ -225,12 +257,53 @@ class Controller implements InvokeEvent
      */
     public static function keyPollQuiz($text, $method, ...$args)
     {
+        if(!method_exists(static::class, $method))
+            throw new BadMethodCallException("Initialize key with undefined method '$method' on '" . static::class . "', require to define: public function $method()");
+
         return [
             'text' => $text,
             'poll' => [ 'type' => Poll::TYPE_QUIZ ],
             'method' => [ static::class, $method ],
             'args' => $args,
         ];
+    }
+
+    /**
+     * اجرای توابع استاتیک
+     * 
+     * @param string $name
+     * @param array $arguments
+     * @throws InvalidArgumentException
+     * @throws BadMethodCallException
+     * @return mixed
+     */
+    public static function __callStatic($name, $arguments)
+    {
+        if(startsWith($name, 'key', true))
+        {
+            $name = substr($name, 3);
+
+            if (@!$arguments[0])
+                throw new InvalidArgumentException("Key method '$name' required text parameter, like 'Home::keyHome(\"Home\")'");
+            $text = $arguments[0];
+            ATool::remove($arguments, 0);
+
+            return static::key($text, $name, ...$arguments);
+        }
+
+        if(startsWith($name, 'method', true))
+        {
+            $name = substr($name, 6);
+            return static::method($name);
+        }
+
+        if(startsWith($name, 'invoke', true))
+        {
+            $name = substr($name, 6);
+            return static::invoke($name);
+        }
+
+        throw new BadMethodCallException("Call to undefined static method '$name' on '" . static::class . "'");
     }
 
     /**

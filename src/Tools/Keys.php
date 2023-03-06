@@ -104,10 +104,10 @@ class Keys
      *
      * @param array $key دکمه ها
      * @param bool|null $inline اینلاین بودن
-     * @param boolean $resize ریسایز خودکار
-     * @param boolean $encode انکد کردن نتیجه
-     * @param boolean $once کیبورد یکباره
-     * @param boolean $selective سلکتیو
+     * @param bool $resize ریسایز خودکار
+     * @param bool $encode انکد کردن نتیجه
+     * @param bool $once کیبورد یکباره
+     * @param bool $selective سلکتیو
      * @return string|array
      */
     public static function makeKey($key, $inline=null, $resize=true, $encode=true, $once=false, $selective=false)

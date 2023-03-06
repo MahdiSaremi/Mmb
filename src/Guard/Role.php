@@ -2,6 +2,8 @@
 
 namespace Mmb\Guard; #auto
 
+use Mmb\Tools\ATool;
+
 class Role
 {
 
@@ -40,6 +42,8 @@ class Role
         if($role instanceof Role)
         {
             $result = $role->name;
+            if($role->advNames)
+                $result .= '|' . join('|', $role->advNames);
 
             if($role->setValues)
             {
@@ -104,9 +108,7 @@ class Role
      */
     public static function issetConstant($id)
     {
-
         return isset(self::$constants[$id]);
-
     }
 
     /**
@@ -117,34 +119,82 @@ class Role
      */
     public static function getConstantOf($id)
     {
+        $role = self::$constants[$id] ?? false;
+        if($role)
+            $role = explode('|', $role)[0];
 
-        return self::$constants[$id] ?? false;
-
+        return $role;
     }
 
     /**
      * گرفتن کاربری که این نقش ثابت را دارد
+     * 
+     * `Role::getConstantFor('developer')`
+     * 
+     * `Role::getConstantFor('developer|manager|test') // Role=developer AdvRoles=manager,test`
      * 
      * @param string $role
      * @return int|bool
      */
     public static function getConstantFor($role)
     {
+        $exp = explode('|', $role);
+        $expc = count($exp);
+        // Search for role
+        if($expc == 1)
+        {
+            foreach(self::$constants as $id => $rl)
+            {
+                if($role == $rl)
+                    return $id;
+                elseif(($pos = strpos($rl, '|')) && substr($rl, 0, $pos) == $role)
+                    return $id;
+            }
+        }
+        // Search for role & 
+        else
+        {
+            foreach(self::$constants as $id => $rl)
+            {
+                $exp2 = explode('|', $rl);
+                if($expc <= count($exp2) && $exp2[0] == $exp[0])
+                {
+                    $ok = true;
+                    for($i = 1; $i < $expc; $i++)
+                    {
+                        if(!array_search($exp[$i], $exp2))
+                        {
+                            $ok = false;
+                            break;
+                        }
+                    }
+                    if($ok)
+                        return $id;
+                }
+            }
+        }
 
-        return array_search($role, self::$constants);
-
+        return false;
     }
 
 
+
     public $name;
+    public $advNames = [];
     private $setValues = [];
     public function __construct($name)
     {
+        $advNames = explode('|', $name);
+        $name = $advNames[0];
+        ATool::remove($advNames, 0);
+
         if(!isset(self::$roles[$name]))
         {
             $name = static::$default;
+            $advNames = [];
         }
         $this->name = $name;
+        $this->advNames = $advNames;
     }
 
     /**
@@ -160,7 +210,7 @@ class Role
     }
 
     /**
-     * تنظیم مقدار ها
+     * تنظیم کل مقدار ها
      *
      * @param array $values
      * @return void
@@ -178,7 +228,75 @@ class Role
      */
     public function get($attribute)
     {
-        return $this->setValues[$attribute] ?? self::$roles[$this->name][$attribute] ?? false;
+        if(($val = $this->setValues[$attribute] ?? null) !== null)
+            return $val;
+
+        foreach($this->advNames as $name)
+        {
+            if(($val = self::$roles[$name][$attribute] ?? null) !== null)
+                return $val;
+        }
+    
+        if(($val = self::$roles[$this->name][$attribute] ?? null) !== null)
+            return $val;
+            
+        return false;
+    }
+
+    /**
+     * افزودن نقش
+     *
+     * @param string $name
+     * @return boolean
+     */
+    public function addRole($name)
+    {
+        if($name != $this->name && !in_array($name, $this->advNames))
+        {  
+            $this->advNames[] = $name;
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * حذف نقش
+     *
+     * @param string $name
+     * @return boolean
+     */
+    public function removeRole($name)
+    {
+        if(in_array($name, $this->advNames) && $name != $this->name)
+        {  
+            ATool::remove($this->advNames, array_search($name, $this->advNames));
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * بررسی می کند نقشی را دارد یا خیر
+     *
+     * @param string $name
+     * @return boolean
+     */
+    public function hasRole($name)
+    {
+        return $name == $this->name || in_array($name, $this->advNames);
+    }
+
+    /**
+     * بررسی می کند نقش اصلی آن این مقدار است یا خیر
+     *
+     * @param string $name
+     * @return boolean
+     */
+    public function isRole($name)
+    {
+        return $name == $this->name;
     }
 
     /**

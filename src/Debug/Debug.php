@@ -22,7 +22,7 @@ class Debug
     /**
      * بررسی می کند حالت دیباگ روشن است یا خیر
      *
-     * @return boolean
+     * @return bool
      */
     public static function isOn() {
         return self::$on;

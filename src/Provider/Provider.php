@@ -3,12 +3,15 @@
 namespace Mmb\Provider; #auto
 
 use Mmb\Assets\Assets;
+use Mmb\Core\ArgsParser;
+use Mmb\Core\ErrorHandler;
 use Mmb\Kernel\Instance;
 use Mmb\Kernel\Kernel;
 use Mmb\Listeners\HasListeners;
 use Mmb\Storage\Storage;
 use Mmb\Tools\SaveInstances;
 use Mmb\Guard\Guard;
+use Mmb\Kernel\Env;
 use Mmb\Lang\Lang;
 
 class Provider
@@ -81,6 +84,17 @@ class Provider
     }
 
     /**
+     * لود کردن فایل انو
+     *
+     * @param string $file
+     * @return void
+     */
+    public function loadEnvFrom($file)
+    {
+        Env::loadFrom($file);
+    }
+
+    /**
      * تنظیم مسیر استوریج
      * 
      * @param string $path
@@ -103,6 +117,40 @@ class Provider
     }
 
     /**
+     * کلید دلخواه تنظیم کنید
+     * 
+     * `$this->onArg('custom_text', function(Request $request, $value, $key) { return ['text' => $value]; });`
+     * 
+     * **Use:** `mmb()->sendMsg([ 'custom_text' => "Text" ]);`
+     * 
+     * @param string|array $arg
+     * @param string|array|\Closure $replacement
+     * @return void
+     */
+    public function onArg($arg, $replacement)
+    {
+
+        ArgsParser::defaultStatic()->onArg($arg, $replacement);
+
+    }
+
+    /**
+     * افزودن کالبک برای ارور کلاس مشخص
+     * 
+     * `$this->onError(MyException::class, function(MyException $exception) { replyText("خطای 'دلخواه' رخ داد"); });`
+     * 
+     * @param string $class
+     * @param \Closure $callback
+     * @return void
+     */
+    public function onError($class, $callback)
+    {
+
+        ErrorHandler::defaultStatic()->catchOf($class, $callback);
+
+    }
+
+    /**
      * تعریف می کند زمانی که این نام صدا شود، مقدار مورد نظر برگردانده شود
      * 
      * @param string $name
@@ -110,6 +158,18 @@ class Provider
      * @return void
      */
     public function onInstance($name, $callback)
+    {
+        Instance::setOn($name, $callback);
+    }
+
+    /**
+     * تعریف می کند زمانی که این نام صدا شود، مقدار مورد نظر برگردانده شود
+     * 
+     * @param string $name
+     * @param \Closure $callback
+     * @return void
+     */
+    public function onApp($name, $callback)
     {
         Instance::setOn($name, $callback);
     }

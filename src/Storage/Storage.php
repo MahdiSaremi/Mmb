@@ -48,7 +48,7 @@ class Storage
      */
     public static function getFileName()
     {
-        return strtolower(static::class);
+        return str_replace("\\", ".", strtolower(static::class));
     }
 
     public static function jsonFlag() 
@@ -140,9 +140,9 @@ class Storage
      * با این تابع می توانید دیتا های مورد نظر را بگیرید و ویرایش کنید
      *
      * * Callback: function(&$data)
-     * * `Globals::edit(function(&$data) { $data['test'] = strtolower($data['test']); });`
+     * * `Globals::editBase(function(&$data) { $data['test'] = strtolower($data['test']); });`
      * 
-     * @param Callable|Closure|string|array $callback
+     * @param callable|Closure|string|array $callback
      * @return void
      */
     public static function editBase($callback)

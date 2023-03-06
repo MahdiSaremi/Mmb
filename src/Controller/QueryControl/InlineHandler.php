@@ -17,6 +17,7 @@ class InlineHandler extends Handler
     public function __construct($controller)
     {
         $this->controller = $controller;
+        $this->break();
     }
 
     private $call;

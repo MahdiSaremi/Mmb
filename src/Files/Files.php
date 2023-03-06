@@ -1,6 +1,6 @@
 <?php
-
-namespace Mmb\Files; #auto
+#auto-name
+namespace Mmb\Files;
 
 use Closure;
 
@@ -13,7 +13,7 @@ class Files
      * این تابع درخواست ها را در صف قرار می دهد تا ویرایشات همزمان کنترل شوند
      *
      * @param string $file
-     * @param Closure|Callable|string|array $callback `function($content) { return $newContent; }`
+     * @param Closure|callable|string|array $callback `function($content) { return $newContent; }`
      * @return bool
      */
     public static function editText($file, $callback) {
@@ -46,7 +46,7 @@ class Files
      * این تابع درخواست ها را در صف قرار می دهد تا ویرایشات همزمان کنترل شوند
      *
      * @param string $file
-     * @param Closure|Callable|string|array $callback `function($stream)`
+     * @param Closure|callable|string|array $callback `function($stream)`
      * @return bool
      */
     public static function editStream($file, $callback) {

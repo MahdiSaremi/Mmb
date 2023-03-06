@@ -2,6 +2,9 @@
 
 namespace Mmb\Lang; #auto
 
+use Mmb\Exceptions\TypeException;
+use Mmb\Tools\Advanced;
+use Mmb\Tools\AdvancedValue;
 use Mmb\Tools\ATool;
 
 class Lang
@@ -108,15 +111,15 @@ class Lang
         {
             if(isset($data[$name]))
             {
-                return self::getText($data[$name], $args);
+                return self::getText($data[$name], $lang, $args);
             }
             if($value = ATool::selectorGet($data, $name))
             {
-                return $value;
+                return self::getText($value, $lang, $args);
             }
         }
 
-        return false;
+        throw new LangValueNotFound("Language value $lang.$name is not defined");
 
     }
 
@@ -127,7 +130,7 @@ class Lang
      * @param array $args
      * @return string
      */
-    private static function getText($text, $args)
+    private static function getText($text, $lang, $args)
     {
         
         if($text instanceof \Closure)
@@ -135,14 +138,26 @@ class Lang
             return $text($args);
         }
 
+        if($text instanceof AdvancedValue)
+        {
+            $text = Advanced::getRealValue($text);
+        }
+        if(!is_string($text))
+        {
+            throw new TypeException("Lang value expected string value, given '" . typeOf($text) . "'");
+        }
+
         // --- Functions ---
         // > @{langs.%lang%}?{Unknown %lang%}
         // > lang("langs.$args[lang]") ?: "Unknown $args[lang]"
-        preg_replace_callback('/@\{(.*?)\}(|\?\{(.*?)\})/', 
-            function ($res) use (&$args) {
-                $name = self::getText($res[1], $args);
-                $default = self::getText(@$res[3], $args);
-                return lang($name, []/*$args*/) ?: $default;
+        $text = preg_replace_callback('/@\{(.*?)\}(|\?\{(.*?)\})/', 
+            function ($res) use (&$args, $lang) {
+                $name = self::getText($res[1], $lang, $args);
+                if(@$res[3])
+                    $default = self::getText($res[3], $lang, $args);
+                else
+                    $default = null;
+                return tryLangFrom($name, $lang, []/*$args*/) ?: $default;
             }
         , $text);
 

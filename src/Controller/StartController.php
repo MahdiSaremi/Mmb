@@ -4,7 +4,7 @@ namespace Mmb\Controller; #auto
 
 use Mmb\Controller\Controller;
 use Mmb\Controller\StepHandler\Handlable;
-use Mmb\Handlers\StartHandler;
+use Mmb\Core\StartHandler;
 
 abstract class StartController extends Controller
 {

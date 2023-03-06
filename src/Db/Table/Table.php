@@ -94,6 +94,17 @@ class Table
 
     }
 
+    public static final function getTableName()
+    {
+        return static::$tablesPrefix . static::getTable();
+    }
+
+    public static $tablesPrefix = '';
+    public static function setPrefix($prefix)
+    {
+        static::$tablesPrefix = $prefix;
+    }
+
     /**
      * این تابع زمان ایجاد جدول صدا زده می شود تا اطلاعات آن را پر کند
      *
@@ -110,7 +121,7 @@ class Table
      */
     public static function createOrEditTable() {
 
-       return (new QueryBuilder)->createOrEditTable(static::getTable(), [ static::class, 'generate' ]);
+       return (new QueryBuilder)->createOrEditTable(static::getTableName(), [ static::class, 'generate' ]);
 
     }
 
@@ -170,7 +181,7 @@ class Table
     public static function query() {
 
         return (new \Mmb\Db\QueryBuilder)
-                -> table( static::getTable() )
+                -> table( static::getTableName() )
                 -> output( static::class );
 
     }
@@ -183,7 +194,7 @@ class Table
     public static function queryWith($class) {
 
         return (new $class)
-                -> table( static::getTable() )
+                -> table( static::getTableName() )
                 -> output( static::class );
 
     }
@@ -318,7 +329,7 @@ class Table
      * @param string $class نام کلاس مورد نظر
      * @param mixed $column نام ستونی در کلاس مورد نظر که شامل آدرس این کلاس است
      * @param mixed $primary_column نام ستونی در این کلاس که آدرس را با آن تطابق میدهد
-     * @return OneToMany|QueryBuilder
+     * @return OneToOne|QueryBuilder
      */
     public function hasOne($class, $column = null, $primary_column = null)
     {
@@ -334,7 +345,7 @@ class Table
             $column = end($e) . "_" . $primary_column;
         }
         
-        return $class::queryWith(OneToMany::class)
+        return $class::queryWith(OneToOne::class)
                 ->where($column, $this->$primary_column);
 
     }
@@ -448,6 +459,17 @@ class Table
     }
 
     /**
+     * گرفتن تعداد
+     *
+     * @return static[]
+     */
+    public static function all() {
+
+        return static::query()->all();
+
+    }
+
+    /**
      * حذف این ردیف
      *
      * @return bool
@@ -457,6 +479,48 @@ class Table
         return static::queryThis()
                 ->delete();
 
+    }
+
+
+
+    /**
+     * زمانی که یک ردیف جدید قرار است ایجاد شود صدا زده می شود
+     *
+     * @param array $data
+     * @return array
+     */
+    public static function onCreateQuery(array $data)
+    {
+        return $data;
+    }
+
+    /**
+     * زمانی که این ردیف ایجاد می شود صدا زده می شود
+     *
+     * @return void
+     */
+    public function onCreate()
+    {
+    }
+
+    /**
+     * زمانی که درخواست آپدیت ایجاد می شود صدا زده می شود
+     *
+     * @param array $data
+     * @return array
+     */
+    public static function onUpdateQueryStatic(array $data)
+    {
+        return $data;
+    }
+
+    /**
+     * زمانی که تیبل ایجاد می شود صدا زده می شود
+     *
+     * @return void
+     */
+    public static function onCreateTable()
+    {
     }
 
 }

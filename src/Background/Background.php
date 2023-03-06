@@ -4,9 +4,12 @@
 
 namespace Mmb\Background; #auto
 
+use Mmb\Exceptions\MmbException;
+use Mmb\Listeners\Listeners;
 use Opis\Closure\SerializableClosure;
 
-class Background {
+class Background
+{
 
     /**
      * اتصال سرور و مرورگر را می بندد
@@ -15,7 +18,8 @@ class Background {
      *
      * @return void
      */
-    public static function closeConnection() {
+    public static function closeConnection()
+    {
 
         header("HTTP/1.0 200 OK", true, 200);
         header("Connection: close");
@@ -40,20 +44,36 @@ class Background {
      * @param string $url
      * @return void
      */
-    public static function openAndBreak($url) {
+    public static function openAndBreak($url)
+    {
 
         fclose(fopen($url, "r"));
 
     }
 
     /**
+     * لینک هندل کننده بک گراند
+     * 
+     * @var string
+     */
+    public static $targetUrl = '';
+
+    /**
      * گرفتن لینک فعلی
      *
      * @return string
      */
-    public static function getCurrentUrl() {
-        return (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http")
-                . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+    public static function getTargetUrl()
+    {
+        if (!static::$targetUrl)
+            throw new MmbException("Background require a handler file that define at Background::\$targetUrl");
+
+        if (!startsWith(static::$targetUrl, 'http'))
+            throw new MmbException("Background handler url is not valid: '" . static::$targetUrl . "'");
+
+        return static::$targetUrl;
+        // return (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http")
+        //         . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
     }
 
     
@@ -65,7 +85,8 @@ class Background {
      * @param string $command
      * @return void
      */
-    public static function exec($command) {
+    public static function exec($command)
+    {
         
         exec("$command >/dev/null 2>&1 &");
         
@@ -79,7 +100,8 @@ class Background {
      * @param string $path
      * @return void
      */
-    public static function execPhp($path) {
+    public static function execPhp($path)
+    {
 
         static::exec("php \"" . addslashes($path) . "\"");
 
@@ -91,15 +113,19 @@ class Background {
      * تابعی که وارد می کنید را دوباره به فایل ربات ارسال می کند تا در پس زمینه اجرا شود.
      * با این کار مقدار های یوز شده جابجا می شود، اما دیگر نه موقعیت و نه هیچکدام از متغیر ها و کلاس ها دیگر وجود ندارد
      *
-     * @param Callable|\Closure $callback
+     * @param array|string $method
      * @return void
      */
-    public static function run($callback) {
+    public static function run($method, ...$args)
+    {
 
         $id = md5(time() . rand(1, 10000));
-        BackgroundStorage::set('closures.' . $id, serializeClosure($callback));
-        $url = static::getCurrentUrl() . "?" . http_build_query([
-            'atom' => 'background',
+        BackgroundStorage::set($id, [
+            'type' => 'closure',
+            'closure' => $method,
+            'args' => serialize($args),
+        ]);
+        $url = static::getTargetUrl() . "?" . http_build_query([
             'background' => 'closure',
             'id' => $id,
         ]);
@@ -113,7 +139,8 @@ class Background {
      * @param Task|string $class
      * @return void
      */
-    public static function runTask($class) {
+    public static function runTask($class)
+    {
 
         if(is_string($class) && method_exists($class, 'instance'))
             $class = $class::instance();
@@ -123,13 +150,38 @@ class Background {
 
         $id = md5(time() . rand(1, 10000));
         BackgroundStorage::set('tasks.' . $id, serialize($class));
-        $url = static::getCurrentUrl() . "?" . http_build_query([
+        $url = static::getTargetUrl() . "?" . http_build_query([
             'atom' => 'background',
             'background' => 'task',
             'id' => $id,
         ]);
         self::openAndBreak($url);
 
+    }
+
+    /**
+     * هندل کردن بک گراند
+     * 
+     * @return void
+     */
+    public static function handle()
+    {
+        $background = $_GET['background'] ?? false;
+        $id = $_GET['id'] ?? false;
+        if (!$background || !$id || !BackgroundStorage::selectorValidName($id))
+            return;
+
+        if (!($info = BackgroundStorage::get($id)))
+            return;
+
+        BackgroundStorage::unset($id);
+
+        switch($info['type'])
+        {
+            case 'closure':
+                Listeners::invokeMethod2($info['closure'], @unserialize($info['args']) ?: []);
+            break;
+        }
     }
 
 

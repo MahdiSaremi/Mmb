@@ -5,9 +5,11 @@
 use Mmb\Assets\Assets;
 use Mmb\Debug\Debug;
 use Mmb\Exceptions\MmbException;
+use Mmb\Kernel\Env;
 use Mmb\Kernel\Instance;
 use Mmb\Kernel\Kernel;
 use Mmb\Lang\Lang;
+use Mmb\Lang\LangValueNotFound;
 use Mmb\Mmb;
 use Mmb\Tools\ATool;
 use Mmb\Tools\InlineResult;
@@ -30,10 +32,10 @@ Kernel::$runTime = microtime(true);
  *
  * @param array $key دکمه ها
  * @param bool|null $inline اینلاین بودن
- * @param boolean $resize ریسایز خودکار
- * @param boolean $encode انکد کردن نتیجه
- * @param boolean $once کیبورد یکباره
- * @param boolean $selective سلکتیو
+ * @param bool $resize ریسایز خودکار
+ * @param bool $encode انکد کردن نتیجه
+ * @param bool $once کیبورد یکباره
+ * @param bool $selective سلکتیو
  * @return string|array
  */
 function mkey($key, $inline=null, $resize=true, $encode=true, $once=false, $selective=false)
@@ -93,23 +95,23 @@ function mmb_error_throw($des, $must_throw_error = false)
  * @param Closure $closure
  * @return string
  */
-function serializeClosure(Closure $closure)
-{
-    // require_once __DIR__ . '/Opis.php';
-    return serialize(new \Opis\Closure\SerializableClosure($closure));
-}
+// function serializeClosure(Closure $closure)
+// {
+//     // require_once __DIR__ . '/Opis.php';
+//     return serialize(new \Opis\Closure\SerializableClosure($closure));
+// }
 
-/**
- * انسریالایز کردن تابع
- *
- * @param string $closure
- * @return \Opis\Closure\SerializableClosure
- */
-function unserializeClosure(string $closure)
-{
-    // require_once __DIR__ . '/Opis.php';
-    return unserialize($closure);
-}
+// /**
+//  * انسریالایز کردن تابع
+//  *
+//  * @param string $closure
+//  * @return \Opis\Closure\SerializableClosure
+//  */
+// function unserializeClosure(string $closure)
+// {
+//     // require_once __DIR__ . '/Opis.php';
+//     return unserialize($closure);
+// }
 
 /**
  * با صرف نظر کردن از بزرگی و کوچکی حروف، دو رشته را با هم مقایسه می کند
@@ -210,7 +212,7 @@ function markdown2Encode($text)
  *
  * @param string $string
  * @param string $needle
- * @param boolean $ignoreCase
+ * @param bool $ignoreCase
  * @return bool
  */
 function startsWith($string, $needle, $ignoreCase = false)
@@ -227,7 +229,7 @@ function startsWith($string, $needle, $ignoreCase = false)
  *
  * @param string $string
  * @param string $needle
- * @param boolean $ignoreCase
+ * @param bool $ignoreCase
  * @return bool
  */
 function endsWith($string, $needle, $ignoreCase = false)
@@ -405,8 +407,8 @@ function trim2(string $string, string $charlist = " \t\n\r\0\x0B")
  * * 60 => 1 دقیقه
  * * 65 => 1 دقیقه و 5 ثانیه
  *
- * @param integer $time_relative
- * @param integer $roundBase
+ * @param int $time_relative
+ * @param int $roundBase
  * @return string
  */
 function timeFa($time_relative, $roundBase = -1)
@@ -508,7 +510,7 @@ function maybeArray(array $array, ...$ignore)
  * * `این تابع، تابع کمکی است! تابع اصلی: ATool::parse`
  *
  * @param array $array
- * @param boolean $assoc
+ * @param bool $assoc
  * @return array
  */
 function aParse(array $array, $assoc = false)
@@ -549,7 +551,7 @@ function aEach($array, $callback = null)
  * 
  * * `این تابع، تابع کمکی است! کلاس اصلی: AIter`
  *
- * @param array|Generator|Callable|Closure $value
+ * @param array|Generator|callable|Closure $value
  * @return \Mmb\Tools\ATool\AIter
  */
 function aIter($value)
@@ -601,7 +603,7 @@ function asset($path)
  * 
  * `\Debug::on();`
  *
- * @return boolean
+ * @return bool
  */
 function is_debug_mode()
 {
@@ -868,6 +870,75 @@ function lang($name, $args = [], ...$_args)
 {
     return Lang::text($name, $args, ...$_args);
 }
+
+/**
+ * گرفتن متن با زبان پیشفرض - اگر مقدار وجود نداشت نال برمیگرداند
+ * 
+ * @param string $name
+ * @param array|mixed $args
+ * @param mixed ...$_args
+ * @return string|null
+ */
+function tryLang($name, $args = [], ...$_args)
+{
+    try
+    {
+        return Lang::text($name, $args, ...$_args);
+    }
+    catch(LangValueNotFound $e)
+    {
+        return null;
+    }
+}
+
+/**
+ * گرفتن متن با زبان پیشفرض
+ * 
+ * @param string $name
+ * @param string $lang
+ * @param array|mixed $args
+ * @param mixed ...$_args
+ * @return string
+ */
+function langFrom($name, $lang, $args = [], ...$_args)
+{
+    return Lang::textFromLang($name, $lang, $args, ...$_args);
+}
+
+/**
+ * گرفتن متن با زبان پیشفرض - اگر مقدار وجود نداشت نال برمیگرداند
+ * 
+ * @param string $name
+ * @param string $lang
+ * @param array|mixed $args
+ * @param mixed ...$_args
+ * @return string|null
+ */
+function tryLangFrom($name, $lang, $args = [], ...$_args)
+{
+    try
+    {
+        return Lang::textFromLang($name, $lang, $args, ...$_args);
+    }
+    catch(LangValueNotFound $e)
+    {
+        return null;
+    }
+}
+
+
+/**
+ * گرفتن مقدار انو
+ *
+ * @param string $name
+ * @param mixed $default
+ * @return mixed
+ */
+function env($name, $default = null)
+{
+    return Env::get($name, $default);
+}
+
 
 
 /**

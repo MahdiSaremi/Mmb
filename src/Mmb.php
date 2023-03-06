@@ -87,7 +87,7 @@ class Mmb extends MmbBase implements \Serializable
         $method = str_replace(["-", "_", " ", "\n", "\t", "\r"], '', $method);
 
         // Request
-        $request = Handlers\Request::defaultNew($this, $this->_token, $method, $args);
+        $request = Core\Request::defaultNew($this, $this->_token, $method, $args);
         return $request->request();
         
     }
@@ -110,7 +110,7 @@ class Mmb extends MmbBase implements \Serializable
         // }
 
         // Request
-        $request = Handlers\Request::defaultNew($this, $this->_token, $method, $args);
+        $request = Core\Request::defaultNew($this, $this->_token, $method, $args);
         $request->parseArgs();
 
         // Responce

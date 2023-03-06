@@ -55,33 +55,7 @@ class MenuHandler extends StepHandler
 
     public function eachKeys()
     {
-        
-        // foreach($this->keys as $y => $row)
-        // {
 
-        //     if(is_null($row))
-        //         continue;
-            
-        //     if(!is_array($row))
-        //         throw new TypeException("Invalid key at [$y] value: " . json_encode($row));
-
-
-        //     foreach($row as $x => $key)
-        //     {
-                    
-        //         if(is_null($key))
-        //             continue;
-                
-        //         if(!is_array($key))
-        //             throw new TypeException("Invalid key at [$y][$x] value: " . json_encode($key));
-
-
-        //         yield $key;
-
-        //     }
-
-        // }
-        
         foreach($this->eachKeysRow() as $y => $row)
         {
             foreach($this->eachKeysCol($row, $y) as $key)
@@ -90,6 +64,50 @@ class MenuHandler extends StepHandler
             }
         }
 
+    }
+
+    public function setKeys($keys)
+    {
+
+        $res = [];
+
+        foreach($keys as $y => $row)
+        {
+
+            if(is_null($row))
+                continue;
+            
+            if(!is_array($row))
+                throw new TypeException("Invalid key at [$y] value: " . json_encode($row));
+
+            foreach($row as $x => $key)
+            {
+
+                if(is_null($key))
+                    continue;
+                
+                if(!is_array($key))
+                    throw new TypeException("Invalid key at [$y][$x] value: " . json_encode($key));
+                    
+                if(!isset($key['text']))
+                    throw new TypeException("Invalid key text at [$y][$x] value: " . json_encode($key));
+
+                $text = '.' . $key['text'];
+                $data = [@$key['method'], @$key['args']];
+                if (isset($key['contact']))
+                    $text = 'contact';
+                elseif (isset($key['location']))
+                    $text = 'location';
+                elseif (isset($key['poll']))
+                    $text = 'poll';
+
+                $res[$text] = $data;
+
+            }
+        }
+
+        $this->keys = $res;
+        
     }
 
     public function findSelectedKey(Upd $upd)
@@ -103,27 +121,31 @@ class MenuHandler extends StepHandler
 
             $check = $contact ? 'contact' : (
                 $location ? 'location' : (
-                    $poll ? 'poll' : 'text'
+                    $poll ? 'poll' : '.' . $text
                 )
             );
-            $value = $check == 'text' ? $text : true;
+            // $value = $check == 'text' ? $text : true;
 
             // Find selected key
-            foreach($this->eachKeys() as $key)
+            if(isset($this->keys[$check]))
             {
-
-                if(@$key[$check] == $value)
-                {
-
-                    // Skip poll for other type
-                    // if ($check == 'poll' && @$key['poll']['type'] && $key['poll']['type'] != $poll->type)
-                    //     continue;
-
-                    return $key;
-
-                }
-
+                return $this->keys[$check];
             }
+            // foreach($this->eachKeys() as $key)
+            // {
+
+            //     if(@$key[$check] == $value)
+            //     {
+
+            //         // Skip poll for other type
+            //         // if ($check == 'poll' && @$key['poll']['type'] && $key['poll']['type'] != $poll->type)
+            //         //     continue;
+
+            //         return $key;
+
+            //     }
+
+            // }
 
         }
 
@@ -134,8 +156,8 @@ class MenuHandler extends StepHandler
     public function runKeyEvent($key)
     {
 
-        $method = @$key['method'];
-        $args = @$key['args'] ?: [];
+        $method = @$key[0];
+        $args = @$key[1] ?: [];
 
         return Listeners::invokeMethod2($method, $args);
 
@@ -149,37 +171,6 @@ class MenuHandler extends StepHandler
             return Listeners::invokeMethod2($this->other_method, $this->other_args);
 
         }
-    }
-
-    public function getKey()
-    {
-
-        $res = [];
-        foreach($this->eachKeysRow() as $y => $row)
-        {
-            $keyr = [];
-
-            foreach($this->eachKeysCol($row, $y) as $key)
-            {
-                if(@$key['text'])
-                    $keyr[] = $this->getSingleKey($key);
-            }
-
-            if($keyr)
-                $res[] = $keyr;
-        }
-
-        return $res;
-    }
-
-    public function getSingleKey($key)
-    {
-
-        unset($key['method']);
-        unset($key['args']);
-
-        return $key;
-
     }
 
 
