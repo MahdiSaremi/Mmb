@@ -25,5 +25,6 @@
         "ext-json": "*",
         "php": "^7.3|^8.0"
     },
-    "minimum-stability": "stable"
+    "minimum-stability": "stable",
+    "prefer-stable": true
 }
