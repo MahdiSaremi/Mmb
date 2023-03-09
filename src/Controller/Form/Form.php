@@ -52,7 +52,7 @@ abstract class Form implements Handlable
         }
         catch(FilterError $error)
         {
-            return $this->error($error->getMessage());
+            return $this->onError($error->getMessage());
         }
         catch(FindingInputFinished $finished)
         {
@@ -82,7 +82,7 @@ abstract class Form implements Handlable
     public function _finish()
     {
         $this->endForm();
-        return $this->finish();
+        return $this->onFinish();
     }
 
     /**
@@ -107,6 +107,15 @@ abstract class Form implements Handlable
     {
         return FormStarter::key($text, 'start', static::class);
     }
+
+    /**
+     * زمان مقداردهی فرم صدا زده می شود
+     * 
+     * در این تابع باید اینپوت ها را تعریف کنید
+     * 
+     * @return void
+     */
+    public abstract function form();
 
     /**
      * تابعی که زمان شروع فرم صدا زده می شود
@@ -144,18 +153,35 @@ abstract class Form implements Handlable
      * تابعی که زمان لغو فرم صدا زده می شود
      * @return Handlable|null
      */
-    public function cancelForm()
-    {
-    }
+    public abstract function onCancel();
 
     /**
      * تابعی که زمان خطای اینپوت ها صدا زده می شود
      * @param string $error
      * @return Handlable|null
      */
-    public function error($error)
+    public function onError($error)
     {
         replyText($error);
+    }
+
+    /**
+     * تابعی که زمانی که یک اینپوت را با متد پیشفرض درخواست می کنید، صدا زده می شود
+     * @param string|array $text
+     * @return Handlable|null
+     */
+    public function onRequest($text)
+    {
+        if(is_array($text))
+        {
+            replyText(['key' => $this->key] + $text);
+        }
+        else
+        {
+            replyText($text, [
+                'key' => $this->key,
+            ]);
+        }
     }
 
     /**
@@ -163,10 +189,10 @@ abstract class Form implements Handlable
      * @throws FindingInputFinished 
      * @return never
      */
-    public function cancel()
+    public final function cancel()
     {
         $this->canceled = true;
-        throw new FindingInputFinished($this->cancelForm());
+        throw new FindingInputFinished($this->onCancel());
     }
 
     /**
@@ -184,22 +210,13 @@ abstract class Form implements Handlable
     }
 
     /**
-     * زمان مقداردهی فرم صدا زده می شود
-     * 
-     * در این تابع باید اینپوت ها را تعریف کنید
-     * 
-     * @return void
-     */
-    public abstract function form();
-
-    /**
      * زمان پایان فرم صدا زده می شود
      * 
      * می توانید با محتویات وارد شده فرم عملیات خود را انجام دهید
      * 
      * @return Handlable|null
      */
-    public abstract function finish();
+    public abstract function onFinish();
 
     /**
      * گرفتن آپشن ها
@@ -285,7 +302,7 @@ abstract class Form implements Handlable
      */
     public function required($name)
     {
-        $input = (new FormInput($name))->required();
+        $input = (new FormInput($this, $name))->required();
         $this->newInput($input);
     }
 
@@ -299,7 +316,7 @@ abstract class Form implements Handlable
      */
     public function optional($name)
     {
-        $input = (new FormInput($name))->optional();
+        $input = (new FormInput($this, $name))->optional();
         $this->newInput($input);
     }
 

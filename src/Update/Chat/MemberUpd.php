@@ -4,8 +4,9 @@
 
 namespace Mmb\Update\Chat; #auto
 
+use Mmb\Mmb;
 use Mmb\MmbBase;
-use Mmb\Update\User\User;
+use Mmb\Update\User\UserInfo;
 
 class MemberUpd extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\Update\Interfaces\IUserID
 {
@@ -32,7 +33,7 @@ class MemberUpd extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\
     /**
      * کاربر
      *
-     * @var User
+     * @var UserInfo
      */
     public $from;
     /**
@@ -87,7 +88,7 @@ class MemberUpd extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\
 
         $this->_base = $base;
         $this->chat = new Chat($a['chat'], $base);
-        $this->from = new User($a['from'], $base);
+        $this->from = new UserInfo($a['from'], $base);
         $this->date = $a['date'];
         $this->old = new Member($a['old_chat_member'], $base);
         $this->new = new Member($a['new_chat_member'], $base);

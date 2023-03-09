@@ -5,6 +5,7 @@
 use Mmb\Assets\Assets;
 use Mmb\Debug\Debug;
 use Mmb\Exceptions\MmbException;
+use Mmb\Guard\Guard;
 use Mmb\Kernel\Env;
 use Mmb\Kernel\Instance;
 use Mmb\Kernel\Kernel;
@@ -937,6 +938,16 @@ function tryLangFrom($name, $lang, $args = [], ...$_args)
 function env($name, $default = null)
 {
     return Env::get($name, $default);
+}
+
+/**
+ * گرفتن کلاس گارد
+ *
+ * @return Guard
+ */
+function guard()
+{
+    return app(Guard::class);
 }
 
 

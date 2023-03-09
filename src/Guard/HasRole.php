@@ -7,7 +7,7 @@ trait HasRole
 
     public function modifyRoleIn(&$data)
     {
-        if($role = Role::getConstantOf(@$data['id']))
+        if($role = Role::getFullConstantOf(@$data['id']))
         {
             $data['role'] = $role;
         }

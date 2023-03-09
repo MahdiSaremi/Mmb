@@ -4,14 +4,14 @@ namespace Mmb\Update\Chat; #auto
 
 use Mmb\Mmb;
 use Mmb\MmbBase;
-use Mmb\Update\User\User;
+use Mmb\Update\User\UserInfo;
 
 class Member extends MmbBase
 {
     /**
      * اطلاعات کاربر
      *
-     * @var User
+     * @var UserInfo
      */
     public $user;
     /**
@@ -68,7 +68,7 @@ class Member extends MmbBase
     private $_base;
    public function __construct($v, $base){
         $this->_base = $base;
-        $this->user = new User($v['user'], $base);
+        $this->user = new UserInfo($v['user'], $base);
         $s = $this->status = $v['status'];
         $this->title = @$v['custom_title'];
         $this->untilDate = @$v['until_date'];

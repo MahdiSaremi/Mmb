@@ -4,7 +4,7 @@ namespace Mmb\Update\Message\Data; #auto
 
 use Mmb\Mmb;
 use Mmb\MmbBase;
-use Mmb\Update\User\User;
+use Mmb\Update\User\UserInfo;
 
 /**
  * برجستگی های متن
@@ -44,7 +44,7 @@ class Entity extends MmbBase
     /**
      * کاربر تگ شده برجستگی
      *
-     * @var User
+     * @var UserInfo
      */
     public $user;
 
@@ -67,7 +67,7 @@ class Entity extends MmbBase
         if($this->type == "text_link")
             $this->url = @$e['url'];
         if($this->type == "text_mention")
-            $this->user = new User(@$e['user'], $base);
+            $this->user = new UserInfo(@$e['user'], $base);
         $this->lang = @$e['language'];
     }
 

@@ -2,16 +2,22 @@
 
 namespace Mmb\Controller\Form; #auto
 
+use Mmb\Listeners\HasCustomMethod;
 use Mmb\Update\Message\Data\Poll;
 use Mmb\Update\Upd;
 
 class FormInput
 {
 
+    use HasCustomMethod;
+
+    /** @var Form */
+    public $form;
     public $name;
 
-    public function __construct($name)
+    public function __construct(Form $form, $name)
     {
+        $this->form = $form;
         $this->name = $name;
     }
 
@@ -197,7 +203,7 @@ class FormInput
     /**
      * درخواست پر کردن اینپوت
      * 
-     * @param \Closure|null $callback
+     * @param \Closure|string|array|null $callback
      * @return mixed|FormInput
      */
     public function request($callback = null)
@@ -205,7 +211,17 @@ class FormInput
         if($callback === null)
         {
             $f = $this->request;
-            return $f ? $f() : null;
+            if($f)
+            {
+                if($f instanceof \Closure)
+                {
+                    return $f();
+                }
+                else
+                {
+                    return $this->form->onRequest($f);
+                }
+            }
         }
 
         $this->request = $callback;
@@ -231,7 +247,7 @@ class FormInput
         return $this;
     }
 
-    public $filled = false;
+    public $filled = [];
     /**
      * زمان پر شدن مقدار توسط کاربر اجرا می شود
      * @param \Closure|null $callback
@@ -241,15 +257,18 @@ class FormInput
     {
         if($callback === null)
         {
-            $f = $this->filled;
-            return $f ? $f() : null;
+            foreach($this->filled as $f)
+            {
+                if(($value = $f()) !== null)
+                    return $value;
+            }
         }
 
-        $this->filled = $callback;
+        $this->filled[] = $callback;
         return $this;
     }
 
-    public $then = false;
+    public $then = [];
     /**
      * بعد از پر شدن مقدار اجرا می شود
      * 
@@ -260,15 +279,18 @@ class FormInput
     {
         if($callback === null)
         {
-            $f = $this->then;
-            return $f ? $f() : null;
+            foreach($this->then as $f)
+            {
+                if(($value = $f()) !== null)
+                    return $value;
+            }
         }
 
-        $this->then = $callback;
+        $this->then[] = $callback;
         return $this;
     }
 
-    public $cancel = false;
+    public $cancel = [];
     /**
      * زمان لغو شدن فرم اجرا می شود
      * 
@@ -279,15 +301,18 @@ class FormInput
     {
         if($callback === null)
         {
-            $f = $this->cancel;
-            return $f ? $f() : null;
+            foreach($this->cancel as $f)
+            {
+                if(($value = $f()) !== null)
+                    return $value;
+            }
         }
 
-        $this->cancel = $callback;
+        $this->cancel[] = $callback;
         return $this;
     }
 
-    public $skip = false;
+    public $skip = [];
     /**
      * زمان رد کردن اینپوت اجرا می شود
      * 
@@ -298,11 +323,14 @@ class FormInput
     {
         if($callback === null)
         {
-            $f = $this->skip;
-            return $f ? $f() : null;
+            foreach($this->skip as $f)
+            {
+                if(($value = $f()) !== null)
+                    return $value;
+            }
         }
 
-        $this->skip = $callback;
+        $this->skip[] = $callback;
         return $this;
     }
 

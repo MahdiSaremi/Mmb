@@ -6,7 +6,7 @@ namespace Mmb\Update\Inline; #auto
 
 use Mmb\Mmb;
 use Mmb\MmbBase;
-use Mmb\Update\User\User;
+use Mmb\Update\User\UserInfo;
 
 class Inline extends MmbBase implements \Mmb\Update\Interfaces\IInlineID, \Mmb\Update\Interfaces\IUserID 
 {
@@ -32,7 +32,7 @@ class Inline extends MmbBase implements \Mmb\Update\Interfaces\IInlineID, \Mmb\U
     /**
      * از طرف کاربر
      *
-     * @var User
+     * @var UserInfo
      */
     public $from;
     /**
@@ -84,7 +84,7 @@ class Inline extends MmbBase implements \Mmb\Update\Interfaces\IInlineID, \Mmb\U
 
         $this->_base = $base;
         $this->id = $in['id'];
-        $this->from = new User($in['from'], $base);
+        $this->from = new UserInfo($in['from'], $base);
         $this->query = $in['query'];
         $this->offset = $in['offset'];
         $this->type = @$in['type'];

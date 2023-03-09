@@ -2,7 +2,7 @@
 #auto-name
 namespace Mmb\Tools\Advanced;
 
-use Mmb\Update\User\User;
+use Mmb\Update\User\UserInfo;
 
 class AdvancedChanceUserRepeat extends AdvancedChance
 {
@@ -26,7 +26,7 @@ class AdvancedChanceUserRepeat extends AdvancedChance
 
 	protected function getArray()
     {
-        $id = optional(User::$this)->id . '.' . $this->name;
+        $id = optional(UserInfo::$this)->id . '.' . $this->name;
         $repeat = AdvUserRepatStorage::get($id);
         if($repeat === null)
             $repeat = [ 0, 0 ];

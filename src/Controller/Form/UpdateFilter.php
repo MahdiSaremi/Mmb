@@ -3,7 +3,7 @@
 namespace Mmb\Controller\Form;
 
 use Mmb\Update\Upd;
-use Mmb\Update\User\User;
+use Mmb\Update\User\UserInfo;
 
 trait UpdateFilter
 {

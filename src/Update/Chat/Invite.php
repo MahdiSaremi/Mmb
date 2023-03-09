@@ -4,7 +4,7 @@ namespace Mmb\Update\Chat; #auto
 
 use Mmb\Mmb;
 use Mmb\MmbBase;
-use Mmb\Update\User\User;
+use Mmb\Update\User\UserInfo;
 
 class Invite extends MmbBase
 {
@@ -31,7 +31,7 @@ class Invite extends MmbBase
     /**
      * سازنده لینک
      *
-     * @var User
+     * @var UserInfo
      */
     public $creator;
 
@@ -88,7 +88,7 @@ class Invite extends MmbBase
         $this->_base = $base;
         $this->link = $inv['invite_link'];
         $this->chatLink = $chat;
-        $this->creator = new User($inv['creator'], $base);
+        $this->creator = new UserInfo($inv['creator'], $base);
         $this->primary = $inv['is_primary'];
         $this->revoked = $inv['is_revoked'];
         $this->name = @$inv['name'];

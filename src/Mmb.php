@@ -11,7 +11,7 @@ use Mmb\Update\Message\Data\TelFile;
 use Mmb\Update\Message\Msg;
 use Mmb\Update\Upd;
 use Mmb\Update\User\Profiles;
-use Mmb\Update\User\User;
+use Mmb\Update\User\UserInfo;
 use Mmb\Update\Webhook\Info as WebhookInfo;
 
 // Telegram IP
@@ -267,11 +267,11 @@ class Mmb extends MmbBase implements \Serializable
      * گرفتن اطلاعات عمومی ربات
      *
      * @param array $args
-     * @return User|false
+     * @return UserInfo|false
      */
     public function getMe(array $args = []){
 
-        return objOrFalse(User::class, $this->call('getme', $args), $this);
+        return objOrFalse(UserInfo::class, $this->call('getme', $args), $this);
 
     }
 

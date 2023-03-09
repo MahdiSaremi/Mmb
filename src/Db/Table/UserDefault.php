@@ -4,6 +4,7 @@ namespace Mmb\Db\Table; #auto
 
 use Mmb\Db\QueryCol;
 use Handler\Defaultable;
+use Mmb\Update\User\UserInfo;
 
 /**
  * کلاسی آماده برای مدل کاربر
@@ -79,7 +80,7 @@ class UserDefault extends Table
      */
     public static function createThisUser() {
         
-        return static::$this = static::createUser(\User::$this->id);
+        return static::$this = static::createUser(UserInfo::$this->id);
 
     }
 
@@ -93,7 +94,7 @@ class UserDefault extends Table
         if(static::$this)
             return static::$this;
 
-        return static::$this = static::find(\User::$this->id);
+        return static::$this = static::find(UserInfo::$this->id);
 
     }
 

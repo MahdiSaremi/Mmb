@@ -4,7 +4,7 @@ namespace Mmb\Update\Chat; #auto
 
 use Mmb\Mmb;
 use Mmb\MmbBase;
-use Mmb\Update\User\User;
+use Mmb\Update\User\UserInfo;
 
 class JoinReq extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\Update\Interfaces\IUserID
 {
@@ -31,7 +31,7 @@ class JoinReq extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\Up
     /**
      * کاربر
      *
-     * @var User
+     * @var UserInfo
      */
     public $from;
     /**
@@ -61,7 +61,7 @@ class JoinReq extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\Up
 
         $this->_base = $base;
         $this->chat = new Chat($a['chat'], $base);
-        $this->from = new User($a['from'], $base);
+        $this->from = new UserInfo($a['from'], $base);
         $this->date = $a['date'];
         $this->bio = @$a['bio'];
         if($_ = $a['invite_link'])

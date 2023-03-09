@@ -4,7 +4,7 @@ namespace Mmb\Update\Message; #auto
 
 use Mmb\Mmb;
 use Mmb\MmbBase;
-use Mmb\Update\User\User;
+use Mmb\Update\User\UserInfo;
 
 class PollAnswer extends MmbBase implements \Mmb\Update\Interfaces\IUserID 
 {
@@ -31,7 +31,7 @@ class PollAnswer extends MmbBase implements \Mmb\Update\Interfaces\IUserID
     /**
      * کاربر رای دهنده
      *
-     * @var User
+     * @var UserInfo
      */
     public $user;
     /**
@@ -55,7 +55,7 @@ class PollAnswer extends MmbBase implements \Mmb\Update\Interfaces\IUserID
 
         $this->_base = $base;
         $this->id = $a['poll_id'];
-        $this->user = new User($a['user'], $base);
+        $this->user = new UserInfo($a['user'], $base);
         $this->options = $a['option_ids'];
         $this->chosenCount = count($this->options);
         

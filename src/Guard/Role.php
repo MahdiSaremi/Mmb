@@ -127,6 +127,19 @@ class Role
     }
 
     /**
+     * گرفتن مقدار اصلی نقش ثابت کاربر
+     * 
+     * @param int $id
+     * @return string|bool
+     */
+    public static function getFullConstantOf($id)
+    {
+        $role = self::$constants[$id] ?? false;
+
+        return $role;
+    }
+
+    /**
      * گرفتن کاربری که این نقش ثابت را دارد
      * 
      * `Role::getConstantFor('developer')`

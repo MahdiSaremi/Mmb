@@ -108,4 +108,17 @@ class Guard
             Listeners::callMethod($this->notAllowed, []);
     }
 
+
+    /**
+     * بررسی دسترسی
+     *
+     * @param string $name
+     * @param mixed ...$args
+     * @return boolean
+     */
+    public static function allowTo($name, ...$args)
+    {
+        return app(Guard::class)->allow($name, ...$args);
+    }
+
 }

@@ -232,9 +232,9 @@ class QueryPattern
                 case 'anyOf':
                     return "(" . join('|', array_map('preg_quote', $inp[1])) . ")";
                 case 'num':
-                    return '([\d\.]+)';
+                    return '([\-\d][\d\.]*)';
                 case 'int':
-                    return '(\d+)';
+                    return '([\-\d]\d*)';
                 case 'match':
                     return '(' . $inp[1] . ')';
             }
@@ -377,7 +377,7 @@ class QueryPattern
                 case 'anyOf':
                     if(!in_array($value, $inp[1]))
                     {
-                        throw new \InvalidArgumentException("Argument '$inp[0]' don't accept value '$value'");
+                        throw new \InvalidArgumentException("Argument '$name' don't accept value '$value'");
                     }
                 break;
                 case 'num':

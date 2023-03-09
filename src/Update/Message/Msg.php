@@ -15,7 +15,7 @@ use Mmb\Update\Message\Data\Media;
 use Mmb\Update\Message\Data\Poll;
 use Mmb\Update\Message\Data\Sticker;
 use Mmb\Update\User\InChat;
-use Mmb\Update\User\User;
+use Mmb\Update\User\UserInfo;
 
 class Msg extends MmbBase implements \Mmb\Update\Interfaces\IMsgID, \Mmb\Update\Interfaces\IUserID, \Mmb\Update\Interfaces\IChatID
 {
@@ -188,13 +188,13 @@ class Msg extends MmbBase implements \Mmb\Update\Interfaces\IMsgID, \Mmb\Update\
     /**
      * عضو های جدید
      *
-     * @var User[]|null
+     * @var UserInfo[]|null
      */
     public $newMembers;
     /**
      * عضو ترک شده
      *
-     * @var User|null
+     * @var UserInfo|null
      */
     public $leftMember;
     /**
@@ -254,7 +254,7 @@ class Msg extends MmbBase implements \Mmb\Update\Interfaces\IMsgID, \Mmb\Update\
     /**
      * اطلاعات ارسال کننده
      *
-     * @var User|null
+     * @var UserInfo|null
      */
     public $from;
     /**
@@ -290,7 +290,7 @@ class Msg extends MmbBase implements \Mmb\Update\Interfaces\IMsgID, \Mmb\Update\
     /**
      * کاربری که پیام آن باز ارسال شده است (در صورت باز ارسال از کاربر)
      *
-     * @var User|null
+     * @var UserInfo|null
      */
     public $forwardFrom;
     /**
@@ -338,7 +338,7 @@ class Msg extends MmbBase implements \Mmb\Update\Interfaces\IMsgID, \Mmb\Update\
     /**
      * رباتی که پیغام توسط آن ایجاد شده
      *
-     * @var User|null
+     * @var UserInfo|null
      */
     public $via;
     /**
@@ -392,7 +392,7 @@ class Msg extends MmbBase implements \Mmb\Update\Interfaces\IMsgID, \Mmb\Update\
             $this->chat = new Chat($msg['chat'], $base);
         }
         if(isset($msg['from'])){
-            $this->from = new User($msg['from'], $base);
+            $this->from = new UserInfo($msg['from'], $base);
         }
         
         // Text
@@ -490,11 +490,11 @@ class Msg extends MmbBase implements \Mmb\Update\Interfaces\IMsgID, \Mmb\Update\
             $this->type = "new_members";
             $this->newMembers = [];
             foreach($msg['new_chat_members']as$once)
-                $this->newMembers[] = new User($once, $base);
+                $this->newMembers[] = new UserInfo($once, $base);
         }
         elseif(isset($msg['left_chat_member'])){
             $this->type = "left_member";
-            $this->leftMember = new User($msg['left_chat_member'], $base);
+            $this->leftMember = new UserInfo($msg['left_chat_member'], $base);
         }
         elseif(isset($msg['new_chat_title'])){
             $this->type = "new_title";
@@ -545,7 +545,7 @@ class Msg extends MmbBase implements \Mmb\Update\Interfaces\IMsgID, \Mmb\Update\
         // Forward info
         if(isset($msg['forward_from'])){
             $this->forwarded = true;
-            $this->forwardFrom = new User($msg['forward_from'], $base);
+            $this->forwardFrom = new UserInfo($msg['forward_from'], $base);
         }
         elseif(isset($msg['forward_from_chat'])){
             $this->forwarded = true;
@@ -585,7 +585,7 @@ class Msg extends MmbBase implements \Mmb\Update\Interfaces\IMsgID, \Mmb\Update\
             $this->userInChat = new InChat($this->from, $this->chat, $base);
         }
         if($_ = @$msg['via_bot'])
-            $this->via = new User($_, $base);
+            $this->via = new UserInfo($_, $base);
         if($_ = @$msg['sender_chat'])
             $this->sender = new Chat($_, $base);
         if($_ = @$msg['media_group_id'])

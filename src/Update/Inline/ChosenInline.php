@@ -5,7 +5,7 @@ namespace Mmb\Update\Inline; #auto
 use Mmb\Mmb;
 use Mmb\MmbBase;
 use Mmb\Update\Message\Msg;
-use Mmb\Update\User\User;
+use Mmb\Update\User\UserInfo;
 
 class ChosenInline extends MmbBase implements \Mmb\Update\Interfaces\IUserID, \Mmb\Update\Interfaces\IMsgID 
 {
@@ -31,7 +31,7 @@ class ChosenInline extends MmbBase implements \Mmb\Update\Interfaces\IUserID, \M
     /**
      * کاربر
      *
-     * @var User
+     * @var UserInfo
      */
     public $from;
     /**
@@ -60,7 +60,7 @@ class ChosenInline extends MmbBase implements \Mmb\Update\Interfaces\IUserID, \M
 
         $this->_base = $base;
         $this->id = $r['result_id'];
-        $this->from = new User($r['from'], $base);
+        $this->from = new UserInfo($r['from'], $base);
         $this->msgID = @$r['inline_message_id'];
         if($this->msgID)
             $this->msg = new Msg($this->msgID, $base, true);

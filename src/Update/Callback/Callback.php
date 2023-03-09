@@ -7,7 +7,7 @@ namespace Mmb\Update\Callback; #auto
 use Mmb\Mmb;
 use Mmb\MmbBase;
 use Mmb\Update\Message\Msg;
-use Mmb\Update\User\User;
+use Mmb\Update\User\UserInfo;
 
 class Callback extends MmbBase implements \Mmb\Update\Interfaces\ICallbackID, \Mmb\Update\Interfaces\IMsgID, \Mmb\Update\Interfaces\IUserID, \Mmb\Update\Interfaces\IChatID
 {
@@ -27,7 +27,7 @@ class Callback extends MmbBase implements \Mmb\Update\Interfaces\ICallbackID, \M
     /**
      * از طرف کاربر
      *
-     * @var User
+     * @var UserInfo
      */
     public $from;
     /**
@@ -60,7 +60,7 @@ class Callback extends MmbBase implements \Mmb\Update\Interfaces\ICallbackID, \M
             self::$this = $this;
 
         $this->_base = $base;
-        $this->from = new User($cl['from'], $base);
+        $this->from = new UserInfo($cl['from'], $base);
         $this->data = $cl['data'];
         $this->id = $cl['id'];
         if(isset($cl['message'])){

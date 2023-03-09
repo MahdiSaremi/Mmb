@@ -7,13 +7,13 @@ use Mmb\Listeners\Listeners;
 abstract class InlineForm extends Form
 {
 
-    public function finish()
+    public function onFinish()
     {
         $method = $this->_callback;
         return Listeners::invokeMethod2($method, [ $this ]);
     }
 
-    public function cancelForm()
+    public function onCancel()
     {
         $method = $this->_callback_cancel;
         return Listeners::invokeMethod2($method, [ $this ]);

@@ -4,9 +4,6 @@ namespace Mmb\FakeFace;
 
 use Mmb\Db\Table\Table;
 use Mmb\Kernel\Instance;
-use Mmb\Update\Chat\Chat;
-use Mmb\Update\Message\Msg;
-use Mmb\Update\User\User;
 
 /**
  * این کلاس برای زمان موقت دیدگاه کل سورس را تغییر می دهد
