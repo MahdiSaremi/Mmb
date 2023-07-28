@@ -4,6 +4,9 @@ namespace Mmb\Core;
 
 use Mmb\Exceptions\MmbException;
 
+/**
+ * @deprecated
+ */
 class StartHandler {
 
     use Defaultable;

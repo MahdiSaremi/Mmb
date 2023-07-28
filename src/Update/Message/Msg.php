@@ -7,6 +7,9 @@ namespace Mmb\Update\Message; #auto
 use Mmb\Mmb;
 use Mmb\MmbBase;
 use Mmb\Update\Chat\Chat;
+use Mmb\Update\Chat\ChatShared;
+use Mmb\Update\Interfaces\IChatID;
+use Mmb\Update\Interfaces\IMsgID;
 use Mmb\Update\Message\Data\Contact;
 use Mmb\Update\Message\Data\Dice;
 use Mmb\Update\Message\Data\Entity;
@@ -16,6 +19,7 @@ use Mmb\Update\Message\Data\Poll;
 use Mmb\Update\Message\Data\Sticker;
 use Mmb\Update\User\InChat;
 use Mmb\Update\User\UserInfo;
+use Mmb\Update\User\UserShared;
 
 class Msg extends MmbBase implements \Mmb\Update\Interfaces\IMsgID, \Mmb\Update\Interfaces\IUserID, \Mmb\Update\Interfaces\IChatID
 {
@@ -26,6 +30,10 @@ class Msg extends MmbBase implements \Mmb\Update\Interfaces\IMsgID, \Mmb\Update\
      * @var static
      */
     public static $this;
+    public static function this()
+    {
+        return static::$this;
+    }
 
 
     /**
@@ -34,10 +42,6 @@ class Msg extends MmbBase implements \Mmb\Update\Interfaces\IMsgID, \Mmb\Update\
      * @var string $acceptStartCode
      */
     public static $acceptStartCode = '^\s\n\r';
-    /**
-     * @var Mmb
-     */
-    private $_base;
     /**
      * آیدی عددی پیام
      *
@@ -348,6 +352,27 @@ class Msg extends MmbBase implements \Mmb\Update\Interfaces\IMsgID, \Mmb\Update\
      */
     public $userInChat;
 
+    /**
+     * کاربر به اشتراک گذاشته شده
+     *
+     * @var UserShared|null
+     */
+    public $userShared;
+
+    /**
+     * چت به اشتراک گذاشته شده
+     *
+     * @var ChatShared|null
+     */
+    public $chatShared;
+
+    /**
+     * آیا این مدیا اسپویلر دارد
+     *
+     * @var boolean
+     */
+    public $hasMediaSpoiler;
+
     public const TYPE_TEXT = 'text';
     public const TYPE_PHOTO = 'photo';
     public const TYPE_VOICE = 'voice';
@@ -371,37 +396,38 @@ class Msg extends MmbBase implements \Mmb\Update\Interfaces\IMsgID, \Mmb\Update\
     public const TYPE_NEW_SUPERGROUP = 'new_supergroup';
     public const TYPE_NEW_CHANNEL = 'new_channel';
 
-    function __construct($msg, Mmb $base, $isInline = false){
+    function __construct(array $args, ?Mmb $mmb = null, $isInline = false, $inlineID = null)
+    {
+        parent::__construct($args, $mmb);
 
-        if($base->loading_update && !static::$this)
+        if($this->_base->loading_update && !static::$this)
             self::$this = $this;
-
-        $this->_base = $base;
+        $mmb = $this->_base;
 
         if($isInline){
             $this->isInline = true;
-            $this->inlineID = $msg;
+            $this->inlineID = $inlineID;
             return;
         }
-        $this->isInline = false;
 
-        $this->id = $msg['message_id'];
+        $this->isInline = false;
         $this->started = false;
 
-        if(isset($msg['chat'])){
-            $this->chat = new Chat($msg['chat'], $base);
-        }
-        if(isset($msg['from'])){
-            $this->from = new UserInfo($msg['from'], $base);
-        }
+        $this->initFrom($args, [
+            'message_id' => 'id',
+            'chat' => fn($chat) => $this->chat = new Chat($chat, $this->_base),
+            'from' => fn($from) => $this->from = new UserInfo($from, $this->_base),
+        ]);
         
         // Text
-        if(isset($msg['text'])){
-            $this->text = $msg['text'];
+        if(isset($args['text']))
+        {
+            $this->text = $args['text'];
             $this->type = "text";
 
             // Command
-            if(@$this->text[0] == "/") {
+            if(@$this->text[0] == "/")
+            {
 
                 // Start command
                 if($this->started = preg_match('/^\/start(\s(['.(self::$acceptStartCode).']+)|)$/i', $this->text, $r))
@@ -413,184 +439,215 @@ class Msg extends MmbBase implements \Mmb\Update\Interfaces\IMsgID, \Mmb\Update\
                     $this->commandTag = $r[2];
                     $this->commandData = ltrim(substr($this->text, strlen($r[0])));
                 }
-
             }
         }
-
         // Caption
-        elseif(isset($msg['caption'])) {
-
-            $this->text = $msg['caption'];
-
+        elseif(isset($args['caption']))
+        {
+            $this->text = $args['caption'];
         }
 
 
-        if(isset($msg['photo'])){
+        if(isset($args['photo'])){
             $this->type = "photo";
             $this->photo = [];
-            foreach($msg['photo'] as $a){
-                $this->photo[] = new Media("photo", $a, $base);
+            foreach($args['photo'] as $a){
+                $this->photo[] = new Media("photo", $a, $mmb);
             }
             $this->media = end($this->photo);
             $this->media_id = $this->media->id;
         }
-        elseif(isset($msg['voice'])){
+        elseif(isset($args['voice'])){
             $this->type = "voice";
-            $this->media = new Media("voice", $msg['voice'], $base);
+            $this->media = new Media("voice", $args['voice'], $mmb);
             $this->media_id = $this->media->id;
             $this->voice = $this->media;
         }
-        elseif(isset($msg['video'])){
+        elseif(isset($args['video'])){
             $this->type = "video";
-            $this->media = new Media("video", $msg['video'], $base);
+            $this->media = new Media("video", $args['video'], $mmb);
             $this->media_id = $this->media->id;
             $this->video = $this->media;
         }
-        elseif(isset($msg['animation'])){
+        elseif(isset($args['animation'])){
             $this->type = "anim";
-            $this->media = new Media("anim", $msg['animation'], $base);
+            $this->media = new Media("anim", $args['animation'], $mmb);
             $this->media_id = $this->media->id;
             $this->anim = $this->media;
         }
-        elseif(isset($msg['audio'])){
+        elseif(isset($args['audio'])){
             $this->type = "audio";
-            $this->media = new Media("audio", $msg['audio'], $base);
+            $this->media = new Media("audio", $args['audio'], $mmb);
             $this->media_id = $this->media->id;
             $this->audio = $this->media;
         }
-        elseif(isset($msg['video_note'])){
+        elseif(isset($args['video_note'])){
             $this->type = "video_note";
-            $this->media = new Media("videonote", $msg['video_note'], $base);
+            $this->media = new Media("videonote", $args['video_note'], $mmb);
             $this->media_id = $this->media->id;
             $this->videoNote = $this->media;
         }
-        elseif(isset($msg['location'])){
+        elseif(isset($args['location'])){
             $this->type = "location";
-            $this->location = new Location($msg['location'], $base);
+            $this->location = new Location($args['location'], $mmb);
         }
-        elseif(isset($msg['dice'])){
+        elseif(isset($args['dice'])){
             $this->type = "dice";
-            $this->dice = new Dice($msg['dice'], $base);
+            $this->dice = new Dice($args['dice'], $mmb);
         }
-        elseif(isset($msg['poll'])){
+        elseif(isset($args['poll'])){
             $this->type = "poll";
-            $this->poll = new Poll($msg['poll'], $base);
+            $this->poll = new Poll($args['poll'], $mmb);
         }
-        elseif(isset($msg['sticker'])){
+        elseif(isset($args['sticker'])){
             $this->type = "sticker";
-            $this->media = new Sticker($msg['sticker'], $base);
+            $this->media = new Sticker($args['sticker'], $mmb);
             $this->media_id = $this->media->id;
             $this->sticker = $this->media;
         }
-        elseif(isset($msg['contact'])){
+        elseif(isset($args['contact'])){
             $this->type = "contact";
-            $this->contact = new Contact($msg['contact'], $base);
+            $this->contact = new Contact($args['contact'], $mmb);
         }
-        elseif(isset($msg['new_chat_members'])){
+        elseif(isset($args['new_chat_members'])){
             $this->type = "new_members";
             $this->newMembers = [];
-            foreach($msg['new_chat_members']as$once)
-                $this->newMembers[] = new UserInfo($once, $base);
+            foreach($args['new_chat_members']as$once)
+                $this->newMembers[] = new UserInfo($once, $mmb);
         }
-        elseif(isset($msg['left_chat_member'])){
+        elseif(isset($args['left_chat_member'])){
             $this->type = "left_member";
-            $this->leftMember = new UserInfo($msg['left_chat_member'], $base);
+            $this->leftMember = new UserInfo($args['left_chat_member'], $mmb);
         }
-        elseif(isset($msg['new_chat_title'])){
+        elseif(isset($args['new_chat_title'])){
             $this->type = "new_title";
-            $this->newTitle = $msg['new_chat_title'];
+            $this->newTitle = $args['new_chat_title'];
         }
-        elseif(isset($msg['new_chat_photo'])){
+        elseif(isset($args['new_chat_photo'])){
             $this->type = "new_photo";
             $this->newPhoto = [];
-            foreach($msg['new_chat_photo'] as $once)
-                $this->newPhoto[] = new Media("photo", $once, $base);
+            foreach($args['new_chat_photo'] as $once)
+                $this->newPhoto[] = new Media("photo", $once, $mmb);
         }
-        elseif(isset($msg['delete_chat_photo'])){
+        elseif(isset($args['delete_chat_photo'])){
             $this->type = "del_photo";
             $this->delPhoto = true;
         }
-        elseif(isset($msg['group_chat_created'])){
+        elseif(isset($args['group_chat_created'])){
             $this->type = "new_group";
             $this->newGroup = true;
         }
-        elseif(isset($msg['supergroup_chat_created'])){
+        elseif(isset($args['supergroup_chat_created'])){
             $this->type = "new_supergroup";
             $this->newSupergroup = true;
         }
-        elseif(isset($msg['channel_chat_created'])){
+        elseif(isset($args['channel_chat_created'])){
             $this->type = "new_channel";
             $this->newChannel = true;
         }
-        if(isset($msg['document'])){
+        elseif(isset($args['user_shared']))
+        {
+            $this->type = 'user_shared';
+            $this->userShared = new UserShared($args['user_shared'], $mmb);
+        }
+        elseif(isset($args['chat_shared']))
+        {
+            $this->type = 'chat_shared';
+            $this->chatShared = new ChatShared($args['chat_shared'], $mmb);
+        }
+        if(isset($args['document'])){
             if(!$this->type){
                 $this->type = "doc";
             }
             if(!$this->media){
-                $this->media = new Media("doc", $msg['document'], $base);
+                $this->media = new Media("doc", $args['document'], $mmb);
                 $this->media_id = $this->media->id;
             }
             $this->doc = $this->media;
         }
-        if(isset($msg['reply_to_message'])){
-            $this->reply = new Msg($msg['reply_to_message'], $base);
+        if(isset($args['reply_to_message'])){
+            $this->reply = new Msg($args['reply_to_message'], $mmb);
         }
 
         // Time & Date
-        $this->date = @$msg['date'];
-        $this->edited = isset($msg['edit_date']);
+        $this->date = @$args['date'];
+        $this->edited = isset($args['edit_date']);
         if($this->edited)
-            $this->editDate = $msg['edit_date'];
+            $this->editDate = $args['edit_date'];
 
         // Forward info
-        if(isset($msg['forward_from'])){
+        if(isset($args['forward_from'])){
             $this->forwarded = true;
-            $this->forwardFrom = new UserInfo($msg['forward_from'], $base);
+            $this->forwardFrom = new UserInfo($args['forward_from'], $mmb);
         }
-        elseif(isset($msg['forward_from_chat'])){
+        elseif(isset($args['forward_from_chat'])){
             $this->forwarded = true;
-            $this->forwardChat = new Chat($msg['forward_from_chat'], $base);
-            $this->forwardMsgId = $msg['forward_from_message_id'];
-            $this->forwardSig = @$msg['forward_signature'];
+            $this->forwardChat = new Chat($args['forward_from_chat'], $mmb);
+            $this->forwardMsgId = $args['forward_from_message_id'];
+            $this->forwardSig = @$args['forward_signature'];
         }
         else{
             $this->forwarded = false;
         }
         if($this->forwarded)
-            $this->forwardDate = @$msg['forward_date'];
+            $this->forwardDate = @$args['forward_date'];
 
         // Entity
-        if(isset($msg['entities']))
-            $e = $msg['entities'];
-        elseif(isset($msg['caption_entities']))
-            $e = $msg['caption_entities'];
+        if(isset($args['entities']))
+            $e = $args['entities'];
+        elseif(isset($args['caption_entities']))
+            $e = $args['caption_entities'];
         else
             $e = [];
         $this->entities = [];
         foreach($e as $once)
-            $this->entities[] = new Entity($once, $base);
+            $this->entities[] = new Entity($once, $mmb);
             
-        if(isset($msg['pinned_message'])){
-            $this->pinnedMsg = new Msg($msg['pinned_message'], $base);
+        if(isset($args['pinned_message'])){
+            $this->pinnedMsg = new Msg($args['pinned_message'], $mmb);
         }
-        if(isset($msg['reply_markup'])){
+        if(isset($args['reply_markup'])){
             try{
-                $this->key = filterArray3D($msg['reply_markup'], ['text'=>"text", 'callback_data'=>"data", 'url'=>"url", 'login_url'=>"login"],null);
+                $this->key = filterArray3D($args['reply_markup'], ['text'=>"text", 'callback_data'=>"data", 'url'=>"url", 'login_url'=>"login"],null);
             }
             catch(\Exception $e){
                 $this->key = null;
             }
         }
         if($this->chat && $this->from && $this->chat->id != $this->from->id){
-            $this->userInChat = new InChat($this->from, $this->chat, $base);
+            $this->userInChat = new InChat($this->from, $this->chat, $mmb);
         }
-        if($_ = @$msg['via_bot'])
-            $this->via = new UserInfo($_, $base);
-        if($_ = @$msg['sender_chat'])
-            $this->sender = new Chat($_, $base);
-        if($_ = @$msg['media_group_id'])
+        if($_ = @$args['via_bot'])
+            $this->via = new UserInfo($_, $mmb);
+        if($_ = @$args['sender_chat'])
+            $this->sender = new Chat($_, $mmb);
+        if($_ = @$args['media_group_id'])
             $this->mediaGroupID = $_;
+        if($_ = @$args['has_media_spoiler'])
+            $this->hasMediaSpoiler = $_;
             
+    }
+
+    /**
+     * یک شی از نوع پیام می سازد که از آن صرفا برای متد هایی که به آیدی چت و پیام نیاز دارند استفاده کنید
+     *
+     * @param mixed $chatid
+     * @param mixed $msgid
+     * @return Msg
+     */
+    public static function of($chatid, $msgid)
+    {
+        if($chatid instanceof IChatID)
+            $chatid = $chatid->IChatID();
+        if($msgid instanceof IMsgID)
+            $msgid = $msgid->IMsgID();
+        
+        return new Msg([
+            'id' => $msgid,
+            'chat' => [
+                'id' => $chatid,
+            ]
+        ]);
     }
     
     /**
@@ -678,15 +735,28 @@ class Msg extends MmbBase implements \Mmb\Update\Interfaces\IMsgID, \Mmb\Update\
     /**
      * حذف پیام
      *
-     * @return bool
+     * @return boolean
      */
-    public function del(array $args = []){
-
-        $args['chat'] = $this->chat->id;
-        $args['msg'] = $this->id;
+    public function del(array $args = [])
+    {
+        $args = maybeArray([
+            'chat' => $this->chat->id,
+            'msg' => $this->id,
+            'args' => $args,
+        ]);
 
         return $this->_base->call('deletemessage', $args);
+    }
 
+    /**
+     * حذف پیام
+     *
+     * @param array $args
+     * @return boolean
+     */
+    public function delete(array $args = [])
+    {
+        return $this->del($args);
     }
     
     /*public function edit($text, $media=null, $args=[]){
@@ -904,16 +974,68 @@ class Msg extends MmbBase implements \Mmb\Update\Interfaces\IMsgID, \Mmb\Update\
         }
 
     }
+
+    /**
+     * متن پیام را بصورت اچ تی ام ال می دهد
+     * 
+     * با این کار، برجستگی های پیام نیز در خروجی نمایش داده می شوند
+     * 
+     * توجه: این تابع در حال توسعه ست و دارای مشکل است
+     *
+     * @return string|null
+     */
+    public function getHtml()
+    {
+        if(!$this->entities)
+        {
+            return $this->text;
+        }
+
+        $chars = mb_str_split($this->text);
+        foreach(array_reverse($this->entities) as $entity)
+        {
+            $start = $entity->offset;
+            $end = $start + $entity->len;
+
+            $chars[$start] = match($entity->type)
+            {
+                'text_link' => "<a href='{$entity->url}'>",
+                'bold' => "<b>",
+                'italic' => "<i>",
+                'underline' => "<u>",
+                'strikethrough' => "<s>",
+                'spoiler' => "<tg-spoiler>",
+                'code' => "<code>",
+                'pre' => "<pre>",
+                'text_mention' => "<a href='tg://user?id={$entity->user->id}'>",
+                default => ''
+            } . @$chars[$start];
+            @$chars[$end - 1] .= match($entity->type)
+            {
+                'text_link' => "</a>",
+                'bold' => "</b>",
+                'italic' => "</i>",
+                'underline' => "</u>",
+                'strikethrough' => "</s>",
+                'spoiler' => "</tg-spoiler>",
+                'code' => "</code>",
+                'pre' => "</pre>",
+                'text_mention' => "</a>",
+                default => ''
+            };
+        }
+        
+        return implode('', $chars);
+    }
     
 	/**
 	 * گرفتن آیدی پیام
 	 *
 	 * @return int
 	 */
-	function IMsgID() {
-
+	function IMsgID()
+    {
         return $this->id;
-
 	}
 	
 	/**
@@ -921,10 +1043,9 @@ class Msg extends MmbBase implements \Mmb\Update\Interfaces\IMsgID, \Mmb\Update\
 	 *
 	 * @return int
 	 */
-	function IUserID() {
-
+	function IUserID()
+    {
         return $this->from->IUserID();
-
 	}
 	
 	/**
@@ -932,10 +1053,9 @@ class Msg extends MmbBase implements \Mmb\Update\Interfaces\IMsgID, \Mmb\Update\
 	 *
 	 * @return int
 	 */
-	function IChatID() {
-
+	function IChatID()
+    {
         return $this->chat->IChatID();
-        
 	}
     
 }

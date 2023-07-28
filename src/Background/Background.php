@@ -149,9 +149,11 @@ class Background
             throw new \Mmb\Exceptions\TypeException("Background::runTask() : Class '\Mmb\Background\Task' required, '".(get_class($class) ?: gettype($class))."' given.");
 
         $id = md5(time() . rand(1, 10000));
-        BackgroundStorage::set('tasks.' . $id, serialize($class));
+        BackgroundStorage::set($id, [
+            'type' => 'task',
+            'target' => serialize($class)
+        ]);
         $url = static::getTargetUrl() . "?" . http_build_query([
-            'atom' => 'background',
             'background' => 'task',
             'id' => $id,
         ]);
@@ -166,6 +168,8 @@ class Background
      */
     public static function handle()
     {
+        static::closeConnection();
+
         $background = $_GET['background'] ?? false;
         $id = $_GET['id'] ?? false;
         if (!$background || !$id || !BackgroundStorage::selectorValidName($id))
@@ -179,7 +183,11 @@ class Background
         switch($info['type'])
         {
             case 'closure':
-                Listeners::invokeMethod2($info['closure'], @unserialize($info['args']) ?: []);
+                Listeners::invokeMethod2($info['closure'], @unserialize($info['args']) ?: [], true);
+            break;
+
+            case 'task':
+                unserialize($info['target'])->runNow();
             break;
         }
     }

@@ -9,11 +9,6 @@ class Contact extends MmbBase
 {
 
     /**
-     * @var Mmb
-     */
-    private $_base;
-
-    /**
      * شماره کاربر
      *
      * @var string
@@ -40,17 +35,29 @@ class Contact extends MmbBase
     /**
      * ایدی عددی صاحب مخاطب
      *
+     * @deprecated
      * @var int
      */
     public $userID;
-    function __construct($con, $base)
+    /**
+     * ایدی عددی صاحب مخاطب
+     *
+     * @var int
+     */
+    public $userId;
+    function __construct(array $args, ?Mmb $mmb = null)
     {
-        $this->_base = $base;
-        $this->num = $con['phone_number'];
-        $this->firstName = @$con['first_name'];
-        $this->lastName = @$con['last_name'];
+        parent::__construct($args, $mmb);
+
+        $this->initFrom($args, [
+            'phone_number' => 'num',
+            'first_name' => 'firstName',
+            'last_name' => 'lastName',
+            'user_id' => 'userId',
+        ]);
+
         $this->name = $this->firstName . ($this->lastName ? " " . $this->lastName : "");
-        $this->userID = @$con['user_id'];
+        $this->userID = $this->userId;
     }
 
     /**

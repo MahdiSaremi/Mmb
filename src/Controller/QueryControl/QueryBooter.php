@@ -39,6 +39,19 @@ class QueryBooter
     {
         return $this->patterns[] = new QueryPattern($pattern);
     }
+
+    private $else;
+
+    /**
+     * متدی تعریف کنید تا در صورت عدم تطابق، آن صدا شود
+     *
+     * @param string $method
+     * @return void
+     */
+    public function else($method)
+    {
+        $this->else = $method;
+    }
     
 
     // -- -- -- -- -- --      Use      -- -- -- -- -- -- \\
@@ -48,16 +61,20 @@ class QueryBooter
      * @param string $query
      * @return array|bool
      */
-    public function matchQuery($query)
+    public function matchQuery($query, $parentMatch = [], $parentSubIndex = 0)
     {
         foreach($this->patterns as $pattern)
         {
-            $result = $pattern->matchQuery($query);
+            $result = $pattern->matchQuery($query, $parentMatch, $parentSubIndex);
             if($result)
             {
                 return $result;
             }
         }
+
+        if($this->else)
+            return [ $this->else, [] ];
+
         return false;
     }
 
@@ -84,6 +101,24 @@ class QueryBooter
             }
         }
         throw new MmbException("No match found, pattern errors:$errors");
+    }
+
+    public function makeQueryReplace($namedArgs, $indexArgs, $result, $countAll)
+    {
+        $errors = "";
+        foreach($this->patterns as $pattern)
+        {
+            try
+            {
+                $res = $pattern->makeQueryReplace($namedArgs, $indexArgs, $pattern->pattern, $countAll);
+                return $res;
+            }
+            catch(\Exception $e)
+            {
+                $errors .= "\n\t" . $e->getMessage();
+            }
+        }
+        throw new MmbException("Sub failed errors:$errors");
     }
 
 }

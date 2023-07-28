@@ -5,7 +5,8 @@ namespace Mmb\Db; #auto
 use Mmb\Exceptions\MmbException;
 use Mmb\Core\Defaultable;
 
-class Driver {
+class Driver
+{
 
     use Defaultable;
 
@@ -30,11 +31,12 @@ class Driver {
      * @param QueryCompiler $queryCompiler
      * @return QueryResult
      */
-    public function runQuery($queryCompiler) {
-
+    public function runQuery($queryCompiler)
+    {
         throw new MmbException("No database driver found");
-
     }
+
+    public $caches_values = [];
 
     /**
      * لود شدن کلاس از کانفیگ
@@ -59,5 +61,8 @@ class Driver {
     {
         static::defaultStatic()->config($configPrefix);
     }
+
+    public function getName()
+    { return ''; }
 
 }

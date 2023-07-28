@@ -9,6 +9,11 @@ trait SaveInstances
 
     private static $instanceObjects = [];
 
+    public static function resetInstances()
+    {
+        static::$instanceObjects = [];
+    }
+
     public final function __construct()
     {
         self::$instanceObjects[] = $this;

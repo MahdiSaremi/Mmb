@@ -11,11 +11,18 @@ class Instance
 
     private static $creators = [];
 
+    public static function reset()
+    {
+        static::$instances = [];
+        static::$creators = [];
+    }
+
     /**
      * گرفتن مقدار عمومی
      *
-     * @param string $class
-     * @return mixed
+     * @template T
+     * @param string|class-string<T> $class
+     * @return mixed|T
      */
     public static function get($class, $createOnFail = true)
     {

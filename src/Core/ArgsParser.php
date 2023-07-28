@@ -3,6 +3,7 @@
 namespace Mmb\Core;
 
 use Mmb\Controller\Menu;
+use Mmb\Controller\MenuBase;
 use Mmb\Exceptions\TypeException;
 
 class ArgsParser {
@@ -16,50 +17,47 @@ class ArgsParser {
      * @param Request $request
      * @return void
      */
-    public function parse(Request $request) {
-
+    public function parse(Request $request)
+    {
         $args = [];
         $smallWords = $this->smallWords();
 
         // Start parsing
-        foreach($request->args as $key => $value) {
-
+        foreach($request->args as $key => $value)
+        {
             $before_key = $key;
             $skip = false;
+            $key = strtolower($key);
 
             // Ignore errors
-            if(eqi($key, 'ignore')) {
-
+            if($key == 'ignore')
+            {
                 $request->ignoreError = $value;
                 continue;
-
             }
 
             // -- Key parse --
-            $key = strtolower($key);
             $replace = $smallWords[$key] ?? false;
-            if($replace) {
-
+            if($replace)
+            {
                 // Multi type
-                if(is_array($replace)) {
-
+                if(is_array($replace))
+                {
                     $replace = $replace[$request->lowerMethod()]
                             ?? $replace[0]
                             ?? false;
                     if(!$replace) goto Next;
-
                 }
-
 
                 // Advanced replace
                 if($replace instanceof \Closure)
                 {
-
                     // Run
                     $add = $replace($request, $value, $key);
                     
                     // Add
-                    foreach($add as $key2 => $value2) {
+                    foreach($add as $key2 => $value2)
+                    {
                         if(is_array($value2))
                             $value2 = json_encode($value2);
                         $args[$key2] = $value2;
@@ -67,17 +65,17 @@ class ArgsParser {
 
                     // Skip
                     $skip = true;
-
                 }
 
-                elseif(startsWith($replace, '@')) {
-
+                elseif(startsWith($replace, '@'))
+                {
                     // Run
                     $function = substr($replace, 1);
                     $add = $this->$function($request, $value, $key);
                     
                     // Add
-                    foreach($add as $key2 => $value2) {
+                    foreach($add as $key2 => $value2)
+                    {
                         if(is_array($value2))
                             $value2 = json_encode($value2);
                         $args[$key2] = $value2;
@@ -85,20 +83,18 @@ class ArgsParser {
 
                     // Skip
                     $skip = true;
-
                 }
 
                 // Basic replace
-                else {
+                else
+                {
                     $key = $replace;
                 }
-
             }
             // Invalid
-            else {
-
-                throw new \Mmb\Exceptions\MmbException("Invalid arg '$key' in method '{$request->method}'");
-
+            else
+            {
+                // throw new \Mmb\Exceptions\MmbException("Invalid arg '$key' in method '{$request->method}'");
             }
 
 
@@ -119,7 +115,8 @@ class ArgsParser {
 
             // Add
             Next:
-            if(!$skip) {
+            if(!$skip)
+            {
                 if(is_array($value))
                     $value = json_encode($value);
                 $args[$key] = $value;
@@ -128,7 +125,6 @@ class ArgsParser {
         }
 
         $request->args = $args;
-        
     }
 
 
@@ -193,7 +189,10 @@ class ArgsParser {
         'diswebpre' => "disable_web_page_preview",
         'disnotif' => "disable_notification",
         'phone' => "phone_number",
-        'name' => "first_name",
+        'name' => [
+            'name',
+            'sendcontact' => "first_name",
+        ],
         'firstname' => "first_name",
         'first' => "first_name",
         'lastname' => "last_name",
@@ -236,6 +235,7 @@ class ArgsParser {
         'correct' => 'correct_option_id',
         "allowsendingwithoutreply" => "allow_sending_without_reply",
         "ignorerep" => "allow_sending_without_reply",
+        "ignorereply" => "allow_sending_without_reply",
 
         "ignore" => "ignore",
     ];
@@ -248,9 +248,7 @@ class ArgsParser {
      */
     public function smallWords()
     {
-
         return self::$smallWords;
-
     }
 
     /**
@@ -264,17 +262,15 @@ class ArgsParser {
      */
     public static function onArg($arg, $replacement)
     {
-
         if(is_array($arg))
         foreach($arg as $a)
             self::$smallWords[$a] = $replacement;
         else
             self::$smallWords[$arg] = $replacement;
-
     }
 
-    public function interfaces() {
-
+    public function interfaces()
+    {
         static $value = [
             'from_chat_id'          =>      \Mmb\Update\Interfaces\IChatID::class,
             'chat_id'               =>      \Mmb\Update\Interfaces\IChatID::class,
@@ -298,7 +294,6 @@ class ArgsParser {
         ];
 
         return $value;
-
     }
 
     /**
@@ -311,7 +306,6 @@ class ArgsParser {
      */
     public function parseKey(Request $request, $value, $key)
     {
-
         if($value instanceof Menu)
         {
             throw new TypeException("Mmb 'key' argument required array/string, given Menu. Use 'menu' argument for Menu");
@@ -320,7 +314,6 @@ class ArgsParser {
         return [
             'reply_markup' => is_array($value) ? mkey($value) : $value,
         ];
-
     }
 
     /**
@@ -333,16 +326,14 @@ class ArgsParser {
      */
     public function parseMenu(Request $request, $value, $key)
     {
-
-        if($value instanceof Menu)
+        if($value instanceof MenuBase)
         {
-            return $this->parseKey($request, $value->getKey(), null);
+            return $this->parseKey($request, $value->getMenuKey(), null);
         }
         else
         {
             throw new TypeException("Argument '$key' required Menu type, given " . typeOf($value));
         }
-
     }
 
     /**
@@ -353,8 +344,8 @@ class ArgsParser {
      * @param string $key
      * @return array
      */
-    public function text(Request $request, $value, $key) {
-
+    public function text(Request $request, $value, $key)
+    {
         $method = $request->lowerMethod();
 
         // Normal message
@@ -375,11 +366,10 @@ class ArgsParser {
         
         // Else
         return [ $key => $value ];
-        
     }
 
-    public function media(Request $request, $value, $key) {
-
+    public function media(Request $request, $value, $key)
+    {
         static $fil = [
             'type' => "type",
             'text' => "caption",
@@ -391,20 +381,22 @@ class ArgsParser {
             'performer' => "permorfer"
         ];
 
-        if($request->lowerMethod() == "sendmedia" || $request->lowerMethod() == "editmessagemedia"){
+        if($request->lowerMethod() == "sendmedia" || $request->lowerMethod() == "editmessagemedia")
+        {
             $value = filterArray($value, $fil);
             $key = 'media';
-        }else{
+        }
+        else
+        {
             $value = filterArray2D($value, $fil);
             $key = 'medias';
         }
 
         return [ $key => $value ];
-
     }
 
-    public function per(Request $request, $value, $key) {
-
+    public function per(Request $request, $value, $key)
+    {
         if(gettype($value) == "array")
             $value = mPers($value);
 
@@ -420,19 +412,16 @@ class ArgsParser {
         }
 
         return [ $key => $value ];
-
     }
 
-    public function results(Request $request, $value, $key) {
-
-        if($key == "results" && gettype($value) == "array") {
-            
+    public function results(Request $request, $value, $key)
+    {
+        if($key == "results" && gettype($value) == "array")
+        {
             $value = mInlineRes($value);
-
         }
 
         return [ $key => $value ];
-
     }
 
 }

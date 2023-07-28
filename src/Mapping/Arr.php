@@ -3,58 +3,44 @@
 namespace Mmb\Mapping; #auto
 
 use ArrayAccess;
+use ArrayObject;
 use Countable;
 use IteratorAggregate;
 use JsonSerializable;
+use Mmb\Big\BigNumber;
+use Mmb\Exceptions\MmbException;
 use Mmb\Tools\ATool;
+use Mmb\Tools\Operator;
 use Mmb\Tools\Type;
 
-class Arr implements Countable, ArrayAccess, IteratorAggregate, JsonSerializable
+/**
+ * @template V
+ * @extends ArrayableObject<V>
+ */
+class Arr extends ArrayableObject implements JsonSerializable
 {
 
-    private $data;
-    
     /**
-     * @param array $array
+     * @param array|Arrayable $array
      */
-    public function __construct(array $array = [])
+    public function __construct(array|Arrayable $array = [])
     {
+        if($array instanceof Arrayable)
+        {
+            $array = $array->toArray();
+        }
+
         $this->data = array_values($array);
     }
 
 
     // Interface functions
 
-    public function count()
-    {
-        return count($this->data);
-    }
-
-	public function offsetExists($offset)
-    {
-        return array_key_exists($offset, $this->data);
-	}
-	
-	public function offsetGet($offset)
-    {
-        return $this->data[$offset];
-	}
-	
-	public function offsetSet($offset, $value)
-    {
-        $this->data[$offset] = $value;
-	}
-	
 	public function offsetUnset($offset)
     {
         ATool::remove($this->data, $offset);
 	}
     
-	public function getIterator()
-    {
-        return $this->data;
-	}
-
 
     // Serialize & Unserialize
 
@@ -76,52 +62,131 @@ class Arr implements Countable, ArrayAccess, IteratorAggregate, JsonSerializable
 
     // Tools
 
-    public function push(...$value)
+    /**
+     * @return static<V>
+     */
+    public function append(...$value)
     {
-        return array_push($this->data, ...$value);
+        return new static(array_merge($this->data, $value));
     }
 
+    /**
+     * @return static<V>
+     */
     public function remove($index)
     {
-        ATool::remove($this->data, $index);
+        $data = $this->data;
+        ATool::remove($data, $index);
+        return new static($data);
     }
 
+    /**
+     * @return static<V>
+     */
     public function insert($index, $value, ...$values)
     {
-        ATool::insert($this->data, $index, $value);
+        $data = $this->data;
+        ATool::insert($data, $index, $value);
         if($values)
-            ATool::insertMulti($this->data, $index + 1, $values);
+            ATool::insertMulti($data, $index + 1, $values);
+
+        return new static($data);
     }
 
-    public function pop()
-    {
-        return array_pop($this->data);
-    }
-
+    /**
+     * @return static<V>
+     */
     public function move($fromIndex, $toIndex)
     {
-        ATool::move($this->data, $fromIndex, $toIndex);
+        $data = $this->data;
+        ATool::move($data, $fromIndex, $toIndex);
+        return new static($data);
     }
 
-    public function join($separator)
+    public function implode($separator)
     {
-        return join($this->data, $separator);
+        return implode($separator, $this->data);
     }
 
-    public function reverse()
+    /**
+     * @return static<V>
+     */
+    public function filter($callback)
     {
-        $this->data = array_reverse($this->data);
+        return new static(array_filter($this->data, $callback));
     }
 
-    public function chunk($length)
+    /**
+     * @return static<V>
+     */
+    public function map($callback)
     {
-        $this->data = array_chunk($this->data, $length);
+        return new static(array_map($callback, $this->data));
+    }
+    /**
+     * @return static<V>
+     */
+    public function walk($callback)
+    {
+        $data = $this->data;
+        array_walk($data, $callback);
+        return new static($data);
+    }
+    /**
+     * @return static<V>
+     */
+    public function each($callback)
+    {
+        $data = $this->data;
+        foreach($data as $index => $value)
+        {
+            $callback($data[$index]);
+        }
+        return new static($data);
     }
 
-    public function unique()
+    /**
+     * @return static<int|string>
+     */
+    public function indexs()
     {
-        $this->data = array_values(array_unique($this->data));
+        return new static(array_keys($this->data));
     }
+
+    /**
+     * @return static<V>
+     */
+    public function sort()
+    {
+        $data = $this->data;
+        sort($data);
+        return new static($data);
+    }
+
+    /**
+     * @return static<V>
+     */
+    public function sortDesc()
+    {
+        $data = $this->data;
+        rsort($data);
+        return new static($data);
+    }
+
+    /**
+     * @return Map<V>
+     */
+    public function assocBy($key)
+    {
+        $result = [];
+        foreach($this->pluckMap($key) as $index => $value)
+        {
+            $result[$value] = $this->data[$index];
+        }
+        return new Map($result);
+    }
+
+
 
     public function indexOf($value)
     {
@@ -130,56 +195,37 @@ class Arr implements Countable, ArrayAccess, IteratorAggregate, JsonSerializable
         return $index === false ? -1 : $index;
     }
 
-    public function filter($callback)
+    public function divide()
     {
-        $this->data = array_filter($this->data, $callback);
+        return new static([ $this->indexs(), $this ]);
     }
+ 
+    
 
-    public function map($callback)
-    {
-        $this->data = array_map($callback, $this->data);
-    }
-
-    public function sum()
-    {
-        return array_sum($this->data);
-    }
 
     /**
-     * محاسبه کردن
-     * 
-     * `$sum = $list->calculate(function($current, $before) { return $current + $before; }, 0);`
-     * `$fx = $list->calculate(function($current, $before) { return $current * $before; }, 1);`
-     * `$max = $list->calculate(function($current, $before) { return max($current, $before); }, PHP_INT_MIN);`
-     * `$min = $list->calculate('min', $list[0]);`
-     * 
-     * @param \Closure|callable $callback
-     * @param mixed $default
-     * @return mixed
+     * @return V
      */
-    public function calculate($callback, $default)
-    {
-        $result = $default;
-        foreach($this->data as $value)
-        {
-            $result = $callback($value, $result);
-        }
-        return $result;
-    }
-
     public function first()
     {
         return $this->data ? $this->data[0] : null;
     }
     
+    /**
+     * @return V
+     */
     public function last()
     {
         return $this->data ? end($this->data) : null;
     }
 
-    public function toArray()
+    public function __toString()
     {
-        return $this->data;
+        if($this->isEmpty())
+            return "[]";
+        
+        // return "[\"" . join("\", \"", array_map('addslashes', $this->data)) . "\"]";
+        return "[" . join(", ", $this->data) . "]";
     }
 
 }

@@ -13,6 +13,11 @@ class Lang
     private static $path = [];
     private static $cacheLoad = [];
 
+    public static function resetCache()
+    {
+        static::$cacheLoad = [];
+    }
+
     /**
      * لود کردن پوشه زبان ها
      * 
@@ -111,11 +116,11 @@ class Lang
         {
             if(isset($data[$name]))
             {
-                return self::getText($data[$name], $lang, $args);
+                return self::convertFromText($data[$name], $lang, $args);
             }
             if($value = ATool::selectorGet($data, $name))
             {
-                return self::getText($value, $lang, $args);
+                return self::convertFromText($value, $lang, $args);
             }
         }
 
@@ -130,7 +135,7 @@ class Lang
      * @param array $args
      * @return string
      */
-    private static function getText($text, $lang, $args)
+    public static function convertFromText($text, $lang, $args)
     {
         
         if($text instanceof \Closure)
@@ -152,9 +157,9 @@ class Lang
         // > lang("langs.$args[lang]") ?: "Unknown $args[lang]"
         $text = preg_replace_callback('/@\{(.*?)\}(|\?\{(.*?)\})/', 
             function ($res) use (&$args, $lang) {
-                $name = self::getText($res[1], $lang, $args);
+                $name = self::convertFromText($res[1], $lang, $args);
                 if(@$res[3])
-                    $default = self::getText($res[3], $lang, $args);
+                    $default = self::convertFromText($res[3], $lang, $args);
                 else
                     $default = null;
                 return tryLangFrom($name, $lang, []/*$args*/) ?: $default;

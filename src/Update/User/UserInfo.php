@@ -16,6 +16,10 @@ class UserInfo extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\U
      * @var static
      */
     public static $this;
+    public static function this()
+    {
+        return static::$this;
+    }
 
 
     /**
@@ -60,24 +64,22 @@ class UserInfo extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\U
      * @var string
      */
     public $lang;
-    /**
-     * @var Mmb
-     */
-    private $_base;
-    function __construct($f, $base) {
+    function __construct(array $args, ?Mmb $mmb = null)
+    {
+        parent::__construct($args, $mmb);
 
-        if($base->loading_update && !static::$this)
+        if($this->_base->loading_update && !static::$this)
             self::$this = $this;
 
-        $this->_base = $base;
-        $this->id = $f['id'];
-        $this->firstName = $f['first_name'];
-        $this->lastName = @$f['last_name'];
-        $this->name = $f['first_name'].(isset($f['last_name']) ? " ".$f['last_name'] : "");
-        $this->username = @$f['username'];
-        $this->isBot = @$f['is_bot'];
-        $this->lang = @$f['language_code'];
-
+        $this->initFrom($args, [
+            'id' => 'id',
+            'first_name' => 'firstName',
+            'last_name' => 'lastName',
+            'username' => 'username',
+            'is_bot' => 'isBot',
+            'language_code' => 'lang',
+        ]);
+        $this->name = $this->firstName . ($this->lastName ? " " . $this->lastName : "");
     }
     
     /**
@@ -87,7 +89,8 @@ class UserInfo extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\U
      * @param int $limit
      * @return Profiles|null
      */
-    function getProfs($offset=null, $limit=null){
+    function getProfs($offset = null, $limit = null)
+    {
         return $this->_base->getUserProfs($this->id, $offset, $limit);
     }
     
@@ -97,7 +100,8 @@ class UserInfo extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\U
      * @param mixed $chat
      * @return Member|bool
      */
-    public function getMember($chat){
+    public function getMember($chat)
+    {
         if(!is_array($chat))
             $chat = ['chat' => $chat];
         $chat['user'] = $this->id;
@@ -111,7 +115,8 @@ class UserInfo extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\U
      * @param array $args
      * @return Msg|false
      */
-    function sendMsg($text, $args = []){
+    function sendMsg($text, $args = [])
+    {
         if(gettype($text) == "array"){
             $args = array_merge($text, $args);
         }else{
@@ -143,10 +148,9 @@ class UserInfo extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\U
 	 *
 	 * @return int
 	 */
-	function IChatID() {
-
+	function IChatID()
+    {
         return $this->id;
-
 	}
 	
 	/**
@@ -154,9 +158,23 @@ class UserInfo extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\U
 	 *
 	 * @return int
 	 */
-	function IUserID() {
-
+	function IUserID()
+    {
         return $this->id;
-
 	}
+    
+    /**
+     * یک شی کاربر با این آیدی می سازد تا بتوانید از متد های آن استفاده کنید
+     * 
+     * این متد اطلاعات کاربر را از تلگرام نمی خواند
+     *
+     * @param string|integer $id
+     * @param ?Mmb $mmb
+     * @return UserInfo
+     */
+    public static function of(string|int $id, ?Mmb $mmb = null)
+    {
+        return new UserInfo([ 'id' => $id ], $mmb ?? mmb());
+    }
+
 }

@@ -3,56 +3,42 @@
 namespace Mmb\Mapping; #auto
 
 use ArrayAccess;
+use ArrayObject;
 use Countable;
 use IteratorAggregate;
 use JsonSerializable;
+use Mmb\Big\BigNumber;
+use Mmb\Exceptions\MmbException;
 use Mmb\Tools\ATool;
-use Mmb\Tools\Type;
+use Mmb\Tools\Operator;
 
-class Map implements Countable, ArrayAccess, IteratorAggregate, JsonSerializable
+/**
+ * @template V
+ * @extends ArrayableObject<V>
+ */
+class Map extends ArrayableObject implements JsonSerializable
 {
-
-    private $data;
     
     /**
-     * @param array $array
+     * @template V
+     * @param array<V>|Arrayable<V> $array
      */
-    public function __construct(array $array = [])
+    public function __construct(array|Arrayable $array = [])
     {
+        if($array instanceof Arrayable)
+        {
+            $array = $array->toArray();
+        }
+
         $this->data = $array;
     }
 
 
     // Interface functions
 
-    public function count()
-    {
-        return count($this->data);
-    }
-
-	public function offsetExists($offset)
-    {
-        return array_key_exists($offset, $this->data);
-	}
-	
-	public function offsetGet($offset)
-    {
-        return $this->data[$offset];
-	}
-	
-	public function offsetSet($offset, $value)
-    {
-        $this->data[$offset] = $value;
-	}
-	
 	public function offsetUnset($offset)
     {
         unset($this->data[$offset]);
-	}
-    
-	public function getIterator()
-    {
-        return $this->data;
 	}
 
 
@@ -70,111 +56,218 @@ class Map implements Countable, ArrayAccess, IteratorAggregate, JsonSerializable
 
     public function __unserialize(array $data)
     {
-        $this->data = array_values($data);
-        
+        $this->data = $data;
     }
 
 
     // Tools
 
+    /**
+     * @return static<V>
+     */
+    public function merge(...$maps)
+    {
+        $data = $this->data;
+        foreach($maps as $i => $map)
+        {
+            if($map instanceof Map || $map instanceof Arr)
+                $maps[$i] = $map->toArray();
+        }
+        $data = array_replace($data, ...$maps);
+        return new static($data);
+    }
+
+    /**
+     * @return static<V>
+     */
+    public function leftMerge(...$maps)
+    {
+        $data = $this->data;
+        foreach($maps as $map)
+        {
+            if($map instanceof Map || $map instanceof Arr)
+                $map = $map->toArray();
+            $data += $map;
+        }
+        return new static($data);
+    }
+
+    /**
+     * @return static<V>
+     */
+    public function remove($index)
+    {
+        $data = $this->data;
+        unset($data[$index]);
+        return new static($data);
+    }
+
+    /**
+     * @return static<V>
+     */
     public function set($key, $value)
     {
-        $this->data[$key] = $value;
+        $data = $this->data;
+        $data[$key] = $value;
+        return new static($data);
     }
 
-    public function replace(array $array)
+    /**
+     * @return static<V>
+     */
+    public function move($fromKey, $toKey)
     {
-        $this->data = array_replace($this->data, $array);
+        $data = $this->data;
+        $temp = $data[$fromKey];
+        $data[$fromKey] = $data[$toKey];
+        $data[$toKey] = $temp;
+        return new static($data);
     }
 
-    public function remove($key)
+    public function implodeValues($separator)
     {
-        unset($this->data[$key]);
+        return implode($this->data, $separator);
     }
 
-    public function pop()
+    public function implodeKeys($separator)
     {
-        return array_pop($this->data);
+        return implode(array_keys($this->data), $separator);
     }
 
-    public function join($separator)
+    public function implode($separator, $separator2 = ": ")
     {
-        return join($this->data, $separator);
+        // return implode($this->map(), $separator);
     }
 
-    public function joinAssoc($separator, $keyValSeparator, $startWithValue = false)
+    /**
+     * @return static<V>
+     */
+    public function filter($callback)
     {
-        $first = true;
-        $res = "";
+        return new static(array_filter($this->data, $callback, ARRAY_FILTER_USE_BOTH));
+    }
 
+    /**
+     * @return static<V>
+     */
+    public function map($callback)
+    {
+        return new static(array_map($callback, $this->data));
+    }
+    /**
+     * @return static<V>
+     */
+    public function each($callback)
+    {
+        $result = [];
         foreach($this->data as $key => $value)
         {
-            if ($first)
-                $first = false;
-            else
-                $res .= $separator;
-
-            $res .= $startWithValue ? "$value$keyValSeparator$key" : "$key$keyValSeparator$value";
+            $callback($key, $value);
+            $result[$key] = $value;
         }
-
-        return $res;
+        return new static($result);
     }
 
-    public function reverse()
+    /**
+     * @return static<V>
+     */
+    public function mapKey($callback)
     {
-        $this->data = array_reverse($this->data, true);
+        $res = [];
+        foreach($this->data as $key => $val)
+        {
+            $res[$callback($key)] = $val;
+        }
+        return new static($res);
     }
 
-    public function unique()
+    /**
+     * @return Arr<V>
+     */
+    public function keys()
     {
-        $this->data = array_unique($this->data);
+        return new Arr(array_keys($this->data));
     }
+    /**
+     * @return Arr<V>
+     */
+    public function values()
+    {
+        return new Arr(array_values($this->data));
+    }
+
+    /**
+     * @return static<V>
+     */
+    public function sort()
+    {
+        $data = $this->data;
+        asort($data);
+        return new static($data);
+    }
+
+    /**
+     * @return static<V>
+     */
+    public function sortDesc()
+    {
+        $data = $this->data;
+        arsort($data);
+        return new static($data);
+    }
+
+
+
 
     public function keyOf($value)
     {
         return array_search($value, $this->data);
     }
-
-    public function filter($callback)
+    /**
+     * @return V
+     */
+    public function valueOf($key)
     {
-        foreach($this->data as $key => $value)
-        {
-            if (!$callback($key, $value))
-                unset($this->data[$key]);
-        }
+        return $this->data[$key] ?? false;
     }
 
-    public function map($callback)
+    public function divide()
     {
-        foreach($this->data as $key => $value)
-        {
-            $this->data[$key] = $callback($key, $value);
-        }
+        return new Arr([ $this->keys(), $this->values() ]);
     }
 
+    
+
+
+    /**
+     * @return V
+     */
     public function first()
     {
         return $this->data ? $this->data[array_key_first($this->data)] : null;
     }
     
+    /**
+     * @return V
+     */
     public function last()
     {
         return $this->data ? end($this->data) : null;
     }
 
-    public function firstKey()
+    public function __toString()
     {
-        return array_key_first($this->data);
-    }
+        if($this->isEmpty())
+            return "[]";
+        
+        $str = "";
+        foreach($this->data as $key => $val)
+        {
+            if($str) $str .= ", ";
+            $str .= "{$key} => {$val}";
+        }
 
-    public function lastKey()
-    {
-        return array_key_last($this->data);
-    }
-
-    public function toArray()
-    {
-        return $this->data;
+        return '[' . $str . ']';
     }
 
 }

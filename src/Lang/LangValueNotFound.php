@@ -2,9 +2,9 @@
 #auto-name
 namespace Mmb\Lang;
 
-use Exception;
+use Mmb\Exceptions\MmbException;
 
-class LangValueNotFound extends Exception
+class LangValueNotFound extends MmbException
 {
 
 }

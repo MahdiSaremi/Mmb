@@ -9,13 +9,9 @@ class PollOption extends MmbBase
 {
     
     /**
-     * @var Mmb
-     */
-    private $_base;
-    /**
      * @var Poll
      */
-    private $_basep;
+    public Poll $poll;
 
     /**
      * متن
@@ -34,16 +30,20 @@ class PollOption extends MmbBase
      *
      * @var float
      */
-    public $cent;
-    public function __construct($a, Poll $poll, $base)
+    public $percent;
+    public function __construct(array $args, Poll $poll, ?Mmb $mmb = null)
     {
-        $this->_base = $base;
-        $this->_basep = $poll;
-        $this->text = $a['text'];
-        $this->votersCount = $a['voter_count'];
+        parent::__construct($args, $mmb);
+        $this->poll = $poll;
+
+        $this->initFrom($args, [
+            'text' => 'text',
+            'voter_count' => 'votersCount',
+        ]);
+
         if($poll->votersCount == 0)
-            $this->cent = 0;
+            $this->percent = 0;
         else
-            $this->cent = $this->votersCount / $poll->votersCount * 100;
+            $this->percent = $this->votersCount / $poll->votersCount * 100;
     }
 }

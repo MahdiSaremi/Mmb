@@ -2,6 +2,8 @@
 
 namespace Mmb;
 
+use Exception;
+use Mmb\Exceptions\MmbException;
 use Mmb\Update\Bot\BotCmd;
 use Mmb\Update\Chat\Chat;
 use Mmb\Update\Chat\Invite;
@@ -13,9 +15,12 @@ use Mmb\Update\Upd;
 use Mmb\Update\User\Profiles;
 use Mmb\Update\User\UserInfo;
 use Mmb\Update\Webhook\Info as WebhookInfo;
+use Mmb\Update\Exceptions;
+use Mmb\Update\Exceptions\TelRequestError;
 
 // Telegram IP
-if(isset($_SERVER['REMOTE_ADDR'])){
+if(isset($_SERVER['REMOTE_ADDR']))
+{
     $telegram_ip_ranges = [
         ['lower' => '149.154.160.0', 'upper' => '149.154.175.255'],
         ['lower' => '91.108.4.0',    'upper' => '91.108.7.255'],
@@ -50,6 +55,10 @@ class Mmb extends MmbBase implements \Serializable
      * @var static
      */
     public static $this;
+    public static function this()
+    {
+        return static::$this;
+    }
 
     
     public static $HARD_ERROR = true;
@@ -63,15 +72,14 @@ class Mmb extends MmbBase implements \Serializable
      *
      * @param string $token
      */
-    function __construct(string $token){
-
+    function __construct(string $token)
+    {
         $token = trim($token);
         $this->_token = $token;
 
         self::$_BOTS[] = $this;
         if (!self::$this)
             self::$this = $this;
-
     }
     
     /**
@@ -81,15 +89,14 @@ class Mmb extends MmbBase implements \Serializable
      * @param array $args
      * @return \stdClass|false
      */ 
-    public function bot($method, array $args = []){
-
+    public function bot($method, array $args = [])
+    {
         // Edit method
         $method = str_replace(["-", "_", " ", "\n", "\t", "\r"], '', $method);
 
         // Request
         $request = Core\Request::defaultNew($this, $this->_token, $method, $args);
         return $request->request();
-        
     }
     
     /**
@@ -99,8 +106,8 @@ class Mmb extends MmbBase implements \Serializable
      * @param array $args
      * @return array|false
      */
-    public function call($method, array $args = []) {
-
+    public function call($method, array $args = [])
+    {
         // Edit method
         $method = str_replace(["-", "_", " ", "\n", "\t", "\r"], '', $method);
 
@@ -113,37 +120,66 @@ class Mmb extends MmbBase implements \Serializable
         $request = Core\Request::defaultNew($this, $this->_token, $method, $args);
         $request->parseArgs();
 
-        // Responce
-        $responce = $request->request(true);
+        // Response
+        $response = $request->request(true);
 
-        if (!$responce) {
-
+        if (!$response)
+        {
             // Connection error
             $des = "Connection error";
-
         }
-        else {
-            
-            if($responce['ok'] === true) {
-                
+        else
+        {
+            if($response['ok'] === true)
+            {
                 // Success result
-                // Listeners::__runMmbReqEnd($responce['result'], $method, $args);
-                return $responce['result'];
-
+                // Listeners::__runMmbReqEnd($response['result'], $method, $args);
+                return $response['result'];
             }
-            else {
-
+            else
+            {
                 // Telegram error
-                $des = "Telegram error: ".$responce['description'] . ": on $method";
-
+                $this->getRequestException($response);
+                $des = "Telegram error: ".$response['description'] . ": on $method";
             }
         }
 
         // Error
         if(!$request->ignoreError)
-            mmb_error_throw($des);
+            throw new TelRequestError($des, $response['error_code'] ?? 0);
 
         return false;
+    }
+
+    public function getRequestException($response)
+    {
+        $target = [
+            Exceptions\TelBadRequestError::$error_code => [
+                Exceptions\TelArgEmptyError::class,
+                Exceptions\TelChatNotFound::class,
+                Exceptions\TelInvalidError::class,
+                Exceptions\TelNotSpecifiedError::class,
+
+                Exceptions\TelBadRequestError::class,
+            ],
+            Exceptions\TelUnauthorizedError::$error_code => [
+                Exceptions\TelUnauthorizedError::class,
+            ],
+            Exceptions\TelNotFoundError::$error_code => [
+                Exceptions\TelNotFoundError::class,
+            ],
+        ];
+        
+        foreach($target[$response['error_code']] ?? [] as $class)
+        {
+            if(method_exists($class, 'match'))
+            {
+                if(!$class::match($response['description']))
+                    continue;
+            }
+
+            return new $class($response['description'], $response['error_code']);
+        }
     }
 
     public $loading_update = false;
@@ -310,10 +346,14 @@ class Mmb extends MmbBase implements \Serializable
      * @param array $args
      * @return Msg|false
      */
-    public function sendMsg(array $args) {
-        
+    public function sendMsg(array $args)
+    {
+        if(isset($args['type']))
+        {
+            return $this->send($args);
+        }
+
         return objOrFalse(Msg::class, $this->call('sendmessage', $args), $this);
-        
     }
     
     /**
@@ -326,10 +366,9 @@ class Mmb extends MmbBase implements \Serializable
      * @param array $args
      * @return bool
      */
-    public function delMsg(array $args) {
-
+    public function delMsg(array $args)
+    {
         return $this->call('deletemessage', $args);
-
     }
 
     /**
@@ -345,10 +384,9 @@ class Mmb extends MmbBase implements \Serializable
      * @param array $args
      * @return Msg|false
      */
-    public function sendMedia(array $args) {
-
+    public function sendMedia(array $args)
+    {
         return objOrFalse(Msg::class, $this->call('sendmedia', $args), $this);
-        
     }
     
     /**
@@ -362,8 +400,8 @@ class Mmb extends MmbBase implements \Serializable
      * @param array $args
      * @return Msg|false
      */
-    public function copyMsg(array $args){
-
+    public function copyMsg(array $args)
+    {
         $r = $this->call('copymessage', $args);
         if($r) {
             if(!isset($r['chat'])){
@@ -375,7 +413,6 @@ class Mmb extends MmbBase implements \Serializable
         }
         else
             return false;
-
     }
 
     /**
@@ -389,10 +426,9 @@ class Mmb extends MmbBase implements \Serializable
      * @param array $args
      * @return Msg|false
      */
-    public function forwardMsg(array $args){
-        
+    public function forwardMsg(array $args)
+    {
         return objOrFalse(Msg::class, $this->call('forwardmessage', $args), $this);
-        
     }
     
     /**
@@ -408,10 +444,9 @@ class Mmb extends MmbBase implements \Serializable
      * @param array $args
      * @return Msg|false
      */
-    public function sendMedias(array $args) {
-
+    public function sendMedias(array $args)
+    {
         return objOrFalse(Msg::class, $this->call('sendmediagroup', $args), $this);
-        
     }
     
     /**
@@ -429,43 +464,57 @@ class Mmb extends MmbBase implements \Serializable
      * @param array $args
      * @return Msg|false
      */
-    public function send($type, array $args = []) {
-
+    public function send($type, array $args = [])
+    {
         // send([ ... ])
-        if(gettype($type) == "array"){
-
+        if(is_array($type))
+        {
             $args = array_merge($type, $args);
-            $type = $args['type'];
+            $type = $args['type'] ?? 'text';
             unset($args['type']);
-            
         }
+        $type = strtolower($type);
         
         // Text message
-        if($type == "text"){
+        if($type == "text")
+        {
+            unset($args['val'], $args['value']);
+            return $this->sendMsg($args);
+        }
 
-            unset($args['val']);
-            $r = $this->call('sendmessage', $args);
+        // Copy message
+        elseif($type == 'copy')
+        {
+            return $this->copyMsg($args);
+        }
 
+        // Forward message
+        elseif($type == 'for' || $type == 'forward')
+        {
+            return $this->forwardMsg($args);
         }
 
         // Other message
-        else {
+        else
+        {
+            if($type == "doc")
+                $type = "Document";
+            elseif($type == "anim")
+                $type = "animation";
 
-            if($type == "doc") $type = "Document";
-            if($type == "anim") $type = "animation";
-
-            if (isset($args['val'])) {
-
+            if(isset($args['val']))
+            {
                 $args[strtolower($type)] = $args['val'];
                 unset($args['val']);
-
+            }
+            elseif(isset($args['value']))
+            {
+                $args[strtolower($type)] = $args['value'];
+                unset($args['value']);
             }
 
-            $r = $this->call('send'.$type, $args);
+            return objOrFalse(Msg::class, $this->call('send'.$type, $args), $this);
         }
-
-        return objOrFalse(Msg::class, $r, $this);
-        
     }
 
     /**
@@ -474,14 +523,13 @@ class Mmb extends MmbBase implements \Serializable
      * @param array $args
      * @return Msg|false
      */
-    public function sendDice($args) {
-
+    public function sendDice($args)
+    {
         $args = maybeArray([
             'chat' => $args,
         ]);
 
         return objOrFalse(Msg::class, $this->call('senddice', $args), $this);
-
     }
     
     /**
@@ -490,10 +538,9 @@ class Mmb extends MmbBase implements \Serializable
      * @param array $args
      * @return Msg|false
      */
-    public function sendPoll(array $args) {
-
+    public function sendPoll(array $args)
+    {
         return objOrFalse(Msg::class, $this->call('sendpoll', $args), $this);
-
     }
     
     public const ACTION_TYPING = 'typing';
@@ -515,15 +562,14 @@ class Mmb extends MmbBase implements \Serializable
      * @param string $action
      * @return bool
      */
-    public function action($chat, $action = 'typing'){
-
+    public function action($chat, $action = 'typing')
+    {
         $args = maybeArray([
             'chat' => $chat,
             'action' => $action
         ]);
 
         return $this->call('sendchataction', $args);
-        
     }
     
     /**
@@ -554,8 +600,8 @@ class Mmb extends MmbBase implements \Serializable
      * @param int $until
      * @return bool
      */
-    public function ban($chat, $user = null, $until = null){
-
+    public function ban($chat, $user = null, $until = null)
+    {
         $args = maybeArray([
             'chat' => $chat,
             'user' => $user,
@@ -563,7 +609,6 @@ class Mmb extends MmbBase implements \Serializable
         ]);
         
         return $this->call('banchatmember', $args);
-
     }
     
     /**
@@ -574,8 +619,8 @@ class Mmb extends MmbBase implements \Serializable
      * @param int $limit
      * @return Profiles|false
      */
-    public function getUserProfs($user, $offset = null, $limit = null){
-
+    public function getUserProfs($user, $offset = null, $limit = null)
+    {
         $args = maybeArray([
             'user' => $user,
             'offset' => $offset,
@@ -583,7 +628,6 @@ class Mmb extends MmbBase implements \Serializable
         ]);
         
         return objOrFalse(Profiles::class, $this->call('getuserprofilephotos', $args), $this);
-        
     }
     
     /**
@@ -721,7 +765,8 @@ class Mmb extends MmbBase implements \Serializable
      * @param array $args
      * @return Invite|false
      */
-    function createInviteLink(array $args){
+    function createInviteLink(array $args)
+    {
         $r = $this->call('createchatinvitelink', $args);
         if(!$r)
             return false;
@@ -735,7 +780,8 @@ class Mmb extends MmbBase implements \Serializable
      * @param array $args
      * @return Invite|false
      */
-    public function editInviteLink(array $args){
+    public function editInviteLink(array $args)
+    {
         $r = $this->call('editchatinvitelink', $args);
         if(!$r)
             return false;
@@ -993,15 +1039,14 @@ class Mmb extends MmbBase implements \Serializable
      * @param mixed $user
      * @return Member|false
      */
-    public function getChatMember($chat, $user=null){
-
+    public function getChatMember($chat, $user=null)
+    {
         $args = maybeArray([
             'chat' => $chat,
             'user' => $user,
         ]);
 
         return objOrFalse(Member::class, $this->call('getchatmember', $args), $this);
-
     }
     
     /**
@@ -1119,19 +1164,19 @@ class Mmb extends MmbBase implements \Serializable
      * @param array $args
      * @return Msg|false
      */
-    public function editMsgCaption($args){
-
+    public function editMsgCaption($args)
+    {
         $args = maybeArray([
             'caption' => $args
         ]);
 
-        if(isset($args['text'])) {
+        if(isset($args['text']))
+        {
             $args['caption'] = $args['text'];
             unset($args['text']);
         }
 
         return objOrFalse(Msg::class, $this->call('editmessagecaption', $args), $this);
-        
     }
     
     /**
@@ -1140,10 +1185,9 @@ class Mmb extends MmbBase implements \Serializable
      * @param array $args
      * @return Msg|false
      */
-    public function editMsgMedia(array $args){
-
+    public function editMsgMedia(array $args)
+    {
         return objOrFalse(Msg::class, $this->call('editmessagemedia', $args), $this);
-        
     }
     
     /**
@@ -1152,10 +1196,9 @@ class Mmb extends MmbBase implements \Serializable
      * @param array $args
      * @return Msg|false
      */
-    public function editMsgKey($args){
-
+    public function editMsgKey($args)
+    {
         return objOrFalse(Msg::class, $this->call('editmessagereplymarkup', $args), $this);
-        
     }
     
     /**
@@ -1164,14 +1207,13 @@ class Mmb extends MmbBase implements \Serializable
      * @param mixed $setName
      * @return StickerSet|false
      */
-    public function getStickerSet($setName){
-
+    public function getStickerSet($setName)
+    {
         $args = maybeArray([
             'name' => $setName,
         ]);
         
         return objOrFalse(StickerSet::class, $this->call('getstickerset', $args), $this);
-
     }
     
     /**
@@ -1181,10 +1223,9 @@ class Mmb extends MmbBase implements \Serializable
      * @param string $paste
      * @return bool
      */
-    public function copyByFilePath($path, $paste){
-
+    public function copyByFilePath($path, $paste)
+    {
         return copy("https://api.telegram.org/file/bot" . $this->_token . "/" . $path, $paste);
-
     }
 
     /**
@@ -1194,15 +1235,14 @@ class Mmb extends MmbBase implements \Serializable
      * @param bool $drop حذف آپدیت های درون صف
      * @return bool
      */
-    public function setWebhook($url, $drop = null){
-
+    public function setWebhook($url, $drop = null)
+    {
         $args = maybeArray([
             'url' => $url,
             'drop' => $drop
         ]);
         
         return $this->call('setwebhook', $args);
-
     }
 
     /**
@@ -1211,10 +1251,9 @@ class Mmb extends MmbBase implements \Serializable
      * @param array $args
      * @return WebhookInfo|false
      */
-    public function getWebhook(array $args = []){
-        
+    public function getWebhook(array $args = [])
+    {
         return objOrFalse(WebhookInfo::class, $this->call('getwebhookinfo', $args), $this);
-        
     }
 
     

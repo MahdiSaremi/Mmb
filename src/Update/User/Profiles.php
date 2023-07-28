@@ -14,7 +14,7 @@ class Profiles extends MmbBase implements ArrayAccess
      *
      * @var Media[][]
      */
-    public $photos;
+    public array $photos;
 
     /**
      * تعداد کل
@@ -23,26 +23,27 @@ class Profiles extends MmbBase implements ArrayAccess
      */
     public $count;
 
-    /**
-     * @var Mmb
-     */
-    private $_base;
-    public function __construct($v, $base){
-        $this->_base = $base;
-        $this->count = $v['total_count'];
+    public function __construct(array $args, ?Mmb $mmb = null)
+    {
+        parent::__construct($args, $mmb);
+
+        $this->count = $args['total_count'] ?? 0;
         $this->photos = [];
-        foreach($v['photos']as$once){
-            $a=[];
-            foreach($once as $x)
-                $a[] = new Media("photo", $x, $base);
-            $this->photos[] = $a;
+        foreach($args['photos'] ?? [] as $once)
+        {
+            $pics = [];
+            foreach($once as $pic)
+            {
+                $pics[] = new Media("photo", $pic, $this->_base);
+            }
+            $this->photos[] = $pics;
         }
     }
 	
     /**
      * @return bool
      */
-	public function offsetExists($offset)
+	public function offsetExists($offset) : bool
     {
         return isset($this->photos[$offset]);
 	}
@@ -51,17 +52,17 @@ class Profiles extends MmbBase implements ArrayAccess
     /**
      * @return Media[]
      */
-	public function offsetGet($offset) 
+	public function offsetGet($offset)
     {
         return $this->photos[$offset];
 	}
 	
-	public function offsetSet($offset, $value) 
+	public function offsetSet($offset, $value) : void
     {
         $this->photos[$offset] = $value;
 	}
 	
-	public function offsetUnset($offset) 
+	public function offsetUnset($offset) : void
     {
         unset($this->photos[$offset]);
 	}

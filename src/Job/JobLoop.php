@@ -1,6 +1,6 @@
 <?php
-
-namespace Mmb\Job; #auto
+#auto-name
+namespace Mmb\Job;
 
 abstract class JobLoop extends Job
 {

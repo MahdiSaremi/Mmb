@@ -15,12 +15,12 @@ class InChat extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\Upd
      * @var static
      */
     public static $this;
+    public static function this()
+    {
+        return static::$this;
+    }
 
     
-    /**
-     * @var Mmb
-     */
-    private $_base;
     /**
      * کاربر هدف
      *
@@ -33,19 +33,16 @@ class InChat extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\Upd
      * @var mixed
      */
     private $chat;
-   public function __construct($user, $chat, $base){
+    public function __construct($user, $chat, ?Mmb $mmb = null)
+    {
+        parent::__construct([], $mmb);
 
-        if($base->loading_update && !static::$this)
-            self::$this = $this;
-
-        $this->_base = $base;
         $this->user = $user;
         if($user instanceof \Mmb\Update\Interfaces\IUserID)
             $this->user = $user->IUserID();
         $this->chat = $chat;
         if($chat instanceof \Mmb\Update\Interfaces\IChatID)
             $this->chat = $chat->IChatID();
-
     }
     
     /**
@@ -53,7 +50,8 @@ class InChat extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\Upd
      *
      * @return Member
      */
-   public function getMember(){
+    public function getMember()
+    {
         return $this->_base->getChatMember($this->chat, $this->user);
     }
     
@@ -63,7 +61,8 @@ class InChat extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\Upd
      * @param int $until
      * @return bool
      */
-   public function kick($until = null){
+    public function kick($until = null)
+    {
         return $this->_base->kick($this->chat, $this->user, $until);
     }
     /**
@@ -72,7 +71,8 @@ class InChat extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\Upd
      * @param int $until
      * @return bool
      */
-   public function ban($until = null){
+    public function ban($until = null)
+    {
         return $this->_base->ban($this->chat, $this->user, $until);
     }
     
@@ -81,7 +81,8 @@ class InChat extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\Upd
      *
      * @return bool
      */
-   public function unban(){
+    public function unban()
+    {
         return $this->_base->unban($this->chat, $this->user);
     }
     
@@ -92,7 +93,8 @@ class InChat extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\Upd
      * @param int $until
      * @return bool
      */
-   public function restrict($per = [], $until = null){
+    public function restrict($per = [], $until = null)
+    {
         return $this->_base->restrict($this->chat, $this->user, $per, $until);
     }
     
@@ -102,7 +104,8 @@ class InChat extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\Upd
      * @param array $per
      * @return bool
      */
-   public function promote($per = []){
+    public function promote($per = [])
+    {
         return $this->_base->promote($this->chat, $this->user, $per);
     }
 
@@ -111,10 +114,9 @@ class InChat extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\Upd
 	 *
 	 * @return int
 	 */
-	function IChatID() {
-
+	public function IChatID()
+    {
         return $this->chat;
-
 	}
 	
 	/**
@@ -122,9 +124,8 @@ class InChat extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\Upd
 	 *
 	 * @return int
 	 */
-	function IUserID() {
-
-        return $this->user;
-        
+	public function IUserID()
+    {
+        return $this->user;   
 	}
 }

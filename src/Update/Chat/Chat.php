@@ -17,6 +17,10 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      * @var static
      */
     public static $this;
+    public static function this()
+    {
+        return static::$this;
+    }
 
     
     /**
@@ -76,7 +80,7 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
     /**
      * عکس پروفایل
      *
-     * @var Photo|null
+     * @var ChatPhoto|null
      */
     public $photo;
     /**
@@ -111,50 +115,72 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      * @var Per|null
      */
     public $pers;
-    /**
-     * @var Mmb
-     */
-    private $_base;
-   public function __construct($c, Mmb $base){
+    public function __construct(array $args, ?Mmb $mmb = null)
+	{
+        parent::__construct($args, $mmb);
 
-        if($base->loading_update && !static::$this)
+        if($this->_base->loading_update && !static::$this)
             self::$this = $this;
 
-        $this->_base = $base;
-        $this->id = $c['id'];
-        $this->type = @$c['type'];
-        $this->title = @$c['title'];
-        $this->username = @$c['username'];
-        $this->firstName = @$c['first_name'];
-        $this->lastName = @$c['last_name'];
-        $this->name = $this->firstName . ($this->lastName ? ' ' . $this->lastName : '');
-        $this->bio = @$c['bio'];
-        if(@$c['des'])
-            $this->bio = @$c['des'];
-        if($_ = @$c['photo'])
-            $this->photo = new Photo($_, $base);
-        $this->inviteLink = @$c['invite_link'];
-        $this->pinnedMsg = @$c['pinned_message'];
-        $this->slowDelay = @$c['slow_mode_delay'];
-        $this->linkedChatID = @$c['linked_chat_id'];
-        if(isset($c['permissions'])){
-            $this->pers = new Per($c['permissions'], null, $base);
-        }
+        $this->initFrom($args, [
+            'id' => 'id',
+            'type' => 'type',
+            'title' => 'title',
+            'username' => 'username',
+            'first_name' => 'firstName',
+            'last_name' => 'lastName',
+            'bio' => 'bio',
+            'des' => 'des',
+            'photo' => fn($photo) => $this->photo = new ChatPhoto($photo, $this->_base),
+            'invite_link' => 'inviteLink',
+            'pinned_message' => 'pinnedMsg',
+            'slow_mode_delay' => 'slowDelay',
+            'linked_chat_id' => 'linkedChatID',
+            'permissions' => fn($per) => $this->pers = new Per($per, null, $this->_base),
+        ]);
 
+        $this->name = $this->firstName . ($this->lastName ? ' ' . $this->lastName : '');
+    }
+
+    /**
+     * یک شی چت با این آیدی می سازد تا بتوانید از متد های آن استفاده کنید
+     * 
+     * این متد اطلاعات چت را از تلگرام نمی خواند
+     *
+     * @param string|integer $id
+     * @param ?Mmb $mmb
+     * @return Chat
+     */
+    public static function of(string|int $id, ?Mmb $mmb = null)
+    {
+        return new Chat([ 'id' => $id ], $mmb ?? mmb());
+    }
+
+    /**
+     * اطلاعات چتی را از تلگرام می خواند و بر می گرداند
+     *
+     * @param string|integer $id
+     * @param Mmb|null $mmb
+     * @return Chat|false
+     */
+    public static function get(string|int $id, ?Mmb $mmb = null)
+    {
+        return ($mmb ?? mmb())->getChat($id);
     }
     
     /**
      * گرفتن اطلاعات کاربر در چت
      *
-     * @param mixed $user
+     * @param mixed|array $user
      * @return Member|false
      */
-   public function getMember($user){
-        if(is_array($user)){
-            $user['chat'] = $this->id;
-            return $this->_base->getChatMember($user);
-        }
-        return $this->_base->getChatMember($this->id, $user);
+	public function getMember($user)
+	{
+		$args = maybeArray([
+			'chat' => $this->id,
+			'user' => $user,
+		]);
+        return $this->_base->getChatMember($args);
     }
     
     /**
@@ -162,7 +188,12 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      *
      * @return int|false
      */
-   public function getMemberNum(){
+   	public function getMemberNum(array $args = [])
+	{
+		$args = maybeArray([
+			'chat' => $this->id,
+			'args' => $args,
+		]);
         return $this->_base->getChatMemberNum($this->id);
     }
     
@@ -171,7 +202,12 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      *
      * @return int|false
      */
-   public function getMemberCount(){
+   	public function getMemberCount(array $args = [])
+	{
+		$args = maybeArray([
+			'chat' => $this->id,
+			'args' => $args,
+		]);
         return $this->_base->getChatMemberCount($this->id);
     }
     
@@ -182,8 +218,14 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      * @param int $until
      * @return bool|false
      */
-   public function ban($user, $until = null) {
-        return $this->_base->ban($this->id, $user, $until);
+   	public function ban($user, $until = null)
+	{
+		$args = maybeArray([
+			'chat' => $this->id,
+			'user' => $user,
+			'until' => $until,
+		]);
+        return $this->_base->ban($args);
     }
     
     /**
@@ -192,8 +234,13 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      * @param mixed $user
      * @return bool|false
      */
-   public function unban($user){
-        return $this->_base->unban($this->id, $user);
+   	public function unban($user)
+	{
+		$args = maybeArray([
+			'chat' => $this->id,
+			'user' => $user,
+		]);
+        return $this->_base->unban($args);
     }
     
     /**
@@ -204,10 +251,12 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      * @param int $until
      * @return bool
      */
-   public function restrict($user, $per = [], $until = null)
-   {
-        if(is_array($user)){
-            $user['chat'] = $this->id;
+   	public function restrict($user, $per = [], $until = null)
+   	{
+        if(is_array($user))
+		{
+			if(!isset($user['chat']))
+				$user['chat'] = $this->id;
             return $this->_base->restrict($user);
         }
         return $this->_base->restrict($this->id, $user, $per, $until);
@@ -220,10 +269,12 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      * @param array $per
      * @return bool
      */
-   public function promote($user, $per = [])
-   {
-        if(is_array($user)){
-            $user['chat'] = $this->id;
+	public function promote($user, $per = [])
+	{
+        if(is_array($user))
+		{
+			if(!isset($user['chat']))
+				$user['chat'] = $this->id;
             return $this->_base->promote($user);
         }
         return $this->_base->promote($this->id, $user, $per);
@@ -235,11 +286,14 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      * @param array $per
      * @return bool
      */
-   public function setPer($per)
-   {
-        if($per instanceof \JsonSerializable) $per = $per->jsonSerialize();
-        if(isset($per['per'])){
-            $per['chat'] = $this->id;
+	public function setPer($per)
+	{
+        if($per instanceof \JsonSerializable)
+			$per = $per->jsonSerialize();
+        if(isset($per['per']))
+		{
+			if(!isset($user['chat']))
+				$user['chat'] = $this->id;
             return $this->_base->setChatPer($per);
         }
         return $this->_base->setChatPer($this->id, $per);
@@ -250,9 +304,10 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      *
      * @return string
      */
-   public function getInviteLink(array $args = [])
-   {
-        $args['chat'] = $this->id;
+	public function getInviteLink(array $args = [])
+	{
+		if(!isset($args['chat']))
+			$args['chat'] = $this->id;
         return $this->_base->getInviteLink($args);
     }
     
@@ -263,9 +318,11 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      * @param array $args
      * @return Invite|false
      */
-   public function createInviteLink(array $args){
-        $args['chat'] = $this->id;
-        return $this->createInviteLink($args);
+   	public function createInviteLink(array $args)
+	{
+		if(!isset($args['chat']))
+			$args['chat'] = $this->id;
+        return $this->_base->createInviteLink($args);
     }
 
     /**
@@ -275,9 +332,11 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      * @param array $args
      * @return Invite|false
      */
-    public function editInviteLink($args){
-        $args['chat'] = $this->id;
-        return $this->editInviteLink($args);
+    public function editInviteLink($args)
+	{
+		if(!isset($args['chat']))
+			$args['chat'] = $this->id;
+        return $this->_base->editInviteLink($args);
     }
     
     /**
@@ -286,8 +345,13 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      * @param mixed $photo
      * @return bool
      */
-   public function setPhoto($photo){
-        return $this->_base->setChatPhoto($this->id, $photo);
+   	public function setPhoto($photo)
+	{
+		$args = maybeArray([
+			'chat' => $this->id,
+			'photo' => $photo,
+		]);
+        return $this->_base->setChatPhoto($args);
     }
     
     /**
@@ -295,8 +359,10 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      *
      * @return bool
      */
-   public function delPhoto(array $args){
-        $args['chat'] = $this->id;
+   	public function delPhoto(array $args)
+	{
+		if(!isset($args['chat']))
+			$args['chat'] = $this->id;
         return $this->_base->delChatPhoto($args);
     }
     
@@ -306,8 +372,13 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      * @param string $title
      * @return bool
      */
-   public function setTitle($title){
-        return $this->_base->setChatTitle($this->id, $title);
+   	public function setTitle($title)
+	{
+		$args = maybeArray([
+			'chat' => $this->id,
+			'title' => $title,
+		]);
+        return $this->_base->setChatTitle($args);
     }
     
     /**
@@ -316,8 +387,13 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      * @param string $des Description | توضیحات
      * @return bool
      */
-   public function setDes($des){
-        return $this->_base->setChatDes($this->id, $des);
+   	public function setDes($des)
+	{
+		$args = maybeArray([
+			'chat' => $this->id,
+			'des' => $des,
+		]);
+        return $this->_base->setChatDes($args);
     }
     
     /**
@@ -326,8 +402,13 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      * @param mixed $msg Message id or message object | آیدی یا شئ پیام
      * @return bool
      */
-   public function pin($msg){
-        return $this->_base->pinMsg($this->id, $msg);
+   	public function pin($msg)
+	{
+		$args = maybeArray([
+			'chat' => $this->id,
+			'msg' => $msg,
+		]);
+        return $this->_base->pinMsg($args);
     }
     
     /**
@@ -336,8 +417,13 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      * @param mixed $msg
      * @return bool
      */
-   public function unpin($msg = null){
-        return $this->_base->unpinMsg($this->id, $msg);
+   	public function unpin($msg = null)
+	{
+		$args = maybeArray([
+			'chat' => $this->id,
+			'msg' => $msg,
+		]);
+        return $this->_base->unpinMsg($args);
     }
     
     /**
@@ -346,8 +432,10 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      * @param mixed $msg
      * @return bool
      */
-   public function unpinAll(array $args = []){
-        $args['chat'] = $this->id;
+   	public function unpinAll(array $args = [])
+	{
+		if(!isset($args['chat']))
+			$args['chat'] = $this->id;
         return $this->_base->unpinAll($args);
     }
     
@@ -356,8 +444,10 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      *
      * @return bool
      */
-   public function leave(array $args = []){
-        $args['chat'] = $this->id;
+   	public function leave(array $args = [])
+	{
+		if(!isset($args['chat']))
+			$args['chat'] = $this->id;
         return $this->_base->leave($args);
     }
     
@@ -366,19 +456,26 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      *
      * @return Member[]|false
      */
-   public function getAdmins(array $args = []){
-        $args['chat'] = $this->id;
+   	public function getAdmins(array $args = [])
+	{
+		if(!isset($args['chat']))
+			$args['chat'] = $this->id;
         return $this->_base->getChatAdmins($args);
     }
     
     /**
      * تنظیم بسته استیکر
      *
-     * @param string $setName
+     * @param string|array $setName
      * @return bool
      */
-   public function setStickerSet($setName){
-        return $this->_base->setChatStickerSet($this->id, $setName);
+   	public function setStickerSet($setName)
+	{
+		$args = maybeArray([
+			'chat' => $this->id,
+			'setName' => $setName,
+		]);
+        return $this->_base->setChatStickerSet($args);
     }
     
     /**
@@ -386,8 +483,11 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      *
      * @return bool
      */
-   public function delStickerSet(){
-        return $this->_base->delChatStickerSet($this->id);
+   	public function delStickerSet($args = [])
+	{
+		if(!isset($args['chat']))
+			$args['chat'] = $this->id;
+        return $this->_base->delChatStickerSet($args);
     }
 
     /**
@@ -396,8 +496,13 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      * @param mixed $action
      * @return bool
      */
-   public function action($action){
-        return $this->_base->action($this->id, $action);
+   	public function action($action)
+	{
+		$args = maybeArray([
+			'chat' => $this->id,
+			'action' => $action,
+		]);
+        return $this->_base->action($args);
     }
 
     /**
@@ -407,15 +512,14 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      * @param array $args
      * @return Msg|false
      */
-   public function sendMsg($text, $args = []) {
-
+   	public function sendMsg($text, array $args = [])
+	{
         $args = maybeArray([
             'chat' => $this->id,
             'text' => $text,
             'args' => $args
         ]);
         return $this->_base->sendMsg($args);
-
     }
     
     /**
@@ -425,9 +529,14 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
      * @param array $args
      * @return Msg|false
      */
-   public function send($type, $args = []){
-        $args['chat'] = $this->id;
-        return $this->_base->send($type, $args);
+   	public function send($type, array $args = [])
+	{
+		$args = maybeArray([
+			'chat' => $this->id,
+			'type' => $type,
+			'args' => $args,
+		]);
+        return $this->_base->send($args);
     }
 
 	/**
@@ -435,9 +544,8 @@ class Chat extends MmbBase implements \Mmb\Update\Interfaces\IChatID
 	 *
 	 * @return int
 	 */
-	public function IChatID() {
-
+	public function IChatID()
+	{
         return $this->id;
-        
 	}
 }

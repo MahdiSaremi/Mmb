@@ -40,7 +40,8 @@ class Debug
             if(Chat::$this) {
                 Chat::$this->sendMsg([
                     'text' => "<b>Mmb+ Error:</b>\n\n<code>".htmlEncode($description)."</code>",
-                    'mode' => 'HTML'
+                    'mode' => 'HTML',
+                    'ignore' => true,
                 ]);
             }
             throw new MmbException("Mmb+ Error: " . str_replace("\n", " ", $description));

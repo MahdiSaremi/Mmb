@@ -2,6 +2,8 @@
 #auto-name
 namespace Mmb\Tools;
 
+use Closure;
+use Mmb\Mapping\Arrayable;
 use Mmb\Tools\Advanced\AdvancedChanceUserRepeat;
 use Mmb\Tools\Advanced\AdvancedFunc;
 use Mmb\Tools\Advanced\AdvancedRandom;
@@ -15,10 +17,10 @@ class Advanced
      *
      * `Advanced::random([ 'Hey', 'Hi', 'Hello ])`
      * 
-     * @param array $array
+     * @param array|Arrayable $array
      * @return AdvancedRandom
      */
-    public static function random(array $array)
+    public static function random(array|Arrayable $array)
     {
         return new AdvancedRandom($array);
     }
@@ -30,10 +32,10 @@ class Advanced
      * 
      * `Advanced::randomChance([ ['High', 15], ['Low', 2] ])`
      *
-     * @param array $value_chance
+     * @param array|Arrayable $value_chance
      * @return AdvancedRandomChance
      */
-    public static function randomChance(array $value_chance)
+    public static function randomChance(array|Arrayable $value_chance)
     {
         return new AdvancedRandomChance($value_chance);
     }
@@ -44,12 +46,12 @@ class Advanced
      * بطور خلاصه بعد از هر بار، شانس بیشتری برای آمدن مقدار بعدی وجود خواهد داشت
      *
      * @param string $name اسم یکتا
-     * @param array $array
+     * @param array|Arrayable $array
      * @param int $rememberTime حداکثر فاصله گرفتن مقدار، بر اساس ثانیه
      * @param int $focusScale
      * @return AdvancedChanceUserRepeat
      */
-    public static function repeatChance($name, array $array, $rememberTime = 1800, $focusScale = 3)
+    public static function repeatChance($name, array|Arrayable $array, $rememberTime = 1800, $focusScale = 3)
     {
         return new AdvancedChanceUserRepeat($array, $name, $rememberTime, $focusScale);
     }
@@ -59,7 +61,7 @@ class Advanced
      * 
      * `'usersCount' => Advanced::func(function() { return User::count(); })`
      *
-     * @param callable|string|array $callable
+     * @param callable|string|array|Closure $callable
      * @return AdvancedFunc
      */
     public static function func($callable)

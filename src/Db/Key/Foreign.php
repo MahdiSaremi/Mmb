@@ -6,31 +6,15 @@ class Foreign extends \Mmb\Db\SingleKey {
 
     use On;
 
-    /**
-     * ستون مورد نظر
-     *
-     * @var string
-     */
-    public $target;
+    public $table;
+    public $column;
+    public $constraint;
 
-    public function __construct($target)
+    public function __construct($table_name, $column_name, $constraint)
     {
-        $this->target = $target;
-    }
-
-    public $refrenceTable;
-    public $refrenceColumn;
-    /**
-     * تنظیم رفرنس
-     *
-     * @param string $table نام جدول
-     * @param string $col نام ستون مورد نظر
-     * @return $this
-     */
-    public function refrences($table, $column) {
-        $this->refrenceTable = $table;
-        $this->refrenceColumn = $column;
-        return $this;
+        $this->table = $table_name;
+        $this->column = $column_name;
+        $this->constraint = $constraint;
     }
 
 }

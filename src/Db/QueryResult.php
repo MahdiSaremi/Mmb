@@ -42,6 +42,13 @@ abstract class QueryResult {
     public abstract function fetchAll();
 
     /**
+     * گرفتن یک سلول
+     *
+     * @return mixed
+     */
+    public abstract function fetchCell();
+
+    /**
      * گرفتن تمامی ردیف های خروجی بصورت کلاس
      *
      * @param string $class
@@ -101,8 +108,9 @@ abstract class QueryResult {
     /**
      * تبدیل خروجی به کوئری کول
      *
+     * @param string $table
      * @return \Mmb\Db\QueryCol
      */
-    public abstract function toQueryCol();
+    public abstract function toQueryCol($table);
 
 }

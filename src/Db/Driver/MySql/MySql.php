@@ -2,14 +2,19 @@
 
 namespace Mmb\Db\Driver\MySql; #auto
 
-class MySql extends \Mmb\Db\Driver {
+use Closure;
+use Exception;
+use Throwable;
+
+class MySql extends \Mmb\Db\Driver
+{
 
     public $queryCompiler = Query::class;
 
     /**
      * @var \mysqli
      */
-    private $db;
+    public $db;
 
     public function reset()
     {
@@ -93,7 +98,6 @@ class MySql extends \Mmb\Db\Driver {
      */
     public function connectForce()
     {
-
         $host = $this->host ?? static::$defaultHost;
         $dbname = $this->dbname ?? static::$defaultDbname;
         $username = $this->username ?? static::$defaultUsername;
@@ -103,9 +107,16 @@ class MySql extends \Mmb\Db\Driver {
         $this->db = new \mysqli($host, $username, $password, $dbname, $port);
 
         if($this->db->error) {
-            throw new \Exception("MySql unable to connect: " . $this->db->connect_error);
+            throw new Exception("MySql unable to connect: " . $this->db->connect_error);
         }
+    }
 
+    protected function getConnectedDb()
+    {
+        if(!$this->db)
+            $this->connectForce();
+
+        return $this->db;
     }
 
     /**
@@ -120,16 +131,15 @@ class MySql extends \Mmb\Db\Driver {
         $state = $this->db->prepare($queryCompiler->query);
         
         if(!$state)
-            throw new \Exception("Error on query '{$queryCompiler->query}': " . $this->db->error);
+            throw new Exception("Error on query '{$queryCompiler->query}': " . $this->db->error);
 
         $ok = $state->execute();
         
         if($state->errno) {
-            throw new \Exception("Error on query '{$queryCompiler->query}': " . $state->error);
+            throw new Exception("Error on query '{$queryCompiler->query}': " . $state->error);
         }
 
-        return new Result($ok, $state, $this->db);
-
+        return new Result($ok, $state, $this);
     }
 
     public function config($configPrefix = 'database')
@@ -139,6 +149,75 @@ class MySql extends \Mmb\Db\Driver {
         static::$defaultPassword = config("$configPrefix.password");
         static::$defaultDbname = config("$configPrefix.name");
         static::$defaultPort = config("$configPrefix.port");
+    }
+
+    public function getName()
+    {
+        return $this->dbname ?? static::$defaultDbname;
+    }
+
+
+    /**
+     * ایجاد یک تراکنش
+     * 
+     * عملیات هایی که انجام می دهید، در انتها در دیتابیس تنظیم می شوند و اگر خطایی رخ دهد نیز تمامی عملیات ها کنسل می شوند
+     *
+     * همچنین اگر در تابع فالس(تنها مقدار دقیق فالس) ریترن شود، تغییرات ذخیره نخواهند شد
+     * 
+     * @param Closure $callback
+     * @param int $flags `MYSQLI_TRANS_START_*`
+     * @param string $name
+     * @param MySql|null $db
+     * @throws Exception
+     * @return boolean
+     */
+    public static function transaction(Closure $callback, $flags = 0, $name = null, MySql $db = null)
+    {
+        $db = ($db ?? static::defaultStatic())->getConnectedDb();
+
+        if($db->begin_transaction($flags, $name))
+        {
+            try
+            {
+                if($callback() !== false)
+                {
+                    $db->commit(0, $name);
+                    return true;
+                }
+                else
+                {
+                    $db->rollback(0, $name);
+                    return false;
+                }
+            }
+            catch(Throwable $e)
+            {
+                $db->rollback(0, $name);
+                throw $e;
+            }
+        }
+        else
+        {
+            throw new Exception("Failed to start transaction");
+        }
+    }
+
+    /**
+     * ایجاد یک تراکنش با این کانکشن
+     * 
+     * عملیات هایی که انجام می دهید، در انتها در دیتابیس تنظیم می شوند و اگر خطایی رخ دهد نیز تمامی عملیات ها کنسل می شوند
+     *
+     * همچنین اگر در تابع فالس(تنها مقدار دقیق فالس) ریترن شود، تغییرات ذخیره نخواهند شد
+     * 
+     * @param Closure $callback
+     * @param int $flags `MYSQLI_TRANS_START_*`
+     * @param string $name
+     * @throws Exception
+     * @return boolean
+     */
+    public function runTransaction(Closure $callback, $flags = 0, $name = null)
+    {
+        return static::transaction($callback, $flags, $name, $this);
     }
 
 }

@@ -2,17 +2,29 @@
 
 namespace Mmb\Db\Table; #auto
 
-class Unknown extends Table {
+use Mmb\Exceptions\MmbException;
+
+class Unknown extends Table
+{
 
 	/**
 	 * گرفتن نام تیبل
 	 *
 	 * @return string
 	 */
-	public static function getTable() {
-
-        throw new \Mmb\Exceptions\MmbException("Unknown table");
-
+	public static function getTable()
+	{
+        throw new MmbException("Unknown table can't build query");
 	}
+
+    public function __construct($data)
+    {
+		$this->allData = $data;
+    }
+
+    public function __set($name, $value)
+    {
+        throw new MmbException("Try to set property on Unknown object");
+    }
 
 }

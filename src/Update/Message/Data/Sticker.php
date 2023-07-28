@@ -9,11 +9,6 @@ class Sticker extends MmbBase implements \Mmb\Update\Interfaces\IMsgDataID
 {
 
     /**
-     * @var Mmb
-     */
-    private $_base;
-
-    /**
      * شناسه فایل
      *
      * @var string
@@ -52,7 +47,7 @@ class Sticker extends MmbBase implements \Mmb\Update\Interfaces\IMsgDataID
     /**
      * تصویر کوچک
      *
-     * @var MsgData
+     * @var Media
      */
     public $thumb;
     /**
@@ -73,20 +68,22 @@ class Sticker extends MmbBase implements \Mmb\Update\Interfaces\IMsgDataID
      * @var int
      */
     public $size;
-    public function __construct($st, $base){
-        $this->_base = $base;
-        $this->id = $st['file_id'];
-        $this->uniqueID = $st['file_unique_id'];
-        $this->width = $st['width'];
-        $this->height = $st['height'];
-        $this->isAnim = $st['is_animated'] ?? false;
-        if(isset($st['thumb']))
-            $this->thumb = new Media("photo", $st['thumb'], $base);
-        $this->emoji = @$st['emoji'];
-        $this->setName = @$st['set_name'];
-        if(isset($st['mask_position']))
-            $this->maskPos = new MaskPos(@$st['mask_position'], $base);
-        $this->size = @$st['file_size'];
+    public function __construct(array $args, ?Mmb $mmb = null)
+    {
+        parent::__construct($args, $mmb);
+
+        $this->initFrom($args, [
+            'file_id' => 'id',
+            'file_unique_id' => 'uniqueID',
+            'width' => 'width',
+            'height' => 'height',
+            'is_animated' => 'isAnim',
+            'thumb' => fn($thumb) => $this->thumb = new Media('photo', $thumb, $this->_base),
+            'emoji' => 'emoji',
+            'set_name' => 'setName',
+            'mask_position' => fn($mask) => $this->maskPos = new MaskPos($mask, $this->_base),
+            'file_size' => 'size',
+        ]);
     }
 
     /**
@@ -95,7 +92,8 @@ class Sticker extends MmbBase implements \Mmb\Update\Interfaces\IMsgDataID
      * @param string $path مسیر دانلود
      * @return bool
      */
-    function download($path){
+    function download($path)
+    {
         return $this->_base->getFile($this->id)->download($path);
     }
 
@@ -104,7 +102,8 @@ class Sticker extends MmbBase implements \Mmb\Update\Interfaces\IMsgDataID
      *
      * @return StickerSet|false
      */
-    public function getFile(){
+    public function getFile()
+    {
         return $this->_base->getFile($this->id);
     }
 
@@ -113,7 +112,8 @@ class Sticker extends MmbBase implements \Mmb\Update\Interfaces\IMsgDataID
      *
      * @return StickerSet|false
      */
-    public function getSet(){
+    public function getSet()
+    {
         return $this->_base->getStickerSet($this->setName);
     }
 
@@ -121,12 +121,11 @@ class Sticker extends MmbBase implements \Mmb\Update\Interfaces\IMsgDataID
 	/**
 	 * گرفتن آیدی پیام
 	 *
-	 * @return int
+	 * @return string
 	 */
-	function IMsgDataID() {
-        
+	function IMsgDataID()
+    {
         return $this->id;
-
 	}
 
 }

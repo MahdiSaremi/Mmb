@@ -120,7 +120,7 @@ class Bitmap
      */
     public function getPixel($x, $y)
     {
-        if($color = imageColorAt($this->image, $x, $y))
+        if(($color = imageColorAt($this->image, $x, $y)) !== false)
             return new Color($color);
 
         return false;

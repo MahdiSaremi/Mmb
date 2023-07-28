@@ -11,19 +11,58 @@ class SqlQuery extends \Mmb\Db\QueryCompiler {
      */
     public $query = '';
 
+    public function joins()
+    {
+        if(!$this->joins)
+            return '';
+        
+        $res = "";
+        foreach($this->joins as $join)
+        {
+            $type = $join[0] ? $join[0] . ' JOIN' : 'JOIN';
+            $res .= " $type $join[1]";
+            if($join[2])
+            {
+                $res .= " ON " . $this->conditionQuery($join[2]);
+            }
+        }
+        return $res;
+    }
+
     /**
      * Where
      *
      * @return string
      */
-    public function where() {
-
+    public function where()
+    {
         if(!$this->where)
             return '';
 
-        $query = 'WHERE ';
+        return 'WHERE ' . $this->conditionQuery($this->where);
+    }
 
-        foreach($this->where as $i => $where) {
+    /**
+     * Where
+     *
+     * @return string
+     */
+    public function having()
+    {
+        if(!$this->having)
+            return '';
+
+        return 'HAVING ' . $this->conditionQuery($this->having);
+    }
+
+    public function conditionQuery(array $wheres)
+    {
+        if(!$wheres)
+            return '1';
+
+        $query = '';
+        foreach($wheres as $i => $where)
+        {
 
             $type = $where[0];
             $operator = $where[1];
@@ -32,23 +71,53 @@ class SqlQuery extends \Mmb\Db\QueryCompiler {
             switch($type) {
 
                 case 'col':
-                    $query .= "`$where[2]` $where[3] " . $this->safeString($where[4]);
+                    $query .= "$where[2] $where[3] " . $this->safeString($where[4]);
                 break;
 
                 case 'colcol':
-                    $query .= "`$where[2]` $where[3] `$where[4]`";
+                    $query .= "$where[2] $where[3] $where[4]";
                 break;
 
                 case 'raw':
-                    $query .= $this->safeQueryReplace($where[2], ...$where[3]);
+                    $query .= '(' . $this->safeQueryReplace($where[2], ...$where[3]) . ')';
                 break;
 
                 case 'in':
-                    $query .= "`$where[2]` in (" . join(", ", array_map([$this, 'safeString'], $where[3])) . ")";
+                    if($where[3])
+                    {
+                        $query .= "$where[2] IN (" . join(", ", array_map([$this, 'safeString'], $where[3])) . ")";
+                    }
+                    else
+                    {
+                        $query .= "0";
+                    }
+                break;
+
+                case 'notin':
+                    if($where[3])
+                    {
+                        $query .= "$where[2] NOT IN (" . join(", ", array_map([$this, 'safeString'], $where[3])) . ")";
+                    }
+                    else
+                    {
+                        $query .= "1";
+                    }
                 break;
 
                 case 'isnull':
-                    $query .= "`$where[2]` IS NULL";
+                    $query .= "$where[2] IS NULL";
+                break;
+
+                case 'isnotnull':
+                    $query .= "$where[2] IS NOT NULL";
+                break;
+
+                case 'inner':
+                    $query .= "(" . $this->conditionQuery($where[2]) . ")";
+                break;
+
+                case 'inner-not':
+                    $query .= "NOT (" . $this->conditionQuery($where[2]) . ")";
                 break;
 
             }
@@ -56,7 +125,6 @@ class SqlQuery extends \Mmb\Db\QueryCompiler {
         }
 
         return $query;
-
     }
 
     /**
@@ -64,29 +132,28 @@ class SqlQuery extends \Mmb\Db\QueryCompiler {
      *
      * @return string
      */
-    public function order() {
-
+    public function order()
+    {
         if(!$this->order)
             return '';
 
         $query = 'ORDER BY';
 
-        foreach($this->order as $order) {
-
-            foreach($order[0] as $x => $col) {
+        foreach($this->order as $order)
+        {
+            foreach($order[0] as $x => $col)
+            {
 
                 if($x) $query .= ",";
-                $query .= " `$col`";
+                $query .= " $col";
 
             }
 
             if($order[1])
                 $query .= " " . $order[1];
-
         }
 
         return $query;
-
     }
 
     /**
@@ -94,8 +161,8 @@ class SqlQuery extends \Mmb\Db\QueryCompiler {
      *
      * @return string
      */
-    public function group() {
-
+    public function group()
+    {
         if(!$this->groupBy)
             return '';
 
@@ -109,11 +176,10 @@ class SqlQuery extends \Mmb\Db\QueryCompiler {
         }
 
         return $query;
-
     }
 
-    public function limit() {
-
+    public function limit()
+    {
         if(!$this->limit)
             return '';
 
@@ -125,7 +191,11 @@ class SqlQuery extends \Mmb\Db\QueryCompiler {
             $query .= $this->limit;
 
         return $query;
-
     }
+
+    // public function table()
+    // {
+    //     return '`' . preg_replace('/\s*\.\s*/', '`.`', $this->table) . '`';
+    // }
 
 }

@@ -2,9 +2,13 @@
 
 namespace Mmb\Controller\Form; #auto
 
+use Mmb\Calling\DynCall;
 use Mmb\Controller\Controller;
 use Mmb\Controller\StepHandler\Handlable;
+use Mmb\Controller\StepHandler\StepHandler;
 use Mmb\Exceptions\MmbException;
+use Mmb\Guard\Guard;
+use Mmb\Guard\GuardAllowTrait;
 
 /**
  * @property array $key دکمه های مربوط به اینپوت فعلی
@@ -19,12 +23,96 @@ abstract class Form implements Handlable
     public function __construct($handler)
     {
         $this->handler = $handler;
+        $this->boot();
     }
 
     public function getHandler()
     {
         return $this->handler;
     }
+
+    public function boot()
+    {
+    }
+
+    private $_needTo = [];
+
+    /**
+     * تعریف الزامی بودن دسترسی مورد نظر برای تابع های کنترلر
+     * 
+     * این تابع را تنها در قسمت بوت صدا بزنید
+     * 
+     * @param string $guardPolicy
+     * @param mixed ...$args
+     * @return void
+     */
+    public function needTo($guardPolicy, ...$args)
+    {
+        $this->_needTo[] = [$guardPolicy, $args];
+    }
+    
+    protected $_allowed_cache;
+    /**
+     * بررسی می کند دسترسی های مورد نیاز که در بوت تعریف شده اند را را داراست
+     * 
+     * @return bool
+     */
+    public function allowed()
+    {
+        // Cache
+        if(isset($this->_allowed_cache))
+        {
+            return $this->_allowed_cache;
+        }
+
+        // Class name allowed
+        if(!app(Guard::class)->allowClass(static::class))
+        {
+            return $this->_allowed_cache = false;
+        }
+        
+        // Class object allowed
+        foreach($this->_needTo as $need)
+        {
+            $name = $need[0];
+            $args = $need[1];
+            if(!$this->allow($name, ...$args))
+            {
+                return $this->_allowed_cache = false;
+            }
+        }
+        return $this->_allowed_cache = true;
+    }
+
+    /**
+     * بررسی وجود دسترسی
+     * 
+     * @param string $name
+     * @param mixed ...$args
+     * @return bool
+     */
+    public function allow($name, ...$args)
+    {
+        return app(Guard::class)->allow($name, ...$args);
+    }
+
+    /**
+     * این تابع زمانی که دسترسی غیر مجاز است صدا زده می شود
+     * 
+     * فقط دسترسی هایی که با تابع needTo تعریف شده اند محسوب می شوند
+     * 
+     * @return Handlable|null
+     */
+    public function notAllowed()
+    {
+        return app(Guard::class)->invokeNotAllowed();
+    }
+
+    use DynCall {
+        __get as private __dyn_get;
+        __set as private __dyn_set;
+    }
+
 
     /**
      * شروع فرم
@@ -45,6 +133,12 @@ abstract class Form implements Handlable
      */
     public function _next()
     {
+        // Check permission
+        if(!$this->allowed())
+        {
+            return $this->notAllowed();
+        }
+
         $this->current_input = $this->handler->current;
         try {
             $this->stepBeforeForm();
@@ -52,6 +146,7 @@ abstract class Form implements Handlable
         }
         catch(FilterError $error)
         {
+            $this->lastError = $error;
             return $this->onError($error->getMessage());
         }
         catch(FindingInputFinished $finished)
@@ -61,17 +156,28 @@ abstract class Form implements Handlable
         finally
         {
             $this->stepAfterForm();
-            // Save finally values
-            foreach($this->inputs as $name => $inp)
-            {
-                $this->handler->inputs[$name] = $inp->value();
-            }
-            if (isset($this->keyboard))
-                $this->handler->key = $this->keyboard;
-            if (isset($this->key))
-                $this->handler->key = $this->key;
+            $this->saveInHandler();
         }
         return $this->_finish();
+    }
+
+    /**
+     * بروزرسانی اطلاعات در هندلر
+     *
+     * @return void
+     */
+    public function saveInHandler()
+    {
+        foreach($this->inputs as $name => $inp)
+        {
+            $this->handler->inputs[$name] = $inp->value();
+        }
+        if($this->_key)
+            $this->handler->key = $this->_key;
+        // if (isset($this->keyboard))
+        //     $this->handler->key = $this->keyboard;
+        // if (isset($this->key))
+        //     $this->handler->key = $this->key;
     }
 
     /**
@@ -94,7 +200,9 @@ abstract class Form implements Handlable
     {
         $handler = new FormStepHandler(static::class);
         $handler->inputs = $inputs;
-        return $handler->startForm();
+        $step = $handler->startForm();
+        StepHandler::set($step);
+        return $step;
     }
 
     /**
@@ -156,13 +264,20 @@ abstract class Form implements Handlable
     public abstract function onCancel();
 
     /**
+     * آخرین خطا
+     *
+     * @var FilterError
+     */
+    public $lastError;
+
+    /**
      * تابعی که زمان خطای اینپوت ها صدا زده می شود
      * @param string $error
      * @return Handlable|null
      */
     public function onError($error)
     {
-        replyText($error);
+        response($error);
     }
 
     /**
@@ -174,11 +289,11 @@ abstract class Form implements Handlable
     {
         if(is_array($text))
         {
-            replyText(['key' => $this->key] + $text);
+            response(['key' => $this->key] + $text);
         }
         else
         {
-            replyText($text, [
+            response($text, [
                 'key' => $this->key,
             ]);
         }
@@ -186,6 +301,7 @@ abstract class Form implements Handlable
 
     /**
      * لغو کردن فرم
+     * 
      * @throws FindingInputFinished 
      * @return never
      */
@@ -193,6 +309,18 @@ abstract class Form implements Handlable
     {
         $this->canceled = true;
         throw new FindingInputFinished($this->onCancel());
+    }
+
+    /**
+     * لغو کردن فرم همراه با خطا
+     * 
+     * @throws FindingInputFinished 
+     * @return never
+     */
+    public final function cancelWithError($error)
+    {
+        $this->onError($error);
+        $this->cancel();
     }
 
     /**
@@ -229,21 +357,25 @@ abstract class Form implements Handlable
 
     protected $_key;
 
-    public function __get($name)
+    public function &__get($name)
     {
-        
         if($name == 'keyboard' || $name == 'key')
         {
+            if($this->_key)
+                return $this->_key;
+
             $key = new FormKey($this);
             $res = $this->keyboard($key);
             $res = FormKey::parse($res);
             $this->_key = $res;
-            return FormKey::toKey($this->$name = $res);
+            $result = FormKey::toKey($res);
+            return $result;
         }
 
         if(isset($this->inputs[$name]))
         {
-            return $this->inputs[$name]->value();
+            $result = $this->inputs[$name]->value();
+            return $result;
         }
 
         if(isset($this->handler->inputs[$name]))
@@ -251,13 +383,33 @@ abstract class Form implements Handlable
             return $this->handler->inputs[$name];
         }
 
-        error_log("Undefined input '$name'", 0);
+        // error_log("Undefined input '$name'", 0);
+        return $this->__dyn_get($name);
+    }
 
+    public function __set($name, $value)
+    {
+        if(isset($this->inputs[$name]))
+        {
+            $this->inputs[$name]->value($value);
+            return;
+        }
+        elseif(array_key_exists($name, $this->handler->inputs))
+        {
+            $this->handler->inputs[$name] = $value;
+            return;
+        }
+
+        $this->__dyn_set($name, $value);
+    }
+    public function __set_proto($name, $value)
+    {
+        $this->handler->inputs[$name] = $value;
+        return true;
     }
 
     public function get($name, $default = null)
     {
-        
         if(isset($this->inputs[$name]))
         {
             return $this->inputs[$name]->value();
@@ -269,12 +421,10 @@ abstract class Form implements Handlable
         }
 
         return $default;
-        
     }
 
     public function set($name, $value)
     {
-        
         if(isset($this->inputs[$name]))
         {
             $this->inputs[$name]->value($value);
@@ -282,7 +432,6 @@ abstract class Form implements Handlable
         }
 
         $this->handler->inputs[$name] = $value;
-
     }
     
     /** @var FormInput[] */
@@ -300,10 +449,40 @@ abstract class Form implements Handlable
      * @param string $name
      * @return void
      */
-    public function required($name)
+    public function required($name, $type = FormInput::class)
     {
-        $input = (new FormInput($this, $name))->required();
+        $input = (new $type($this, $name))->required();
         $this->newInput($input);
+    }
+
+    /**
+     * حلقه ای برای درخواست اینپوت ها
+     * 
+     * این اینپوت ها پشت سر هم گرفته می شوند و در انتها دوباره از اول شروع می شود
+     * 
+     * @param string ...$names
+     * @return void
+     */
+    public function requiredLoop(...$names)
+    {
+        if(!$names) return;
+
+        if(count($names) == 1)
+        {
+            // Required & Required again
+            $this->required($names[0]);
+            $this->requiredAgain($names[0]);
+        }
+        else
+        {
+            // Required all
+            foreach($names as $name)
+                $this->required($name);
+
+            // Forgot and go back to first
+            $this->forgot(...$names);
+            $this->required($names[0]);
+        }
     }
 
     /**
@@ -322,19 +501,26 @@ abstract class Form implements Handlable
 
     public function requiredAgain($name)
     {
-
         if($inp = $this->inputs[$name] ?? false)
         {
-            $this->current_input = null;
-            $this->go_next = true;
+            $type = get_class($inp);
+            $this->inputs[$name] = $inp =
+                    new $type($this, $name);
+            if($inp->skipable)  $inp->optional();
+            else                $inp->required();
 
-            $this->newInput($inp);
+            $this->running_input = $inp;
+            $inp->initialize();
+            $this->go_next = false;
+            $this->current_input = $inp;
+            $this->handler->current = $name;
+
+            throw new FindingInputFinished($inp->request());
         }
         else
         {
             throw new MmbException("Input '$name' not defined in requiredAgain()");
         }
-
     }
 
     /**
@@ -347,6 +533,8 @@ abstract class Form implements Handlable
     {
         foreach($input as $inp)
         {
+            if($this->current_input == $inp)
+                $this->current_input = null;
             unset($this->inputs[$inp]);
         }
     }
@@ -359,6 +547,7 @@ abstract class Form implements Handlable
     public function forgotAll()
     {
         $this->inputs = [];
+        $this->current_input = null;
     }
 
     /**
@@ -398,44 +587,18 @@ abstract class Form implements Handlable
             // Current input
             if($this->current_input == $name)
             {
-                $this->$name($input);
-                
-                // Set value
-                $input->value($this->handler->getValue($input, $this->optionSelected, $this->skipped, $this->canceled));
+                $input->initialize();
 
-                // Skip
-                if($this->skipped)
-                {
-                    $input->value(null);
-                    $input->skip();
-                    $this->go_next = true;
-                }
+                $value = $this->handler->getValue($input, $this->optionSelected, $this->skipped, $this->canceled);
+                $this->fillInput($name, $value, $this->skipped, $this->optionSelected, $this->canceled);
 
-                // Cancel
-                elseif($this->canceled)
-                {
-                    if ($input->cancel)
-                        throw new FindingInputFinished($input->cancel());
-                    else
-                        $this->cancel(); // Throw FindingInputFinished
-                }
-
-                // Next
-                else
-                {
-                    $input->filled();
-                    $this->go_next = true;
-                }
-
-                $input->then();
-
+                $this->go_next = true;
             }
 
             // Next input
             elseif($this->go_next)
             {
-
-                $this->$name($input);
+                $input->initialize();
 
                 // Skip if 'request' not filled
                 if ($input->request)
@@ -449,9 +612,9 @@ abstract class Form implements Handlable
         }
         catch(FilterError $error)
         {
-
             if($input->error)
             {
+                $this->lastError = $error;
                 $err = $input->error;
                 throw new FindingInputFinished($err($error->getMessage()));
             }
@@ -459,8 +622,41 @@ abstract class Form implements Handlable
             {
                 throw $error;
             }
-
         }
+    }
+
+    public function fillInput($name, $value, $skipped = false, $optionSelected = false, $canceled = false)
+    {
+        $input = $this->inputs[$name] ?? null;
+        if(!$input)
+            throw new MmbException("Input '$name' is not defined");
+
+        // Set value
+        $input->value($value);
+
+        // Skip
+        if($skipped)
+        {
+            $input->value(null);
+            $input->skip();
+        }
+
+        // Cancel
+        elseif($canceled)
+        {
+            if ($input->cancel)
+                throw new FindingInputFinished($input->cancel());
+            else
+                $this->cancel(); // Throw FindingInputFinished
+        }
+
+        // Next
+        elseif(!$optionSelected)
+        {
+            $input->filled();
+        }
+
+        $input->then();
     }
 
 }

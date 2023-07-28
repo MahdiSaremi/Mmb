@@ -37,16 +37,16 @@ class TelFile extends MmbBase
      * @var int
      */
     public $uniqueID;
-    /**
-     * @var Mmb
-     */
-    private $_base;
-    function __construct($f, $base){
-        $this->_base = $base;
-        $this->id = $f['file_id'];
-        $this->path = $f['file_path'];
-        $this->size = $f['file_size'];
-        $this->uniqueID = $f['unique_id'];
+    function __construct(array $args, ?Mmb $mmb = null)
+    {
+        parent::__construct($args, $mmb);
+
+        $this->initFrom($args, [
+            'file_id' => 'id',
+            'file_path' => 'path',
+            'file_size' => 'size',
+            'unique_id' => 'uniqueID',
+        ]);
     }
     
     /**
@@ -55,7 +55,8 @@ class TelFile extends MmbBase
      * @param string $path محل قرار گیری فایل
      * @return bool
      */
-    function download($path){
+    function download($path)
+    {
         return $this->_base->copyByFilePath($this->path, $path);
     }
     

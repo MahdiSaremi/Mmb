@@ -30,11 +30,11 @@ class Provider
         self::invokeAllObjects('boot');
     }
 
-    public static function invokeAllListens($method, array $args)
+    public static function invokeAllListeners($method, array $args)
     {
         foreach(self::getAllObjects() as $object)
         {
-            $object->invokeListen($method, $args);
+            $object->invokeListeners($method, $args);
         }
     }
 
@@ -93,6 +93,17 @@ class Provider
     {
         Env::loadFrom($file);
     }
+
+    /**
+     * لود کردن فایل انو
+     *
+     * @param string $file
+     * @return void
+     */
+    // public function setEnvSetup($file)
+    // {
+    //     Env::setEnvSetup($file);
+    // }
 
     /**
      * تنظیم مسیر استوریج

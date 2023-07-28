@@ -55,20 +55,26 @@ class Entity extends MmbBase
      */
     public $lang;
 
-    /**
-     * @var Mmb
-     */
-    private $_base;
-    function __construct($e, $base){
-        $this->_base = $base;
-        $this->type = $e['type'];
-        $this->offset = $e['offset'];
-        $this->len = $e['length'];
-        if($this->type == "text_link")
-            $this->url = @$e['url'];
-        if($this->type == "text_mention")
-            $this->user = new UserInfo(@$e['user'], $base);
-        $this->lang = @$e['language'];
+    function __construct(array $args, ?Mmb $mmb = null)
+    {
+        parent::__construct($args, $mmb);
+
+        $this->initFrom($args, [
+            'type' => 'type',
+            'offset' => 'offset',
+            'length' => 'len',
+            'language' => 'lang',
+        ]);
+
+        switch($this->type)
+        {
+            case 'text_link':
+                $this->url = @$args['url'];
+                break;
+            case 'text_mention':
+                $this->user = new UserInfo(@$args['user'], $this->_base);
+                break;
+        }
     }
 
 }

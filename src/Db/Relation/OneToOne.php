@@ -1,11 +1,15 @@
 <?php
+#auto-name
+namespace Mmb\Db\Relation;
 
-namespace Mmb\Db\Relation; #auto
-
+/**
+ * @template R
+ * @extends Relation<R>
+ */
 class OneToOne extends Relation
 {
 
-    public function getRelationValue()
+    public function getDefRelationValue()
     {
         return $this->get();
     }

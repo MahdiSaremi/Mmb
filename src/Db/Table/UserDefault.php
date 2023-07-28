@@ -25,6 +25,10 @@ class UserDefault extends Table
      * @var static
      */
     public static $this;
+    public static function this()
+    {
+        return static::$this;
+    }
 
 
     public static function getTable()

@@ -2,17 +2,20 @@
 
 namespace Mmb\Db\Driver\MySql; #auto
 
-class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery {
+use Mmb\Exceptions\TypeException;
 
-    protected $supports = [ 'select', 'delete', 'update', 'insert', 'insert_multi', 'createTable', 'getTable', 'editColumn', 'editColumn2', 'addColumn', 'removeColumn', 'removeIndex', 'removePrimaryKey' ];
+class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery
+{
+
+    protected $supports = [ 'select', 'delete', 'update', 'insert', 'insert_multi', 'createTable', 'getTable', 'editColumn', 'editColumn2', 'addColumn', 'removeColumn', 'removePrimaryKey', 'removeForeignKey', 'removeIndex', 'addForeignKey' ];
 
     /**
      * Select
      *
      * @return void
      */
-    public function select() {
-
+    public function select()
+    {
         $this->query = '';
 
         $this->query .= 'SELECT ';
@@ -21,7 +24,11 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery {
         $this->query .= join(", ", $this->select);
 
         // From table
-        $this->query .= ' FROM `' . $this->table . '`';
+        $this->query .= ' FROM ' . $this->table;
+
+        // Join
+        if($this->joins)
+            $this->query .= $this->joins();
 
         // Where
         if($this->where)
@@ -31,6 +38,10 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery {
         if($this->groupBy)
             $this->query .= ' ' . $this->group();
 
+        // Having
+        if($this->having)
+            $this->query .= ' ' . $this->having();
+
         // Order by
         if($this->order)
             $this->query .= ' ' . $this->order();
@@ -38,7 +49,6 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery {
         // Limit & Offset
         if($this->limit)
             $this->query .= ' ' . $this->limit();
-
     }
 
     /**
@@ -46,14 +56,14 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery {
      *
      * @return void
      */
-    public function delete() {
-
+    public function delete()
+    {
         $this->query = '';
         
         $this->query .= 'DELETE ';
 
         // From table
-        $this->query .= 'FROM `' . $this->table . '`';
+        $this->query .= 'FROM ' . $this->table;
 
         // Where
         if($this->where)
@@ -65,8 +75,7 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery {
 
         // Limit & Offset
         if($this->limit)
-            $this->query .= ' ' . $this->limit();
-            
+            $this->query .= ' ' . $this->limit();       
     }
 
     /**
@@ -74,22 +83,21 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery {
      *
      * @return void
      */
-    public function update() {
-
+    public function update()
+    {
         $this->query = '';
         
-        $this->query .= 'UPDATE `' . $this->table . '`';
+        $this->query .= 'UPDATE ' . $this->table;
 
         // Values
         $this->query .= ' SET';
         $first = true;
-        foreach($this->insert as $key => $value) {
-
+        foreach($this->insert as $key => $value)
+        {
             if($first) $first = false;
             else $this->query .= ', ';
 
-            $this->query .= ' `' . $key . '`=' . $this->safeString($value);
-
+            $this->query .= ' ' . $key . '=' . $this->safeString($value);
         }
 
         // Where
@@ -103,7 +111,6 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery {
         // Limit & Offset
         if($this->limit)
             $this->query .= ' ' . $this->limit();
-
     }
 
     /**
@@ -111,30 +118,36 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery {
      *
      * @return void
      */
-    public function insert() {
-
+    public function insert()
+    {
         $this->query = '';
         
-        $this->query .= 'INSERT INTO `' . $this->table . '`';
+        $this->query .= 'INSERT INTO ' . $this->table;
 
-        // Columns & Values
-        $cols = "";
-        $vals = "";
-        $first = true;
-        foreach($this->insert as $key => $value) {
+        if(is_array($this->insert))
+        {
+            // Columns & Values
+            $cols = "";
+            $vals = "";
+            $first = true;
+            foreach($this->insert as $key => $value)
+            {
+                if($first) $first = false;
+                else {
+                    $cols .= ', ';
+                    $vals .= ', ';
+                }
 
-            if($first) $first = false;
-            else {
-                $cols .= ', ';
-                $vals .= ', ';
+                $cols .= $key;
+                $vals .= $this->safeString($value);
             }
 
-            $cols .= '`' . $key . '`';
-            $vals .= $this->safeString($value);
-
+            $this->query .= " ($cols) VALUES ($vals)";
         }
-        $this->query .= " ($cols) VALUES ($vals)";
-
+        else
+        {
+            $this->query .= " " . $this->insert;
+        }
     }
 
     /**
@@ -142,30 +155,29 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery {
      *
      * @return void
      */
-    public function insert_multi() {
-
+    public function insert_multi()
+    {
         $this->query = '';
         
-        $this->query .= 'INSERT INTO `' . $this->table . '`';
+        $this->query .= 'INSERT INTO ' . $this->table;
 
         // Columns
         $cols = "";
         $first = true;
-        foreach($this->insert[0] as $key => $value) {
-
+        foreach($this->insert[0] as $key => $value)
+        {
             if($first) $first = false;
             else {
                 $cols .= ', ';
             }
 
-            $cols .= '`' . $key . '`';
-
+            $cols .= $key;
         }
         $this->query .= " ($cols) VALUES ";
 
         // Values
-        foreach($this->insert as $m => $row) {
-
+        foreach($this->insert as $m => $row)
+        {
             if($m)
                 $this->query .= ", ";
 
@@ -182,7 +194,6 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery {
 
             }
             $this->query .= "($vals)";
-
         }
     }
 
@@ -191,9 +202,9 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery {
      *
      * @return void
      */
-    public function createTable() {
-
-        $this->query = "CREATE TABLE `{$this->table}` (";
+    public function createTable()
+    {
+        $this->query = "CREATE TABLE {$this->table} (";
 
         $qcol = $this->queryCol;
         $first = true;
@@ -209,7 +220,6 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery {
         }
 
         $this->query .= ") ENGINE = InnoDB";
-
     }
 
     /**
@@ -218,8 +228,8 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery {
      * @param \Mmb\Db\SingleCol $col
      * @return void
      */
-    public function column(\Mmb\Db\SingleCol $col, \Mmb\Db\SingleCol $old = null) {
-
+    public function column(\Mmb\Db\SingleCol $col, \Mmb\Db\SingleCol $old = null)
+    {
         $this->query .= "`{$col->name}` {$col->type}";
 
         // Len
@@ -247,7 +257,7 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery {
             $this->query .= " AUTO_INCREMENT";
 
         // Primary key
-        if($col->primaryKey)
+        if($col->primaryKey && (!$old || !$old->primaryKey))
             $this->query .= " PRIMARY KEY";
 
         // Unique
@@ -273,10 +283,9 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery {
      *
      * @return void
      */
-    public function getTable() {
-
-        $this->query = "SHOW COLUMNS FROM `{$this->table}`";
-
+    public function getTable()
+    {
+        $this->query = "SHOW COLUMNS FROM {$this->table}";
     }
 
     /**
@@ -284,12 +293,11 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery {
      *
      * @return void
      */
-    public function editColumn() {
-
-        $this->query = "ALTER TABLE `{$this->table}` CHANGE `{$this->colName}` ";
+    public function editColumn()
+    {
+        $this->query = "ALTER TABLE {$this->table} CHANGE {$this->colName} ";
 
         $this->column($this->col);
-
     }
 
     /**
@@ -297,12 +305,11 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery {
      *
      * @return void
      */
-    public function editColumn2() {
-
-        $this->query = "ALTER TABLE `{$this->table}` CHANGE `{$this->colName}` ";
+    public function editColumn2()
+    {
+        $this->query = "ALTER TABLE {$this->table} CHANGE {$this->colName} ";
 
         $this->column($this->col[1], $this->col[0]);
-
     }
 
     /**
@@ -310,12 +317,11 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery {
      *
      * @return void
      */
-    public function addColumn() {
-
-        $this->query = "ALTER TABLE `{$this->table}` ADD ";
+    public function addColumn()
+    {
+        $this->query = "ALTER TABLE {$this->table} ADD ";
 
         $this->column($this->col);
-
     }
 
     /**
@@ -323,10 +329,9 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery {
      *
      * @return void
      */
-    public function removeColumn() {
-
-        $this->query = "ALTER TABLE `{$this->table}` DROP `{$this->colName}`";
-
+    public function removeColumn()
+    {
+        $this->query = "ALTER TABLE {$this->table} DROP {$this->colName}";
     }
 
     /**
@@ -334,10 +339,48 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery {
      *
      * @return void
      */
-    public function removeIndex() {
+    public function removeIndex()
+    {
+        $this->query = "ALTER TABLE {$this->table} DROP INDEX {$this->colName}";
+    }
 
-        $this->query = "ALTER TABLE `{$this->table}` DROP INDEX `{$this->colName}`";
+    /**
+     * Remove foreign key
+     *
+     * @return void
+     */
+    public function removeForeignKey()
+    {
+        $this->query = "ALTER TABLE {$this->table} DROP FOREIGN KEY {$this->colName}";
+    }
 
+    /**
+     * Add foreign key
+     *
+     * @return void
+     */
+    public function addForeignKey()
+    {
+        $this->query = "ALTER TABLE {$this->table} ADD ";
+        $this->foreign();
+    }
+
+    public function foreign()
+    {
+        $foreign = $this->foreign_key;
+
+        if($foreign->constraint)
+            $this->query .= "CONSTRAINT `{$foreign->constraint}` ";
+
+        $this->query .= "FOREIGN KEY ({$this->colName})";
+        $this->table = $foreign->table;
+        $this->query .= " REFERENCES {$this->table} (`{$foreign->column}`)";
+
+        if($foreign->onDelete)
+            $this->query .= " ON DELETE " . $foreign->onDelete;
+        
+        if($foreign->onUpdate)
+            $this->query .= " ON UPDATE " . $foreign->onUpdate;
     }
 
     /**
@@ -347,7 +390,7 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery {
      */
     public function removePrimaryKey() {
 
-        $this->query = "ALTER TABLE `{$this->table}` DROP PRIMARY KEY";
+        $this->query = "ALTER TABLE {$this->table} DROP PRIMARY KEY";
 
     }
 
@@ -359,12 +402,19 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery {
      */
     public function safeString($string)
     {
-        
         if($string === false) return 0;
         if($string === true) return 1;
+        if($string === null) return 'NULL';
+
+        if(is_int($string) || is_float($string))
+            $string = "$string";
+
+        if(!is_string($string))
+        {
+            throw new TypeException("Query builder given object of '" . typeOf($string) . "', required string");
+        }
 
         return '"' . addslashes($string) . '"';
-        
     }
 
 }

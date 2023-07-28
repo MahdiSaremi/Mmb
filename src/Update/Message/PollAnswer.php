@@ -15,12 +15,11 @@ class PollAnswer extends MmbBase implements \Mmb\Update\Interfaces\IUserID
      * @var static
      */
     public static $this;
+    public static function this()
+    {
+        return static::$this;
+    }
 
-
-    /**
-     * @var Mmb
-     */
-    private $_base;
 
     /**
      * شناسه نظرسنجی
@@ -47,18 +46,19 @@ class PollAnswer extends MmbBase implements \Mmb\Update\Interfaces\IUserID
      */
     public $chosenCount;
 
-    public function __construct($a, Mmb $base)
+    public function __construct(array $args, ?Mmb $mmb = null)
     {
+        parent::__construct($args, $mmb);
 
-        if($base->loading_update && !static::$this)
+        if($this->_base->loading_update && !static::$this)
             self::$this = $this;
 
-        $this->_base = $base;
-        $this->id = $a['poll_id'];
-        $this->user = new UserInfo($a['user'], $base);
-        $this->options = $a['option_ids'];
-        $this->chosenCount = count($this->options);
-        
+        $this->initFrom($args, [
+            'poll_id' => 'id',
+            'user' => fn($user) => new UserInfo($user, $this->_base),
+            'options' => 'option_ids',
+        ]);
+        $this->chosenCount = count($this->options ?? []);
     }
 
     

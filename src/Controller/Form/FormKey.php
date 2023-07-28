@@ -73,15 +73,19 @@ class FormKey
         if ($msg = $upd->msg)
         {
             $text = $msg->text;
-            $contact = $msg->contact;
-            $location = $msg->location;
-            $poll = $msg->poll;
 
-            $check = $contact ? 'contact' : (
-                $location ? 'location' : (
-                    $poll ? 'poll' : 'text'
-                )
-            );
+            if($msg->contact)
+                $check = 'contact';
+            elseif($msg->location)
+                $check = 'location';
+            elseif($msg->poll)
+                $check = 'poll';
+            elseif($msg->userShared)
+                $check = 'user';
+            elseif($msg->chatShared)
+                $check = 'chat';
+            else
+                $check = 'text';
             $value = $check == 'text' ? $text : true;
         }
         // elseif ($callback = $upd->callback)
@@ -141,6 +145,12 @@ class FormKey
 
                 if (isset($btn['poll']))
                     $single['poll'] = $btn['poll'];
+
+                if (isset($btn['user']))
+                    $single['user'] = $btn['user'];
+
+                if (isset($btn['chat']))
+                    $single['chat'] = $btn['chat'];
 
                 $keyr[] = $single;
             }

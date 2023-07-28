@@ -45,7 +45,7 @@ class FormStepHandler extends StepHandler
     {
         $class = $this->form;
         $form = new $class($this);
-        return $form->_start() ?: $this;
+        return $form->_start() ?: ($form->canceled ? null : $this);
     }
 
     /**
@@ -69,26 +69,29 @@ class FormStepHandler extends StepHandler
      */
     public function getValue(FormInput $input, &$form_option, &$skip, &$cancel)
     {
+        $ignore_filters = false;
         if($this->key && $btn = FormKey::findMatch(upd(), $this->key))
         {
             $form_option = true;
             if(array_key_exists('skip', $btn))
             {
                 $skip = true;
+                $ignore_filters = true;
             }
             elseif(array_key_exists('cancel', $btn))
             {
                 $cancel = true;
+                $ignore_filters = true;
             }
             elseif(array_key_exists('value', $btn))
             {
                 return $btn['value'];
             }
 
-            return $btn['text'];
+            // return $btn['text'];
         }
 
-        return $input->applyFilters(upd());
+        return $input->applyFilters(upd(), $form_option, $ignore_filters);
     }
 
 }

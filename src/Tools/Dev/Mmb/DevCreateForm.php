@@ -39,7 +39,7 @@ class DevCreateForm extends Dev
             $methods[$inp] = "\$input\n" .
                 "\t\t\t->{$type}()\n" .
                 "\t\t\t->request(function() {\n" .
-                "\t\t\t\treplyText('Enter {$inp}:', [\n" .
+                "\t\t\t\tresponse('Enter {$inp}:', [\n" .
                 "\t\t\t\t\t'key' => \$this->key,\n" .
                 "\t\t\t\t]);\n" .
                 "\t\t\t});";

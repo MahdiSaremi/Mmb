@@ -2,6 +2,7 @@
 #auto-name
 namespace Mmb\Tools\Advanced;
 
+use Mmb\Mapping\Arrayable;
 use Mmb\Update\User\UserInfo;
 
 class AdvancedChanceUserRepeat extends AdvancedChance
@@ -15,8 +16,13 @@ class AdvancedChanceUserRepeat extends AdvancedChance
     public $remember;
     public $focusScale;
     
-    public function __construct(array $array, $name, $rememberTime, $focusScale)
+    public function __construct(array|Arrayable $array, $name, $rememberTime, $focusScale)
     {
+        if($array instanceof Arrayable)
+        {
+            $array = $array->toArray();
+        }
+
         $this->array = $array;
         $this->name = $name;
         $this->remember = $rememberTime;

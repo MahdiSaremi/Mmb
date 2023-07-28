@@ -4,20 +4,24 @@ namespace Mmb\Update\Message\Data; #auto
 
 use Mmb\Mmb;
 use Mmb\MmbBase;
+use Mmb\Tools\Text;
 
 class Media extends MmbBase implements \Mmb\Update\Interfaces\IMsgDataID
 {
-    /**
-     * @var Mmb
-     */
-    private $_base;
-
+    
     /**
      * آیدی فایل
      *
      * @var string
      */
     public $id;
+
+    /**
+     * نوع رسانه
+     *
+     * @var string
+     */
+    public string $type;
 
     /**
      * آیدی یکتای فایل
@@ -79,7 +83,7 @@ class Media extends MmbBase implements \Mmb\Update\Interfaces\IMsgDataID
      *
      * @var string|null
      */
-    public $perfomer;
+    public $permofer;
 
     /**
      * نام صوت
@@ -94,43 +98,30 @@ class Media extends MmbBase implements \Mmb\Update\Interfaces\IMsgDataID
      * @var string|null
      */
     public $ext;
-    function __construct($type, $med, $base){
+    function __construct(string $type, array $args, ?Mmb $mmb = null)
+    {
+        parent::__construct($args, $mmb);
 
-        $this->_base = $base;
-        $this->id = $med['file_id'];
-        $this->uniqueID = @$med['file_unique_id'];
-        $this->size = @$med['file_size'];
-        $this->name = @$med['file_name'];
-        if($ext = $this->name){
-            $ext = explode('.', $ext);
-            $ext = end($ext);
-            $this->ext = $ext;
+        $this->initFrom($args, [
+            'file_id' => 'id',
+            'file_unique_id' => 'uniqueID',
+            'file_size' => 'size',
+            'file_name' => 'name',
+            'thumb' => fn($thumb) => $this->thumb = new Media('photo', $thumb, $this->_base),
+            'mime_type' => 'mime',
+            'duration' => 'duration',
+            
+            'width' => 'width',
+            'height' => 'height',
+            'permofer' => 'permofer',
+            'title' => 'title',
+            'length' => 'duration',
+        ]);
+        if($this->name)
+        {
+            $this->ext = Text::afterLast($this->name, '.');
         }
-        if(isset($med['thumb']))
-            $this->thumb = new Media("photo", $med['thumb'], $base);
-        if(isset($med['mime_type']))
-            $this->mime = $med['mime_type'];
-        if(isset($med['duration']))
-            $this->duration = $med['duration'];
-        if($type == "photo"){
-            $this->width = $med['width'];
-            $this->height = $med['height'];
-        }
-        elseif($type == "audio"){
-            $this->perfomer = @$med['permofer'];
-            $this->title = @$med['title'];
-        }
-        elseif($type == "video"){
-            $this->width = $med['width'];
-            $this->height = $med['height'];
-        }
-        elseif($type == "anim"){
-            $this->width = $med['width'];
-            $this->height = $med['height'];
-        }
-        elseif($type == "videoNote"){
-            $this->duration = $med['length'];
-        }
+        $this->type = $type;
     }
     
     /**
@@ -139,7 +130,8 @@ class Media extends MmbBase implements \Mmb\Update\Interfaces\IMsgDataID
      * @param string $path محل دانلود
      * @return bool
      */
-    function download($path){
+    function download($path)
+    {
         return $this->_base->getFile($this->id)->download($path);
     }
 
@@ -148,19 +140,19 @@ class Media extends MmbBase implements \Mmb\Update\Interfaces\IMsgDataID
      *
      * @return TelFile|false
      */
-    public function getFile(){
+    public function getFile()
+    {
         return $this->_base->getFile($this->id);
     }
 
 	/**
 	 * گرفتن آیدی پیام
 	 *
-	 * @return int
+	 * @return string
 	 */
-	function IMsgDataID() {
-        
+	function IMsgDataID()
+    {
         return $this->id;
-
 	}
 
 }

@@ -63,7 +63,7 @@ class Storage
      * * `"menu.name.*.text|caption" = $data['menu']['name'][همه][text و caption]`
      *
      * @param string $selector
-     * @param mixed $default
+     * @param mixed|Closure $default
      * @return mixed
      */
     public static function get($selector, $default = null)

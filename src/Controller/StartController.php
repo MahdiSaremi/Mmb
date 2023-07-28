@@ -6,6 +6,9 @@ use Mmb\Controller\Controller;
 use Mmb\Controller\StepHandler\Handlable;
 use Mmb\Core\StartHandler;
 
+/**
+ * @deprecated
+ */
 abstract class StartController extends Controller
 {
 

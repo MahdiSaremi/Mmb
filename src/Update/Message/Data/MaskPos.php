@@ -9,11 +9,6 @@ class MaskPos extends MmbBase
 {
 
     /**
-     * @var Mmb
-     */
-    private $_base;
-
-    /**
      * Point
      * موقعیت
      *
@@ -42,12 +37,15 @@ class MaskPos extends MmbBase
      * @var double
      */
     public $scale;
-    public function __construct($a, $base)
+    public function __construct(array $args, ?Mmb $mmb = null)
     {
-        $this->_base = $base;
-        $this->point = $a['point'];
-        $this->x = $a['x_shift'];
-        $this->y = $a['y_shift'];
-        $this->scale = $a['scale'];
+        parent::__construct($args, $mmb);
+
+        $this->initFrom($args, [
+            'point' => 'point',
+            'x_shift' => 'x',
+            'y_shift' => 'y',
+            'scale' => 'scale',
+        ]);
     }
 }

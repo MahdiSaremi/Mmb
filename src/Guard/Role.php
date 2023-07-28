@@ -190,6 +190,58 @@ class Role
         return false;
     }
 
+    /**
+     * گرفتن کاربرانی که این نقش ثابت را دارند
+     * 
+     * `Role::getConstantsFor('developer')`
+     * 
+     * `Role::getConstantsFor('developer|manager|test') // Role=developer AdvRoles=manager,test`
+     * 
+     * @param string $role
+     * @return array
+     */
+    public static function getConstantsFor($role)
+    {
+        $result = [];
+        $exp = explode('|', $role);
+        $expc = count($exp);
+        // Search for role
+        if($expc == 1)
+        {
+            foreach(self::$constants as $id => $rl)
+            {
+                if($role == $rl)
+                    $result[] = $id;
+                elseif(($pos = strpos($rl, '|')) && substr($rl, 0, $pos) == $role)
+                    $result[] = $id;
+            }
+        }
+        // Search for role & 
+        else
+        {
+            foreach(self::$constants as $id => $rl)
+            {
+                $exp2 = explode('|', $rl);
+                if($expc <= count($exp2) && $exp2[0] == $exp[0])
+                {
+                    $ok = true;
+                    for($i = 1; $i < $expc; $i++)
+                    {
+                        if(!array_search($exp[$i], $exp2))
+                        {
+                            $ok = false;
+                            break;
+                        }
+                    }
+                    if($ok)
+                        $result[] = $id;
+                }
+            }
+        }
+
+        return $result;
+    }
+
 
 
     public $name;

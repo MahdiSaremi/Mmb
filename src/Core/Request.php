@@ -2,12 +2,17 @@
 #auto-name
 namespace Mmb\Core;
 
+use Closure;
+use Mmb\Listeners\HasListeners;
+use Mmb\Listeners\HasNormalStaticListeners;
+use Mmb\Listeners\HasStaticListeners;
 use Mmb\Mmb;
 
 /**
  * کلاسی که اطلاعات درخواست های ام ام بی به تلگرام را در خود دارد
  */
-class Request {
+class Request
+{
 
     use Defaultable;
 
@@ -15,7 +20,7 @@ class Request {
     /**
      * ام ام بی تارگت
      *
-     * @var \Mmb
+     * @var Mmb
      */
     public $mmb;
 
@@ -49,12 +54,10 @@ class Request {
 
     public function __construct(Mmb $mmb, string $token, string $method, array $args)
     {
-        
         $this->mmb = $mmb;
         $this->token = $token;
         $this->method = $method;
         $this->args = $args;
-
     }
 
     /**
@@ -62,9 +65,11 @@ class Request {
      *
      * @return \stdClass|array|false
      */
-    public function request($associative = false) {
+    public function request($associative = false)
+    {
+        static::invokeListeners('requesting', [ $this ]);
 
-        $url = "https://api.telegram.org/bot".$this->token."/".$this->method;
+        $url = "https://api.telegram.org/bot" . $this->token . "/" . $this->method;
 
         $request = curl_init();
         curl_setopt($request, CURLOPT_URL, $url);
@@ -72,20 +77,20 @@ class Request {
         curl_setopt($request, CURLOPT_POSTFIELDS, $this->args);
 
         $this->curlSetup($request);
+        static::invokeListeners('setuping', [ $this, $request ]);
 
-        $responce = curl_exec($request);
-        if (curl_error($request)) {
-
+        $response = curl_exec($request);
+        if (curl_error($request))
+        {
             return false;
-
         }
-        else {
+        else
+        {
+            static::invokeListeners('requested', [ $this ]);
 
-            $result = json_decode($responce, $associative);
+            $result = json_decode($response, $associative);
             return $result;
-
         }
-
     }
 
     public function curlSetup($curl)
@@ -97,10 +102,9 @@ class Request {
      *
      * @return void
      */
-    public function parseArgs() {
-
+    public function parseArgs()
+    {
         ArgsParser::defaultStatic()->parse( $this );
-
     }
 
     private $lowerMethod;
@@ -110,13 +114,46 @@ class Request {
      *
      * @return string
      */
-    public function lowerMethod() {
-
+    public function lowerMethod()
+    {
         if($this->lowerMethod)
             return $this->lowerMethod;
-        
         return $this->lowerMethod = strtolower($this->method);
+    }
 
+    use HasNormalStaticListeners;
+
+    /**
+     * افزودن شنونده ای که قبل از اجرای درخواست صدا زده می شود
+     *
+     * @param Closure $callback `function(Request $request)`
+     * @return void
+     */
+    public static function requesting(Closure $callback)
+    {
+        static::listen(__FUNCTION__, $callback);
+    }
+
+    /**
+     * افزودن شنونده ای که بعد از اجرای درخواست صدا زده می شود
+     *
+     * @param Closure $callback `function(Request $request)`
+     * @return void
+     */
+    public static function requested(Closure $callback)
+    {
+        static::listen(__FUNCTION__, $callback);
+    }
+
+    /**
+     * افزودن شنونده ای که در زمان نصب کارل صدا زده می شود
+     *
+     * @param Closure $callback `function(Request $request, $curl)`
+     * @return void
+     */
+    public static function setuping(Closure $callback)
+    {
+        static::listen(__FUNCTION__, $callback);
     }
 
 }

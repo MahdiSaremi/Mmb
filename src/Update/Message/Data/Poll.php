@@ -16,12 +16,11 @@ class Poll extends MmbBase
      * @var static
      */
     public static $this;
+    public static function this()
+    {
+        return static::$this;
+    }
 
-
-    /**
-     * @var Mmb
-     */
-    private $_base;
 
     /**
      * آیدی
@@ -91,7 +90,7 @@ class Poll extends MmbBase
      *
      * @var Entity[]
      */
-    public $explanEntites;
+    public $explanEntities;
     /**
      * زمان فعال بودن نظرسنجی
      *
@@ -105,41 +104,27 @@ class Poll extends MmbBase
      */
     public $closeDate;
 
-    /**
-     * 
-     *
-     * @var Entity[]
-     */
-    public $explanation_entities;
+    function __construct(array $args, ?Mmb $mmb = null)
+    {
+        parent::__construct($args, $mmb);
 
-    function __construct($b, Mmb $base){
-
-        if($base->loading_update && !static::$this)
+        if($this->_base->loading_update && !static::$this)
             self::$this = $this;
 
-        $this->_base = $base;
-        $this->id = $b['id'];
-        $this->text = $b['question'];
-        $this->options = [];
-        $this->votersCount = $b['total_voter_count'];
-        $_ = $b['options'];
-        foreach($_ as $__){
-            $this->options[] = new PollOption($__, $this, $base);
-        }
-        $this->isClosed = $b['is_closed'];
-        $this->isAnonymous = $b['is_anonymous'];
-        $this->type = $b['type'];
-        $this->multiple = $b['allows_multiple_answers'];
-        $this->correct = $b['correct_option_id'];
-        $this->explan = $b['explanation'];
-        $this->explanation_entities = [];
-        $_ = @$b['explanation_entities'];
-        if($_)
-        foreach($_ as $__){
-            $this->explanation_entities[] = new Entity($__, $base);
-        }
-        $this->openPreiod = @$b['open_period'];
-        $this->closeDate = @$b['close_date'];
-
+        $this->initFrom($args, [
+            'id' => 'id',
+            'question' => 'text',
+            'total_voter_count' => 'votersCount',
+            'options' => fn($options) => $this->options = array_map(fn($option) => new PollOption($option, $this, $this->_base), $options),
+            'is_closed' => 'isClosed',
+            'is_anonymous' => 'isAnonymous',
+            'type' => 'type',
+            'allows_multiple_answers' => 'multiple',
+            'correct_option_id' => 'correct',
+            'explanation' => 'explan',
+            'explanation_entities' => fn($explanEntities) => $this->explanEntities = array_map(fn($entity) => new Entity($entity, $this->_base), $explanEntities),
+            'open_period' => 'openPreiod',
+            'close_date' => 'closeDate',
+        ]);
     }
 }

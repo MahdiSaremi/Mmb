@@ -27,7 +27,7 @@ class DevCreateController extends Dev
         $file->php()
             ->extends('Controller')
             ->use('Mmb\Controller\Controller')
-            ->method('main', [], 'replyText("This is main");')
+            ->method('main', [], 'response("This is main");')
             ->save();
 
         echo "Successfully created controller!\n";

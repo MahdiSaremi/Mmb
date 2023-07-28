@@ -2,37 +2,132 @@
 #auto-update
 namespace Mmb\Controller\Form;
 
+use Closure;
+use Mmb\Lang\Lang;
+use Mmb\Tools\Text;
 use Mmb\Update\Upd;
 use Mmb\Update\User\UserInfo;
 
 trait UpdateFilter
 {
 
+
+    #region Update checking
     
-    public $min = false;
+    public $_checks = [];
+
+    /**
+     * بررسی می کند مقدار مورد نظر در آپدیت وجود دارد
+     * 
+     * `$input->check('msg.text', "متن وجود ندارد");`
+     * 
+     * `$input->check(function() { return isset(upd()->msg->text); }, "متن وجود ندارد");`
+     *
+     * @param string|Closure $selector
+     * @param string|array $error
+     * @return $this
+     */
+    public function check($selector, $error)
+    {
+        $this->_checks[] = [ $error, $selector ];
+        return $this;
+    }
+
+    /**
+     * بررسی می کند مقدار مورد نظر در آپدیت برابر با ... است
+     *
+     * @param string $selector
+     * @param mixed $value
+     * @param string|array $error
+     * @return $this
+     */
+    public function checkIs($selector, $value, $error)
+    {
+        $this->_checks[] = [ $error, $selector, $value ];
+        return $this;
+    }
+
+    /**
+     * بررسی می کند آپدیت پیام است و نوع پیام نیز مقدار ورودی ست
+     *
+     * @param ?string $type
+     * @return $this
+     */
+    public function checkMsg($type = null, $error = null, $typeError = null)
+    {
+        $this->check('msg', $error ?: [ 'invalid.msg' ]);
+        if($type)
+            return $this->check($type, $typeError ?: [ 'invalid.msg_type' ]);
+
+        return $this;
+    }
+
+    /**
+     * بررسی می کند آپدیت پیام رسانه ایست
+     *
+     * @param ?string $error
+     * @return $this
+     */
+    public function checkMedia($error = null)
+    {
+        return $this->check('msg.media', $error ?: [ 'invalid.media' ]);
+    }
+
+    #endregion
+
+
+    #region Value checking
+
+    public $_value_checkers = [];
+    
     /**
      * تنظیم حداقل طول/عدد مجاز
      * 
      * @param int $len
      * @return $this
      */
-    public function min($len)
+    public function min($len, $error = null)
     {
-        $this->min = $len;
+        $this->_value_checkers[] = [ 'min', $len, $error ];
         return $this;
     }
+    protected function _apply_min(&$value, $min, $error)
+    {
+        if(is_string($value))
+        {
+            if (mb_strlen($value) < $min)
+                $this->filterErrorThrow('filter.min_text', $error, "طول متن شما باید حداقل %min% باشد", [ 'min' => $min ]);
+        }
+        elseif(is_numeric($value))
+        {
+            if ($value < $min)
+                $this->filterErrorThrow('filter.min_number', $error, "عدد شما باید حداقل %min% باشد", [ 'min' => $min ]);
+        }
+    }
 
-    public $max = false;
     /**
      * تنظیم حداکثر طول/عدد مجاز
      * 
      * @param int $len
      * @return $this
      */
-    public function max($len)
+    public function max($len, $error = null)
     {
-        $this->max = $len;
+        $this->_value_checkers[] = [ 'max', $len, $error ];
         return $this;
+    }
+    protected function _apply_max(&$value, $max, $error)
+    {
+        if(is_string($value))
+        {
+            if (mb_strlen($value) > $max)
+                $this->filterErrorThrow('filter.max_text', $error, "طول متن شما باید حداکثر %max% باشد", [ 'max' => $max ]);
+        }
+        elseif(is_numeric($value))
+        {
+            if ($value > $max)
+                $this->filterErrorThrow('filter.max_number', $error, "عدد شما باید حداکثر %max% باشد", [ 'max' => $max ]);
+        }
     }
     
     /**
@@ -42,477 +137,27 @@ trait UpdateFilter
      * @param mixed $max
      * @return UpdateFilter
      */
-    public function between($min, $max)
+    public function between($min, $max, $error = null)
     {
-        $this->min = $min;
-        $this->max = $max;
+        $this->_value_checkers[] = [ 'between', $min, $max, $error ];
         return $this;
     }
-
-    /**
-     * نوع
-     * 
-     * @var string
-     */
-    public $type = 'text';
-
-    /**
-     * دیتای نوع
-     * 
-     * @var mixed
-     */
-    public $type_data = null;
-
-    /**
-     * تنظیم نوع متن
-     * 
-     * @return $this
-     */
-    public function text()
+    protected function _apply_between(&$value, $min, $max, $error)
     {
-        $this->type = 'text';
-        return $this;
-    }
-
-    /**
-     * تنظیم نوع متن تک خطی
-     * 
-     * @return $this
-     */
-    public function textSingleLine()
-    {
-        $this->type = 'text_singleline';
-        return $this;
-    }
-
-    /**
-     * تنظیم نوع عدد صحیح مثبت
-     * 
-     * @return $this
-     */
-    public function unsignedInteger()
-    {
-        $this->type = 'int_us';
-        return $this;
-    }
-
-    /**
-     * تنظیم نوع عدد صحیح
-     * 
-     * @return $this
-     */
-    public function integer()
-    {
-        $this->type = 'int';
-        return $this;
-    }
-
-    /**
-     * تنظیم نوع عدد اعشاری مثبت
-     * 
-     * @return $this
-     */
-    public function unsignedFloat()
-    {
-        $this->type = 'float_us';
-        return $this;
-    }
-
-    /**
-     * تنظیم نوع عدد اعشاری
-     * 
-     * @return $this
-     */
-    public function float()
-    {
-        $this->type = 'float';
-        return $this;
-    }
-
-    /**
-     * تنظیم نوع عدد
-     * 
-     * @return $this
-     */
-    public function number()
-    {
-        $this->type = 'float';
-        return $this;
-    }
-
-    /**
-     * تنظیم نوع رسانه
-     * 
-     * @return $this
-     */
-    public function media()
-    {
-        $this->type = 'media';
-        return $this;
-    }
-
-    /**
-     * تنظیم نوع تصویر
-     * 
-     * @return $this
-     */
-    public function photo()
-    {
-        $this->type = 'photo';
-        return $this;
-    }
-
-    /**
-     * تنظیم نوع مخاطب
-     * 
-     * @return $this
-     */
-    public function contact()
-    {
-        $this->type = 'contact';
-        return $this;
-    }
-
-    /**
-     * تنظیم نوع مخاطب - تنها مخاطب خود کاربر
-     * 
-     * از این گزینه برای دریافت شماره کاربر از طریق دکمه اشتراک گذاری استفاده کنید
-     * 
-     * @return $this
-     */
-    public function contactSelf()
-    {
-        $this->type = 'contact-self';
-        return $this;
-    }
-
-    /**
-     * تنظیم نوع موقعیت
-     * 
-     * @return $this
-     */
-    public function location()
-    {
-        $this->type = 'location';
-        return $this;
-    }
-
-    /**
-     * تنظیم نوع دلخواه از پیام
-     * 
-     * Example: photo, video, anim, text, ...
-     * 
-     * داده ای که ذخیره می شود طیق نوع پیام تعیین می شود
-     * 
-     * @return $this
-     */
-    public function msgTypeOf($name, $filterError = null)
-    {
-        $this->type = "msgTypeOf";
-        $this->type_data = [ $name, $filterError ];
-        return $this;
-    }
-
-    /**
-     * تنظیم نوع پیغام
-     * 
-     * @return $this
-     */
-    public function msg()
-    {
-        $this->type = 'msg';
-        return $this;
-    }
-
-    /**
-     * تنظیم نوع آیدی پیام ارسالی
-     * 
-     * @return $this
-     */
-    public function msgid()
-    {
-        $this->type = 'msgid';
-        return $this;
-    }
-
-    /**
-     * تنظیم نوع پارامتر های پیام
-     * 
-     * @return $this
-     */
-    public function msgArgs()
-    {
-        $this->type = 'msgArgs';
-        return $this;
-    }
-
-
-
-    /**
-     * اعمال فیلتر ها بر روی آپدیت
-     * 
-     * @param Upd $upd
-     * @throws FilterError 
-     * @return mixed
-     */
-    public function applyFilters(Upd $upd)
-    {
-        $value = $this->matchType($upd);
-        $this->matchFilters($value);
-        return $value;
-    }
-
-    /**
-     * گرفتن مقدار بر اساس نوع اینپوت
-     * 
-     * @param Upd $upd
-     * @throws FilterError 
-     * @return mixed
-     */
-    protected function matchType(Upd $upd)
-    {
-        switch($this->type)
+        if(is_string($value))
         {
-            case 'upd':
-                return $upd;
-
-            case 'text':
-                if (optional($upd->msg)->type != 'text')
-                    throw new FilterError(lang('invalid.text') ?: "تنها پیغام متنی قابل قبول است");
-                return optional($upd->msg)->text;
-
-            case 'text_singleline':
-                if (optional($upd->msg)->type != 'text')
-                    throw new FilterError(lang('invalid.text') ?: "تنها پیغام متنی قابل قبول است");
-                $text = $upd->msg->text;
-                if (strpos($text, "\n"))
-                    throw new FilterError(lang('invalid.single_line') ?: "متن شما باید تک خطی باشد");
-                return $text;
-
-            case 'int':
-                if (optional($upd->msg)->type != 'text')
-                    throw new FilterError(lang('invalid.text') ?: "تنها پیغام متنی قابل قبول است");
-                $text = optional($upd->msg)->text;
-                if ($this->supportFa)
-                    $text = tr_num($text);
-                if (!is_numeric($text) || strpos($text, '.') !== false)
-                    throw new FilterError(lang('invalid.int') ?: "تنها عدد غیر اعشاری قابل قبول است");
-                return intval($text);
-
-            case 'int_us':
-                if (optional($upd->msg)->type != 'text')
-                    throw new FilterError(lang('invalid.text') ?: "تنها پیغام متنی قابل قبول است");
-                $text = optional($upd->msg)->text;
-                if ($this->supportFa)
-                    $text = tr_num($text);
-                if (!is_numeric($text) || strpos($text, '.') !== false)
-                    throw new FilterError(lang('invalid.int') ?: "تنها عدد غیر اعشاری قابل قبول است");
-                $int = intval($text);
-                if ($int < 0)
-                    throw new FilterError(lang('invalid.unsigned') ?: "تنها عدد مثبت قابل قبول است");
-                return $int;
-
-            case 'float':
-                if (optional($upd->msg)->type != 'text')
-                    throw new FilterError(lang('invalid.text') ?: "تنها پیغام متنی قابل قبول است");
-                $text = optional($upd->msg)->text;
-                if ($this->supportFa)
-                    $text = tr_num($text);
-                if (!is_numeric($text))
-                    throw new FilterError(lang('invalid.number') ?: "تنها عدد قابل قبول است");
-                return floatval($text);
-
-            case 'float_us':
-                if (optional($upd->msg)->type != 'text')
-                    throw new FilterError(lang('invalid.text') ?: "تنها پیغام متنی قابل قبول است");
-                $text = optional($upd->msg)->text;
-                if ($this->supportFa)
-                    $text = tr_num($text);
-                if (!is_numeric($text))
-                    throw new FilterError(lang('invalid.number') ?: "تنها عدد قابل قبول است");
-                $float = floatval($text);
-                if ($float < 0)
-                    throw new FilterError(lang('invalid.unsigned') ?: "تنها عدد مثبت قابل قبول است");
-                return $float;
-
-            case 'msg':
-                if (!$upd->msg)
-                    throw new FilterError(lang('invalid.msg') ?: "تنها پیام قابل قبول است");
-                return $upd->msg;
-
-            case 'msgTypeOf':
-                [$type, $filterError] = $this->type_data;
-                if (!$upd->msg)
-                    throw new FilterError(lang('invalid.msg') ?: "تنها پیام قابل قبول است");
-                if ($upd->msg->type != $type)
-                {
-                    if ($filterError)
-                        throw new FilterError($filterError);
-                    else
-                        throw new FilterError(lang('invalid.msg_type') ?: "این نوع پیام پشتیبانی نمی شود");
-                }
-                return $upd->msg->$type;
-
-            case 'msgid':
-                if (!$upd->msg)
-                    throw new FilterError(lang('invalid.msg') ?: "تنها پیام قابل قبول است");
-                return $upd->msg->id;
-
-            case 'media':
-                if (!$upd->msg)
-                    throw new FilterError(lang('invalid.msg') ?: "تنها پیام قابل قبول است");
-                $media = $upd->msg->media;
-                if (!$media)
-                    throw new FilterError(lang('invalid.media') ?: "تنها پیام رسانه ای قابل قبول است");
-                return $media;
-
-            case 'photo':
-                if (!$upd->msg)
-                    throw new FilterError(lang('invalid.msg') ?: "تنها پیام قابل قبول است");
-                $media = $upd->msg->photo;
-                if (!$media)
-                    throw new FilterError(lang('invalid.photo') ?: "تنها پیام تصویری قابل قبول است");
-                return end($media);
-
-            case 'contact':
-                if (!$upd->msg)
-                    throw new FilterError(lang('invalid.msg') ?: "تنها پیام قابل قبول است");
-                $contact = $upd->msg->contact;
-                if (!$contact)
-                    throw new FilterError(lang('invalid.contact') ?: "تنها مخاطب قابل قبول است");
-                return $contact;
-
-            case 'contact-self':
-                if (!$upd->msg)
-                    throw new FilterError(lang('invalid.msg') ?: "تنها پیام قابل قبول است");
-                $contact = $upd->msg->contact;
-                if (!$contact)
-                    throw new FilterError(lang('invalid.contact') ?: "تنها مخاطب قابل قبول است");
-                if ($contact->userID != $upd->msg->from->id)
-                    throw new FilterError(lang('invalid.contact_self') ?: "نمی توانید مخاطب شخص دیگری را ارسال کنید");
-                return $contact;
-
-            case 'location':
-                if (!$upd->msg)
-                    throw new FilterError(lang('invalid.msg') ?: "تنها پیام قابل قبول است");
-                $location = $upd->msg->location;
-                if (!$location)
-                    throw new FilterError(lang('invalid.location') ?: "تنها موقعیت مکانی قابل قبول است");
-                return $location;
-
-            case 'msgArgs':
-                if (!$upd->msg)
-                    throw new FilterError(lang('invalid.msg') ?: "تنها پیام قابل قبول است");
-                $args = $upd->msg->createArgs();
-                if (!$args)
-                    throw new FilterError(lang('invalid.msg_type') ?: "این نوع پیام پشتیبانی نمی شود");
-                return $args;
-
+            $len = mb_strlen($value);
+            if ($len < $min || $len > $max)
+                $this->filterErrorThrow('filter.between_text', $error, "طول متن شما باید حداقل %min% و حداکثر %max% باشد", [ 'min' => $min, 'max' => $max ]);
         }
-
-        return optional($upd->msg)->text;
+        elseif(is_numeric($value))
+        {
+            if ($value < $min || $value > $max)
+                $this->filterErrorThrow('filter.between_number', $error, "عدد شما باید حداقل %min% و حداکثر %max% باشد", [ 'min' => $min, 'max' => $max ]);
+        }
     }
+    
 
-    /**
-     * بررسی فیلتر ها بر روی مقدار اینپوت
-     * 
-     * @param mixed &$value
-     * @throws FilterError 
-     * @return void
-     */
-    protected function matchFilters(&$value)
-    {
-
-        if($this->min !== false)
-        {
-            if(is_string($value))
-            {
-                if (mb_strlen($value) < $this->min)
-                    throw new FilterError(lang('filter.min_text', [ 'min' => $this->min ]) ?: "طول متن شما باید حداقل {$this->min} باشد");
-            }
-            elseif(is_numeric($value))
-            {
-                if ($value < $this->min)
-                    throw new FilterError(lang('filter.min_number', [ 'min' => $this->min ]) ?: "عدد شما باید حداقل {$this->min} باشد");
-            }
-        }
-
-        if($this->max !== false)
-        {
-            if(is_string($value))
-            {
-                if (mb_strlen($value) > $this->max)
-                    throw new FilterError(lang('filter.max_text', [ 'max' => $this->max ]) ?: "طول متن شما باید حداکثر {$this->max} باشد");
-            }
-            elseif(is_numeric($value))
-            {
-                if ($value > $this->max)
-                    throw new FilterError(lang('filter.max_number', [ 'max' => $this->max ]) ?: "عدد شما باید حداکثر {$this->max} باشد");
-            }
-        }
-
-        if($this->matchRegex)
-        {
-            foreach($this->matchRegex as $match)
-            {
-                if($match[0] == 'check')
-                {
-                    if(!preg_match($match[1], $value))
-                    {
-                        if ($match[2])
-                            throw new FilterError($match[2]);
-                        else
-                            throw new FilterError(lang('filter.match') ?: "این فرمت قابل قبول نیست");
-                    }
-                }
-                elseif($match[0] == 'match')
-                {
-                    if(!preg_match($match[1], $value, $value))
-                    {
-                        if ($match[3])
-                            throw new FilterError($match[3]);
-                        else
-                            throw new FilterError(lang('filter.match') ?: "این فرمت قابل قبول نیست");
-                    }
-                    if ($match[2] !== null)
-                        $value = $value[$match[2]];
-                }
-                elseif($match[0] == 'matchall')
-                {
-                    if(!preg_match_all($match[1], $value, $value))
-                    {
-                        if ($match[3])
-                            throw new FilterError($match[3]);
-                        else
-                            throw new FilterError(lang('filter.match') ?: "این فرمت قابل قبول نیست");
-                    }
-                    if ($match[2] !== null)
-                        $value = $value[$match[2]];
-                }
-            }
-        }
-
-        if($this->unique !== false)
-        {
-            $model = $this->unique[0];
-            $column = $this->unique[1];
-
-            if ($model::query()->where($column, $value)->exists())
-                throw new FilterError(lang('filter.unique', [ 'name' => $this->name, 'column' => $column ]) ?: "این مقدار قبلا وجود داشته است");
-        }
-
-        if($this->exists !== false)
-        {
-            $model = $this->exists[0];
-            $column = $this->exists[1];
-
-            if (!$model::query()->where($column, $value)->exists())
-                throw new FilterError(lang('filter.exists', [ 'name' => $this->name, 'column' => $column ]) ?: "این مقدار وجود ندارد");
-        }
-
-    }
-
-    public $unique = false;
     /**
      * یکتا بودن مقدار در دیتابیس
      * 
@@ -520,16 +165,20 @@ trait UpdateFilter
      * @param string|null $column
      * @return $this
      */
-    public function unique($model, $column = null)
+    public function unique($model, $column = null, $error = null)
     {
         if (!$column)
-            $column = $this->name;
+            $column = Text::snake($this->name);
 
-        $this->unique = [ $model, $column ];
+        $this->_value_checkers[] = [ 'unique', $model, $column, $error ];
         return $this;
     }
+    protected function _apply_unique(&$value, $model, $column, $error)
+    {
+        if ($model::query()->where($column, $value)->exists())
+            $this->filterErrorThrow('filter.unique', $error, "این مقدار قبلا وجود داشته است", [ 'name' => $this->name, 'column' => $column ]);
+    }
 
-    public $exists = false;
     /**
      * وجود داشتن دیتا در دیتابیس
      * 
@@ -537,29 +186,20 @@ trait UpdateFilter
      * @param string|null $column
      * @return $this
      */
-    public function exists($model, $column = null)
+    public function exists($model, $column = null, $error = null)
     {
         if (!$column)
-            $column = $this->name;
+            $column = Text::snake($this->name);
 
-        $this->exists = [ $model, $column ];
+        $this->_value_checkers[] = [ 'exists', $model, $column, $error ];
         return $this;
     }
-
-    public $supportFa = false;
-    /**
-     * پشتیبانی از اعداد فارسی
-     * 
-     * @return $this
-     */
-    public function supportFaNumber()
+    protected function _apply_exists(&$value, $model, $column, $error)
     {
-        $this->supportFa = true;
-        return $this;
+        if (!$model::query()->where($column, $value)->exists())
+            $this->filterErrorThrow('filter.exists', $error, "این مقدار وجود ندارد", [ 'name' => $this->name, 'column' => $column ]);
     }
-    
 
-    public $matchRegex = [];
 
     /**
      * فیلتر بررسی ریجکس
@@ -576,7 +216,7 @@ trait UpdateFilter
      */
     public function regexCheck($pattern, $filterError = null)
     {
-        $this->matchRegex[] = ['check', $pattern, $filterError];
+        $this->_value_checkers[] = [ 'regex', 'check', $pattern, 0, $filterError ];
         return $this;
     }
 
@@ -606,7 +246,24 @@ trait UpdateFilter
      */
     public function regexMatch($pattern, $index = null, $filterError = null)
     {
-        $this->matchRegex[] = ['match', $pattern, $index, $filterError];
+        $this->_value_checkers[] = [ 'regex', 'match', $pattern, $index, $filterError ];
+        return $this;
+    }
+
+    /**
+     * فیلتر ریپلیس ریجکس
+     * 
+     * می توانید مقدار هایی از ورودی را تغییر دهید
+     * 
+     * `$input->regexReplace('/[A-Z]+/', function($match) { return strtolower($match[0]); })`
+     * 
+     * @param mixed $pattern
+     * @param string|array|Closure $replacement
+     * @return $this
+     */
+    public function regexReplace($pattern, $replacement)
+    {
+        $this->_value_checkers[] = [ 'regex', 'replace', $pattern, $replacement, null ];
         return $this;
     }
 
@@ -632,8 +289,606 @@ trait UpdateFilter
      */
     public function regexMatchAll($pattern, $index = null, $filterError = null)
     {
-        $this->matchRegex[] = ['matchall', $pattern, $index, $filterError];
+        $this->_value_checkers[] = [ 'regex', 'matchall', $pattern, $index, $filterError ];
         return $this;
     }
 
+    protected function _apply_regex(&$value, $type, $pattern, $index, $error)
+    {
+        if($type == 'check')
+        {
+            if(!preg_match($pattern, $value))
+            {
+                $this->filterErrorThrow('filter.match', $error, "این فرمت قابل قبول نیست");
+            }
+        }
+        elseif($type == 'match')
+        {
+            if(!preg_match($pattern, $value, $value))
+            {
+                $this->filterErrorThrow('filter.match', $error, "این فرمت قابل قبول نیست");
+            }
+            if ($index !== null)
+                $value = $value[$index];
+        }
+        elseif($type == 'matchall')
+        {
+            if(!preg_match_all($pattern, $value, $value))
+            {
+                $this->filterErrorThrow('filter.match', $error, "این فرمت قابل قبول نیست");
+            }
+            if ($index !== null)
+                $value = $value[$index];
+        }
+        elseif($type == 'replace')
+        {
+            $replacement = $index;
+            if($replacement instanceof Closure)
+                $value = preg_replace_callback($pattern, $replacement, $value);
+            else
+                $value = preg_replace($pattern, $replacement, $value);
+        }
+    }
+
+    #endregion
+
+
+    #region Final value
+
+    /**
+     * نوع
+     * 
+     * @var string
+     */
+    public $type = 'text';
+
+    /**
+     * خطای نوع
+     *
+     * @var mixed
+     */
+    public $type_error = null;
+
+    /**
+     * دیتای نوع
+     * 
+     * @var mixed
+     */
+    public $type_data = null;
+
+    /**
+     * تنظیم نوع: متن
+     * 
+     * پ.ن: تنها یک مدل نوع را می توان تنظیم کرد! برای فیلتر کردن از توابع دیگری استفاده کنید
+     * 
+     * @param string|Closure|mixed $error
+     * @return $this
+     */
+    public function text($error = null)
+    {
+        $this->type = 'text';
+        $this->type_error = $error;
+        return $this;
+    }
+
+    /**
+     * تنظیم نوع: متن تک خطی
+     * 
+     * پ.ن: تنها یک مدل نوع را می توان تنظیم کرد! برای فیلتر کردن از توابع دیگری استفاده کنید
+     * 
+     * @param string|Closure|mixed $error
+     * @return $this
+     */
+    public function textSingleLine($error = null)
+    {
+        $this->type = 'text_singleline';
+        $this->type_error = $error;
+        return $this;
+    }
+
+    /**
+     * تنظیم نوع: عدد صحیح مثبت
+     * 
+     * پ.ن: تنها یک مدل نوع را می توان تنظیم کرد! برای فیلتر کردن از توابع دیگری استفاده کنید
+     * 
+     * @param string|Closure|mixed $error
+     * @return $this
+     */
+    public function unsignedInteger($error = null)
+    {
+        $this->type = 'int_us';
+        $this->type_error = $error;
+        return $this;
+    }
+
+    /**
+     * تنظیم نوع: عدد صحیح
+     * 
+     * پ.ن: تنها یک مدل نوع را می توان تنظیم کرد! برای فیلتر کردن از توابع دیگری استفاده کنید
+     * 
+     * @param string|Closure|mixed $error
+     * @return $this
+     */
+    public function integer($error = null)
+    {
+        $this->type = 'int';
+        $this->type_error = $error;
+        return $this;
+    }
+
+    /**
+     * تنظیم نوع: عدد اعشاری مثبت
+     * 
+     * پ.ن: تنها یک مدل نوع را می توان تنظیم کرد! برای فیلتر کردن از توابع دیگری استفاده کنید
+     * 
+     * @param string|Closure|mixed $error
+     * @return $this
+     */
+    public function unsignedFloat($error = null)
+    {
+        $this->type = 'float_us';
+        $this->type_error = $error;
+        return $this;
+    }
+
+    /**
+     * تنظیم نوع: عدد اعشاری
+     * 
+     * پ.ن: تنها یک مدل نوع را می توان تنظیم کرد! برای فیلتر کردن از توابع دیگری استفاده کنید
+     * 
+     * @param string|Closure|mixed $error
+     * @return $this
+     */
+    public function float($error = null)
+    {
+        $this->type = 'float';
+        $this->type_error = $error;
+        return $this;
+    }
+
+    /**
+     * تنظیم نوع: عدد
+     * 
+     * پ.ن: تنها یک مدل نوع را می توان تنظیم کرد! برای فیلتر کردن از توابع دیگری استفاده کنید
+     * 
+     * @param string|Closure|mixed $error
+     * @return $this
+     */
+    public function number($error = null)
+    {
+        $this->type = 'float';
+        $this->type_error = $error;
+        return $this;
+    }
+
+    /**
+     * تنظیم نوع: رسانه
+     * 
+     * پ.ن: تنها یک مدل نوع را می توان تنظیم کرد! برای فیلتر کردن از توابع دیگری استفاده کنید
+     * 
+     * @param string|Closure|mixed $error
+     * @return $this
+     */
+    public function media($error = null)
+    {
+        $this->type = 'media';
+        $this->type_error = $error;
+        return $this;
+    }
+
+    /**
+     * تنظیم نوع: تصویر
+     * 
+     * پ.ن: تنها یک مدل نوع را می توان تنظیم کرد! برای فیلتر کردن از توابع دیگری استفاده کنید
+     * 
+     * @param string|Closure|mixed $error
+     * @return $this
+     */
+    public function photo($error = null)
+    {
+        $this->type = 'photo';
+        $this->type_error = $error;
+        return $this;
+    }
+
+    /**
+     * تنظیم نوع: مخاطب
+     * 
+     * پ.ن: تنها یک مدل نوع را می توان تنظیم کرد! برای فیلتر کردن از توابع دیگری استفاده کنید
+     * 
+     * @param string|Closure|mixed $error
+     * @return $this
+     */
+    public function contact($error = null)
+    {
+        $this->type = 'contact';
+        $this->type_error = $error;
+        return $this;
+    }
+
+    /**
+     * تنظیم نوع: مخاطب - تنها مخاطب خود کاربر
+     * 
+     * از این گزینه برای دریافت شماره کاربر از طریق دکمه اشتراک گذاری استفاده کنید
+     * 
+     * پ.ن: تنها یک مدل نوع را می توان تنظیم کرد! برای فیلتر کردن از توابع دیگری استفاده کنید
+     * 
+     * @param string|Closure|mixed $error
+     * @return $this
+     */
+    public function contactSelf($error = null)
+    {
+        $this->type = 'contact-self';
+        $this->type_error = $error;
+        return $this;
+    }
+
+    /**
+     * تنظیم نوع: موقعیت
+     * 
+     * پ.ن: تنها یک مدل نوع را می توان تنظیم کرد! برای فیلتر کردن از توابع دیگری استفاده کنید
+     * 
+     * @param string|Closure|mixed $error
+     * @return $this
+     */
+    public function location($error = null)
+    {
+        $this->type = 'location';
+        $this->type_error = $error;
+        return $this;
+    }
+
+    /**
+     * تنظیم نوع: دلخواه از پیام
+     * 
+     * Example: photo, video, anim, text, ...
+     * 
+     * داده ای که ذخیره می شود طیق نوع پیام تعیین می شود
+     * 
+     * پ.ن: تنها یک مدل نوع را می توان تنظیم کرد! برای فیلتر کردن از توابع دیگری استفاده کنید
+     * 
+     * @param string $name
+     * @param string|Closure|mixed $error
+     * @return $this
+     */
+    public function msgTypeOf($name, $error = null)
+    {
+        $this->type = "msgTypeOf";
+        $this->type_data = $name;
+        $this->type_error = $error;
+        return $this;
+    }
+
+    /**
+     * تنظیم نوع: پیغام
+     * 
+     * پ.ن: تنها یک مدل نوع را می توان تنظیم کرد! برای فیلتر کردن از توابع دیگری استفاده کنید
+     * 
+     * @param string|Closure|mixed $error
+     * @return $this
+     */
+    public function msg($error = null)
+    {
+        $this->type = 'msg';
+        $this->type_error = $error;
+        return $this;
+    }
+
+    /**
+     * تنظیم نوع: آیدی پیام ارسالی
+     * 
+     * پ.ن: تنها یک مدل نوع را می توان تنظیم کرد! برای فیلتر کردن از توابع دیگری استفاده کنید
+     * 
+     * @param string|Closure|mixed $error
+     * @return $this
+     */
+    public function msgid($error = null)
+    {
+        $this->type = 'msgid';
+        $this->type_error = $error;
+        return $this;
+    }
+
+    /**
+     * تنظیم نوع: پارامتر های پیام
+     * 
+     * پ.ن: تنها یک مدل نوع را می توان تنظیم کرد! برای فیلتر کردن از توابع دیگری استفاده کنید
+     * 
+     * @param string|Closure|mixed $error
+     * @return $this
+     */
+    public function msgArgs($error = null)
+    {
+        $this->type = 'msgArgs';
+        $this->type_error = $error;
+        return $this;
+    }
+
+    #endregion
+
+
+    /**
+     * اعمال فیلتر ها بر روی آپدیت
+     * 
+     * @param Upd $upd
+     * @throws FilterError 
+     * @return mixed
+     */
+    public function applyFilters(Upd $upd, $checkFilters)
+    {
+        if(!$checkFilters)
+        {
+            $this->matchUpdateChecking($upd);
+        }
+        $value = $this->matchType($upd);
+        if(!$checkFilters)
+        {
+            $this->matchFilters($value);
+        }
+
+        return $value;
+    }
+
+    /**
+     * آپدیت را بررسی و فیلتر می کند
+     *
+     * @param Upd $upd
+     * @return void
+     */
+    protected function matchUpdateChecking(Upd $upd)
+    {
+        foreach($this->_checks as $check)
+        {
+            $selector = $check[1];
+
+            if($selector instanceof Closure)
+            {
+                if($selector())
+                    continue;
+            }
+            else
+            {
+                // Select
+                $select = $upd;
+                foreach(explode('.', $selector) as $sel)
+                {
+                    $select = $select->$sel ?? null;
+                    if($select === null)
+                    {
+                        break;
+                    }
+                }
+
+                // Check equals to
+                if(count($check) >= 3)
+                {
+                    if($select = $check[2])
+                        continue;
+                }
+                // Check boolean
+                else
+                {
+                    if($select)
+                        continue;
+                }
+            }
+
+            // Error
+            $error = $check[0];
+            if(is_array($error))
+            {
+                $this->filterErrorThrow($error[0], null, null, $error);
+                // $error = lang($error[0], $error);
+            }
+            $this->filterErrorThrow(null, $error, null);
+        }
+    }
+
+    /**
+     * گرفتن مقدار بر اساس نوع اینپوت
+     * 
+     * @param Upd $upd
+     * @throws FilterError 
+     * @return mixed
+     */
+    protected function matchType(Upd $upd)
+    {
+        switch($this->type)
+        {
+            case 'upd':
+                return $upd;
+
+            case 'text':
+                if (optional($upd->msg)->type != 'text')
+                    $this->filterErrorThrow('invalid.text', $this->type_error, "تنها پیغام متنی قابل قبول است");
+                return optional($upd->msg)->text;
+
+            case 'text_singleline':
+                if (optional($upd->msg)->type != 'text')
+                    $this->filterErrorThrow('invalid.text', $this->type_error, "تنها پیغام متنی قابل قبول است");
+                $text = $upd->msg->text;
+                if (strpos($text, "\n"))
+                    $this->filterErrorThrow('invalid.single_line', $this->type_error, "متن شما باید تک خطی باشد");
+                return $text;
+
+            case 'int':
+                if (optional($upd->msg)->type != 'text')
+                    $this->filterErrorThrow('invalid.text', $this->type_error, "تنها پیغام متنی قابل قبول است");
+                $text = optional($upd->msg)->text;
+                if ($this->supportFa)
+                    $text = tr_num($text);
+                if (!is_numeric($text) || strpos($text, '.') !== false)
+                    $this->filterErrorThrow('invalid.int', $this->type_error, "تنها عدد غیر اعشاری قابل قبول است");
+                return intval($text);
+
+            case 'int_us':
+                if (optional($upd->msg)->type != 'text')
+                    $this->filterErrorThrow('invalid.text', $this->type_error, "تنها پیغام متنی قابل قبول است");
+                $text = optional($upd->msg)->text;
+                if ($this->supportFa)
+                    $text = tr_num($text);
+                if (!is_numeric($text) || strpos($text, '.') !== false)
+                    $this->filterErrorThrow('invalid.int', $this->type_error, "تنها عدد غیر اعشاری قابل قبول است");
+                $int = intval($text);
+                if ($int < 0)
+                    $this->filterErrorThrow('invalid.unsigned', $this->type_error, "تنها عدد مثبت قابل قبول است");
+                return $int;
+
+            case 'float':
+                if (optional($upd->msg)->type != 'text')
+                    $this->filterErrorThrow('invalid.text', $this->type_error, "تنها پیغام متنی قابل قبول است");
+                $text = optional($upd->msg)->text;
+                if ($this->supportFa)
+                    $text = tr_num($text);
+                if (!is_numeric($text))
+                    $this->filterErrorThrow('invalid.number', $this->type_error, "تنها عدد قابل قبول است");
+                return floatval($text);
+
+            case 'float_us':
+                if (optional($upd->msg)->type != 'text')
+                    $this->filterErrorThrow('invalid.text', $this->type_error, "تنها پیغام متنی قابل قبول است");
+                $text = optional($upd->msg)->text;
+                if ($this->supportFa)
+                    $text = tr_num($text);
+                if (!is_numeric($text))
+                    $this->filterErrorThrow('invalid.number', $this->type_error, "تنها عدد قابل قبول است");
+                $float = floatval($text);
+                if ($float < 0)
+                    $this->filterErrorThrow('invalid.unsigned', $this->type_error, "تنها عدد مثبت قابل قبول است");
+                return $float;
+
+            case 'msg':
+                if (!$upd->msg)
+                    $this->filterErrorThrow('invalid.msg', $this->type_error, "تنها پیام قابل قبول است");
+                return $upd->msg;
+
+            case 'msgTypeOf':
+                $type = $this->type_data;
+                if (!$upd->msg)
+                    $this->filterErrorThrow('invalid.msg', $this->type_error, "تنها پیام قابل قبول است");
+                if ($upd->msg->type != $type)
+                {
+                    $this->filterErrorThrow('invalid.msg_type', $this->type_error, "این نوع پیام پشتیبانی نمی شود");
+                }
+                return $upd->msg->$type;
+
+            case 'msgid':
+                if (!$upd->msg)
+                    $this->filterErrorThrow('invalid.msg', $this->type_error, "تنها پیام قابل قبول است");
+                return $upd->msg->id;
+
+            case 'media':
+                if (!$upd->msg)
+                    $this->filterErrorThrow('invalid.msg', $this->type_error, "تنها پیام قابل قبول است");
+                $media = $upd->msg->media;
+                if (!$media)
+                    $this->filterErrorThrow('invalid.media', $this->type_error, "تنها پیام رسانه ای قابل قبول است");
+                return $media;
+
+            case 'photo':
+                if (!$upd->msg)
+                    $this->filterErrorThrow('invalid.msg', $this->type_error, "تنها پیام قابل قبول است");
+                $media = $upd->msg->photo;
+                if (!$media)
+                    $this->filterErrorThrow('invalid.photo', $this->type_error, "تنها پیام تصویری قابل قبول است");
+                return end($media);
+
+            case 'contact':
+                if (!$upd->msg)
+                    $this->filterErrorThrow('invalid.msg', $this->type_error, "تنها پیام قابل قبول است");
+                $contact = $upd->msg->contact;
+                if (!$contact)
+                    $this->filterErrorThrow('invalid.contact', $this->type_error, "تنها مخاطب قابل قبول است");
+                return $contact;
+
+            case 'contact-self':
+                if (!$upd->msg)
+                    $this->filterErrorThrow('invalid.msg', $this->type_error, "تنها پیام قابل قبول است");
+                $contact = $upd->msg->contact;
+                if (!$contact)
+                    $this->filterErrorThrow('invalid.contact', $this->type_error, "تنها مخاطب قابل قبول است");
+                if ($contact->userId != $upd->msg->from->id)
+                    $this->filterErrorThrow('invalid.contact_self', $this->type_error, "نمی توانید مخاطب شخص دیگری را ارسال کنید");
+                return $contact;
+
+            case 'location':
+                if (!$upd->msg)
+                    $this->filterErrorThrow('invalid.msg', $this->type_error, "تنها پیام قابل قبول است");
+                $location = $upd->msg->location;
+                if (!$location)
+                    $this->filterErrorThrow('invalid.location', $this->type_error, "تنها موقعیت مکانی قابل قبول است");
+                return $location;
+
+            case 'msgArgs':
+                if (!$upd->msg)
+                    $this->filterErrorThrow('invalid.msg', $this->type_error, "تنها پیام قابل قبول است");
+                $args = $upd->msg->createArgs();
+                if (!$args)
+                    $this->filterErrorThrow('invalid.msg_type', $this->type_error, "این نوع پیام پشتیبانی نمی شود");
+                return $args;
+
+        }
+
+        return optional($upd->msg)->text;
+    }
+
+    /**
+     * بررسی فیلتر ها بر روی مقدار اینپوت
+     * 
+     * @param mixed &$value
+     * @throws FilterError 
+     * @return void
+     */
+    protected function matchFilters(&$value)
+    {
+        foreach($this->_value_checkers as $check)
+        {
+            $name = $check[0];
+            unset($check[0]);
+            $method = '_apply_' . $name;
+            $this->$method($value, ...$check);
+        }
+    }
+
+
+    public $supportFa = false;
+    /**
+     * پشتیبانی از اعداد فارسی
+     * 
+     * @return $this
+     */
+    public function supportFaNumber()
+    {
+        $this->supportFa = true;
+        return $this;
+    }
+
+    /**
+     * ترو کردن خطای فیلتر
+     *
+     * @param string $name
+     * @param string|Closure|mixed $customError
+     * @param string|Closure|mixed $defaultError
+     * @param array $args
+     * @throws FilterError
+     * @return never
+     */
+    public function filterErrorThrow($name, $customError, $defaultError, array $args = [])
+    {
+        $args['error'] = $name;
+        if($customError)
+        {
+            $customError = Lang::convertFromText($customError, Lang::getLang(), $args);
+            throw new FilterError($customError, $name, $args);
+        }
+
+        if($error = tryLang($name, $args))
+        {
+            throw new FilterError($error, $name, $args);
+        }
+
+        $defaultError = Lang::convertFromText($defaultError, Lang::getLang(), $args);
+        throw new FilterError($defaultError, $name, $args);
+    }
+    
 }

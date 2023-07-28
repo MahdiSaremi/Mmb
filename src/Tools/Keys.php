@@ -13,7 +13,8 @@ class Keys
      * @param string $text
      * @return array
      */
-    public static function reqContact($text){
+    public static function reqContact($text)
+    {
         return ['text' => $text, 'contact' => true];
     }
 
@@ -23,7 +24,8 @@ class Keys
      * @param string $text
      * @return array
      */
-    public static function reqLocation($text){
+    public static function reqLocation($text)
+    {
         return ['text' => $text, 'location' => true];
     }
 
@@ -34,16 +36,114 @@ class Keys
      * @param string $type
      * @return array
      */
-    public static function reqPoll($text, $type = Poll::TYPE_REGULAR){
+    public static function reqPoll($text, $type = Poll::TYPE_REGULAR)
+    {
         return ['text' => $text, 'poll' => ['type' => $type]];
     }
+
+    /**
+     * ساخت تک دکمه درخواست انتخاب کاربر/ربات
+     *
+     * @param string $text
+     * @param int $requestId آیدی درخواست
+     * @param ?boolean $isBot آیا ربات باید انتخاب کند
+     * @param ?boolean $isPremium آیا کاربر پریمیوم باید انتخاب کند
+     * @return array
+     */
+    public static function reqUser($text, $requestId, $isBot = null, $isPremium = null)
+    {
+        $user = [
+            'request_id' => $requestId,
+        ];
+        if(isset($isBot))       $user['user_is_bot'] = $isBot;
+        if(isset($isPremium))   $user['user_is_premium'] = $isPremium;
+
+        return [
+            'text' => $text,
+            'user' => $user,
+        ];
+    }
+
+    /**
+     * ساخت تک دکمه درخواست انتنخاب ربات
+     *
+     * @param string $text
+     * @param int $requestId
+     * @return array
+     */
+    public static function reqBot($text, $requestId)
+    {
+        return static::reqUser($text, $requestId, true);
+    }
+
+    /**
+     * ساخت تک دکمه درخواست انتخاب چت
+     *
+     * @param string $text
+     * @param int $requestId آیدی درخواست
+     * @param ?boolean $isChannel چت کانال باید باشد یا گروه
+     * @param ?boolean $isForum
+     * @param ?boolean $hasUsername چت باید یوزرنیم داشته باشد
+     * @param ?boolean $isOwner باید کاربر سازنده آن باشد
+     * @param ?boolean $botIsMember باید ربات عضو آن باشد
+     * @return array
+     */
+    public static function reqChat($text, $requestId, $isChannel, $isForum = null, $hasUsername = null, $isOwner = null, $botIsMember = null)
+    {
+        $chat = [
+            'request_id' => $requestId,
+            'chat_is_channel' => $isChannel,
+        ];
+        if(isset($isForum))         $chat['chat_is_forum'] = $isForum;
+        if(isset($hasUsername))     $chat['chat_has_username'] = $hasUsername;
+        if(isset($isOwner))         $chat['chat_is_created'] = $isOwner;
+        if(isset($botIsMember))     $chat['bot_is_member'] = $botIsMember;
+        
+        return [
+            'text' => $text,
+            'chat' => $chat
+        ];
+    }
+
+    /**
+     * ساخت تک دکمه درخواست انتخاب کانال
+     *
+     * @param string $text
+     * @param int $requestId آیدی درخواست
+     * @param ?boolean $hasUsername کانال باید یوزرنیم داشته باشد
+     * @param ?boolean $isOwner باید کاربر سازنده آن باشد
+     * @param ?boolean $botIsMember باید ربات عضو آن باشد
+     * @return array
+     */
+    public static function reqChannel($text, $requestId, $hasUsername = null, $isOwner = null, $botIsMember = null)
+    {
+        return static::reqChat($text, $requestId, true, null, $hasUsername, $isOwner, $botIsMember);
+    }
+
+    /**
+     * ساخت تک دکمه درخواست انتخاب گروه
+     *
+     * @param string $text
+     * @param int $requestId آیدی درخواست
+     * @param ?boolean $isForum
+     * @param ?boolean $hasUsername گروه باید یوزرنیم داشته باشد
+     * @param ?boolean $isOwner باید کاربر سازنده آن باشد
+     * @param ?boolean $botIsMember باید ربات عضو آن باشد
+     * @return array
+     */
+    public static function reqGroup($text, $requestId, $isForum = null, $hasUsername = null, $isOwner = null, $botIsMember = null)
+    {
+        return static::reqChat($text, $requestId, false, $isForum, $hasUsername, $isOwner, $botIsMember);
+    }
+
 
     /**
      * ساخت حالت حذف دکمه ها
      *
      * @return string
      */
-    public static function removeKey(){
+    public static function removeKey()
+    {
         return '{"remove_keyboard": true}';
     }
 
@@ -52,7 +152,8 @@ class Keys
      *
      * @return string
      */
-    public static function forceRep($placeholder = null, $selective = null){
+    public static function forceRep($placeholder = null, $selective = null)
+    {
         $ar = [
             'force_reply' => true
         ];
@@ -62,6 +163,7 @@ class Keys
             $ar['selective'] = $selective;
         return json_encode($ar);
     }
+
 
     /**
      * ساخت کلید شیشه ای لینک دار
@@ -139,7 +241,9 @@ class Keys
             "request_location" => "request_location",
             "location" => "request_location",
             "request_poll" => "requset_poll",
-            "poll" => "request_poll"
+            "poll" => "request_poll",
+            "user" => "request_user",
+            "chat" => "request_chat",
         ], null, true, true, false)) === false)
             mmb_error_throw("Invalid keyboard");
         if($inline === null){

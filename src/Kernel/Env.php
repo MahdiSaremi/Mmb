@@ -41,5 +41,5 @@ class Env
     {
         return static::$_values[$name] ?? $default;
     }
-    
+
 }

@@ -4,6 +4,7 @@ namespace Mmb\Tools\ATool; #auto
 
 use Closure;
 use Generator;
+use Mmb\Mapping\Arrayable;
 
 class AIter extends Base
 {
@@ -16,10 +17,15 @@ class AIter extends Base
      * * 1: `function() { yield 1; yield 2; ... }`
      * * 2: `[1, 2, ...]`
      *
-     * @param array|Generator|Callable|Closure $function
+     * @param array|Generator|callable|Closure $function
      */
     public function __construct($value)
     {
+        if($value instanceof Arrayable)
+        {
+            $value = $value->toArray();
+        }
+
         $this->value = $value;
     }
 

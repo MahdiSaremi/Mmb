@@ -2,6 +2,8 @@
 
 namespace Mmb\Db\Driver\MySql; #auto
 
+use Exception;
+
 class Result extends \Mmb\Db\QueryResult {
 
     /**
@@ -14,7 +16,7 @@ class Result extends \Mmb\Db\QueryResult {
     /**
      * دیتابیس
      *
-     * @var \mysqli
+     * @var MySql
      */
     public $db;
 
@@ -25,12 +27,17 @@ class Result extends \Mmb\Db\QueryResult {
      */
     public $res;
 
-    public function __construct($ok, \mysqli_stmt $state, \mysqli $db)
+    public function __construct($ok, \mysqli_stmt $state, MySql $db)
     {
         $this->ok = $ok;
         $this->state = $state;
         $this->db = $db;
         $this->res = $state->get_result();
+    }
+
+    public function reset()
+    {
+        $this->res->data_seek(0);
     }
 
     public function fetch()
@@ -43,13 +50,18 @@ class Result extends \Mmb\Db\QueryResult {
         return $this->res->fetch_all(MYSQLI_ASSOC);
     }
 
+    public function fetchCell()
+    {
+        return $this->res->fetch_row()[0];
+    }
+
     public function insertID()
     {
         return $this->state->insert_id;
     }
 
 
-    public function toQueryCol()
+    public function toQueryCol($table)
     {
         
         $qcol = new \Mmb\Db\QueryCol;
@@ -79,6 +91,19 @@ class Result extends \Mmb\Db\QueryResult {
                 $col->primaryKey();
             elseif($row['Key'] == "UNI")
                 $col->unique();
+            elseif($row['Key'] == "MUL")
+            {
+                try
+                {
+                    $foreign = $this->db->query()->findMySqlForeingKeyRelation($table, $col->name);
+                    if($foreign)
+                    {
+                        $col->foreignKey($foreign->table, $foreign->column, $foreign->constraint);
+                    }
+                }
+                catch(Exception$e)
+                { }
+            }
 
             // Default
             $col->default($row['Default']);
@@ -101,7 +126,12 @@ class Result extends \Mmb\Db\QueryResult {
         }
 
         return $qcol;
+    }
 
+    public function __destruct()
+    {
+        if($this->res)
+            $this->res->close();
     }
 
 }

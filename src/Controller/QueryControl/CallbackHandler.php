@@ -39,6 +39,8 @@ class CallbackHandler extends Handler
                 return true;
 
         }
+
+        return false;
     }
 
     public function handle()

@@ -8,11 +8,6 @@ use Mmb\MmbBase;
 class Info extends MmbBase
 {
     /**
-     * @var Mmb
-     */
-    private $_base;
-
-    /**
      * Webhook url
      *
      * @var string
@@ -64,14 +59,18 @@ class Info extends MmbBase
      */
     public $allowedUpds;
 
-    public function __construct($data, Mmb $base){
-        $this->_base = $base;
-        $this->url = @$data['url'];
-        $this->pendings = @$data['pending_update_count'];
-        $this->ip = @$data['ip_address'];
-        $this->lastErrorTime = @$data['last_error_date'];
-        $this->lastError = @$data['last_error_message'];
-        $this->maxConnections = @$data['max_connections'];
-        $this->allowedUpds = @$data['allowed_updates'];
+    public function __construct(array $args, ?Mmb $mmb = null)
+    {
+        parent::__construct($args, $mmb);
+
+        $this->initFrom($args, [
+            'url' => 'url',
+            'pending_update_count' => 'pendings',
+            'ip_address' => 'ip',
+            'last_error_date' => 'lastErrorTime',
+            'last_error_message' => 'lastError',
+            'max_connections' => 'maxConnections',
+            'allowed_updates' => 'allowedUpds',
+        ]);
     }
 }

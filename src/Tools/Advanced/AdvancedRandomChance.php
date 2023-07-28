@@ -2,6 +2,7 @@
 #auto-name
 namespace Mmb\Tools\Advanced;
 
+use Mmb\Mapping\Arrayable;
 use Mmb\Tools\AdvancedValue;
 
 class AdvancedRandomChance implements AdvancedValue
@@ -12,8 +13,13 @@ class AdvancedRandomChance implements AdvancedValue
      */
     public $array;
     
-    public function __construct(array $array)
+    public function __construct(array|Arrayable $array)
     {
+        if($array instanceof Arrayable)
+        {
+            $array = $array->toArray();
+        }
+
         $this->array = $array;
     }
 

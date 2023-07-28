@@ -25,9 +25,7 @@ class UpdProvider extends Provider
      */
     public function getHandlers()
     {
-
         return [ ];
-
     }
     
 }

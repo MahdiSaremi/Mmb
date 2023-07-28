@@ -3,6 +3,7 @@
 namespace Mmb\Listeners; #auto
 
 use Closure;
+use Mmb\Calling\Caller;
 use Mmb\Exceptions\TypeException;
 use Mmb\Kernel\Instance;
 
@@ -55,105 +56,48 @@ class Listeners
         return $continue;
     }
 
-    public static function invokeMethod($class, $method, array $args = [])
+    /**
+     * صدا زدن متدی از کلاس مورد نظر
+     * 
+     * اگر اسم کلاس وارد شود، آبجکت عمومی آن را میسازد و از طریق آن صدا می زند
+     *
+     * @param string|object $class
+     * @param string $method
+     * @param array $args
+     * @param boolean $silentMode
+     * @return mixed
+     */
+    public static function invokeMethod(string|object $class, string $method, array $args = [], bool $silentMode = false)
     {
-
-        if (is_string($class))
-            $class = app($class);
-
-        return self::callMethod([$class, $method], $args);
-
+        return Caller::invoke($class, $method, $args, $silentMode);
     }
 
-    public static function invokeMethod2($method, array $args = [])
+    /**
+     * صدا زدن تابع
+     * 
+     * اگر اسم کلاسی را وارد کرده باشید، آبجکت عمومی آن را میسازد و از طریق آن صدا می
+     *
+     * @param array|string|Closure $method
+     * @param array $args
+     * @param boolean $silentMode
+     * @return void
+     */
+    public static function invokeMethod2(array|string|Closure $method, array $args = [], bool $silentMode = false)
     {
-
-        if (!is_array($method))
-            return self::callMethod($method, $args);
-
-        if (count($method) == 1)
-            return self::callMethod($method, $args);
-        
-        return self::invokeMethod($method[0], $method[1], $args);
-
+        return Caller::invoke2($method, $args, $silentMode);
     }
 
-    public static function callMethod($method, array $args = [], $silentMode = false)
+    /**
+     * صدا زدن تابع مورد نظر
+     *
+     * @param string|array|Closure $method
+     * @param array $args
+     * @param boolean $silentMode
+     * @return mixed
+     */
+    public static function callMethod(string|array|Closure $method, array $args = [], bool $silentMode = false)
     {
-        $mustInstance = false;
-        if(is_array($method))
-        {
-            if(count($method) > 1)
-            {
-                $pars = (new \ReflectionMethod(@$method[0], @$method[1]))->getParameters();
-                
-                // Event
-                if(!$silentMode && @$method[0] instanceof InvokeEvent)
-                {
-                    $result = null;
-                    if($method[0]->eventInvoke($method[1], $args, $result))
-                    {
-                        return $result;
-                    }
-                }
-
-            }
-            else
-            {
-                $mustInstance = true;
-                $cons = (new \ReflectionClass(@$method[0]))->getConstructor();
-                $pars = $cons ? $cons->getParameters() : [];
-            }
-        }
-        else
-        {
-            $pars = (new \ReflectionFunction($method))->getParameters();
-        }
-
-        $finalArgs = [];
-        $argsCount = count($args);
-        $i = 0;
-        foreach($pars as $par)
-        {
-            $type = $par->getType();
-            $type = "$type";
-
-            // if($type && $i < $argsCount && eqi($type, typeOf(@$args[$i])))
-            if($i < $argsCount)
-            {
-                $arg = @$args[$i++];
-            }
-            elseif($type && class_exists($type))
-            {
-                $arg = Instance::get($type);
-            }
-            elseif($type && interface_exists($type))
-            {
-                $arg = Instance::get($type);
-                if (!$arg)
-                    throw new TypeException("Interface '$type' has not instance value");
-            }
-            else
-            {
-                // if ($i >= $argsCount)
-                    continue;
-                // $arg = @$args[$i++];
-            }
-
-            $finalArgs[] = $arg;
-        }
-        while ($i < $argsCount)
-            $finalArgs[] = $args[$i++];
-
-        // Result
-
-        if($mustInstance)
-        {
-            $type = @$method[0];
-            return new $type(...$finalArgs);
-        }
-
-        return $method(...$finalArgs);
+        return Caller::call($method, $args, $silentMode);
     }
 
     // /**

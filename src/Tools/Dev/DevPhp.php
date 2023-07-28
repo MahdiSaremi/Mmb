@@ -9,9 +9,19 @@ class DevPhp
      * @var DevFile
      */
     private $file;
+    private $path;
     public function __construct($file)
     {
-        $this->file = $file;
+        if($file instanceof DevFile)
+            $this->file = $file;
+        else
+            $this->path = $file;
+    }
+
+    public function setPath($path)
+    {
+        $this->file = null;
+        $this->path = $path;
     }
     
     private $type = 'class';
@@ -206,7 +216,10 @@ class DevPhp
 
     public function save()
     {
-        $this->file->save($this->__toString());
+        if($this->file)
+            $this->file->save($this->__toString());
+        elseif($this->path)
+            file_put_contents($this->path, $this->__toString());
     }
     
 }

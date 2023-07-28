@@ -44,7 +44,6 @@ class Guard
      */
     public function allow($name, ...$args)
     {
-
         // Cache
         if(!$args && isset($this->cache[$name]))
         {
@@ -86,7 +85,49 @@ class Guard
 
         // Error
         throw new PolicyNotFoundException("Policy '$name' not defined");
+    }
 
+
+    protected $_policy_booted = false;
+    
+    /**
+     * بررسی می کند کلاس مورد نظر طبق پترن های تنظیم شده دسترسی دارد یا خیر
+     *
+     * @param string $class
+     * @return boolean
+     */
+    public function allowClass($class)
+    {
+        // Boot
+        if(!$this->_policy_booted)
+        {
+            $this->_policy_booted = true;
+            foreach($this->_policies as $policy)
+            {
+                app($policy)->boot();
+            }
+        }
+
+        // Class check
+        if($needs = $this->_class_need_to[$class] ?? false)
+            foreach($needs as $need)
+                if(!$this->allow($need))
+                    return false;
+        
+        // Class prefix check
+        foreach($this->_class_prefix_need_to as $prefix => $needs)
+        {
+            if(startsWith($class, $prefix, true))
+            {
+                foreach($needs as $need)
+                {
+                    if(!$this->allow($need))
+                        return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     private $notAllowed;
@@ -108,6 +149,41 @@ class Guard
             Listeners::callMethod($this->notAllowed, []);
     }
 
+    protected $_class_need_to = [];
+    /**
+     * افزودن دسترسی مورد نیاز برای کلاس مورد نظر
+     * 
+     * توحه کنید این ویژگی تنها برای کنترلرها و فرم ها می باشد
+     * 
+     * `app(Guard::class)->addClassNeedTo(App\User\Manage::class, 'access_users');`
+     *
+     * @param string $class
+     * @param string $name
+     * @return void
+     */
+    public function addClassNeedTo($class, $name)
+    {
+        @$this->_class_need_to[$class][] = $name;
+    }
+
+    protected $_class_prefix_need_to = [];
+    /**
+     * افزودن دسترسی مورد نیاز برای کلاس هایی با این پیشوند
+     * 
+     * توحه کنید این ویژگی تنها برای کنترلرها و فرم ها می باشد
+     * 
+     * `app(Guard::class)->addClassPrefixNeedTo('App\Panel\\', 'access_panel');`
+     *
+     * @param string $prefix
+     * @param string $name
+     * @return void
+     */
+    public function addClassPrefixNeedTo($prefix, $name)
+    {
+        $prefix = ltrim($prefix, '\\');
+        @$this->_class_prefix_need_to[$prefix][] = $name;
+    }
+
 
     /**
      * بررسی دسترسی
@@ -119,6 +195,23 @@ class Guard
     public static function allowTo($name, ...$args)
     {
         return app(Guard::class)->allow($name, ...$args);
+    }
+
+    /**
+     * نیاز به دسترسی
+     * 
+     * در صورت عدم وجود دسترسی، ارور مربوطه را ارسال می کند
+     *
+     * @param string $name
+     * @param mixed ...$args
+     * @return void
+     */
+    public static function required($name, ...$args)
+    {
+        if(!app(Guard::class)->allow($name, ...$args))
+        {
+            throw new AccessDaniedException(null);
+        }
     }
 
 }

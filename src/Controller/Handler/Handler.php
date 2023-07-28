@@ -2,7 +2,9 @@
 
 namespace Mmb\Controller\Handler; #auto
 
+use Closure;
 use Mmb\Controller\StepHandler\Handlable;
+use Mmb\Guard\Guard;
 use Mmb\Listeners\Listeners;
 use Mmb\Tools\Staticable;
 
@@ -131,5 +133,24 @@ abstract class Handler
     // Static functions
 
     public static $requireStop = false;
+
+    public static function group(Closure|array $group)
+    {
+        return new HandlerIf(null, $group);
+    }
+
+    public static function groupIf(Closure $if, Closure|array $group)
+    {
+        return new HandlerIf($if, $group);
+    }
+
+    public static function groupIfAllowed(string|array $name_args, Closure|array $group)
+    {
+        if(is_string($name_args))
+        {
+            $name_args = [ $name_args ];
+        }
+        return new HandlerIf(fn() => Guard::allowTo(...$name_args), $group);
+    }
 
 }

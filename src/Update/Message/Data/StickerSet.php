@@ -2,15 +2,11 @@
 
 namespace Mmb\Update\Message\Data; #auto
 
+use Mmb\Mmb;
 use Mmb\MmbBase;
 
 class StickerSet extends MmbBase
 {
-
-    /**
-     * @var MMB
-     */
-    private $_base;
 
     /**
      * نام
@@ -48,17 +44,17 @@ class StickerSet extends MmbBase
      * @var Media
      */
     public $thumb;
-    function __construct($a, $base)
+    function __construct(array $args, ?Mmb $mmb = null)
     {
-        $this->_base = $base;
-        $this->name = $a['name'];
-        $this->title = $a['title'];
-        $this->hasAnim = $a['is_animated'];
-        $this->hasMask = $a['contains_masks'];
-        $this->stickers = [];
-        foreach($a['stickers'] as $once)
-            $this->stickers[] = new Sticker($once, $base);
-        if(isset($a['thumb']))
-            $this->thumb = new Media("photo", $a['thumb'], $base);
+        parent::__construct($args, $mmb);
+
+        $this->initFrom($args, [
+            'name' => 'name',
+            'title' => 'title',
+            'is_animated' => 'hasAnim',
+            'contains_masks' => 'hasMask',
+            'stickers' => fn($stickers) => $this->stickers = array_map(fn($sticker) => new Sticker($sticker, $this->_base), $stickers),
+            'thumb' => fn($thumb) => $this->thumb = new Media('photo', $thumb, $this->_base),
+        ]);
     }
 }

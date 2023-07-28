@@ -20,15 +20,14 @@ class Dice extends MmbBase
      * @var int
      */
     public $val;
-    /**
-     * @var Mmb
-     */
-    private $_base;
-    public function __construct($data, $base)
+    public function __construct(array $args, ?Mmb $mmb = null)
     {
-        $this->_base = $base;
-        $this->emoji = $data['emoji'];
-        $this->val = $data['value'];
+        parent::__construct($args, $mmb);
+
+        $this->initFrom($args, [
+            'emoji' => 'emoji',
+            'value' => 'val',
+        ]);
     }
 
 }

@@ -18,24 +18,24 @@ class Callback extends MmbBase implements \Mmb\Update\Interfaces\ICallbackID, \M
      * @var static
      */
     public static $this;
+    public static function this()
+    {
+        return static::$this;
+    }
 
 
-    /**
-     * @var Mmb
-     */
-    private $_base;
     /**
      * از طرف کاربر
      *
      * @var UserInfo
      */
-    public $from;
+    public ?UserInfo $from = null;
     /**
      * پیام اصلی، یا پیام فیک(بدون اطلاعات، فقط جهت استفاده از توابع) در حالت اینلاین
      *
      * @var Msg
      */
-    public $msg;
+    public ?Msg $msg = null;
     /**
      * دیتای دکمه
      *
@@ -54,38 +54,43 @@ class Callback extends MmbBase implements \Mmb\Update\Interfaces\ICallbackID, \M
      * @var bool
      */
     public $isInline;
-    function __construct($cl, Mmb $base){
+    function __construct(array $args, ?Mmb $mmb = null)
+    {
+        parent::__construct($args, $mmb);
 
-        if($base->loading_update && !static::$this)
+        if($this->_base->loading_update && !static::$this)
             self::$this = $this;
 
-        $this->_base = $base;
-        $this->from = new UserInfo($cl['from'], $base);
-        $this->data = $cl['data'];
-        $this->id = $cl['id'];
-        if(isset($cl['message'])){
-            $this->msg = new Msg($cl['message'], $base);
+        $this->initFrom($args, [
+            'from' => fn($from) => $this->from = new UserInfo($from, $this->_base),
+            'data' => 'data',
+            'id' => 'id',
+        ]);
+
+        if(isset($args['message']))
+        {
+            $this->msg = new Msg($args['message'], $this->_base);
             $this->isInline = false;
         }
-        if(isset($cl['inline_message_id'])){
+        if(isset($args['inline_message_id']))
+        {
             $this->isInline = true;
-            $this->msg = new Msg($cl['inline_message_id'], $base, true);
-            /*$this->msg->isInline = true;
-            $this->msg->inlineID = $cl['inline_message_id'];*/
+            $this->msg = new Msg([], $this->_base, true, $args['inline_message_id']);
         }
-        
     }
-    
+
     /**
      * پاسخ به کالبک (نمایش پیغام و پایان دادن به انتظار تلگرام)
      * اگر شما از این تابع در کالبک های خود استفاده نکنید، در صورت استفاده ی زیاد از کالبک های ربات شما، تلگرام به شما اخطاری می دهد که پاسخ به کالبک ها بسیار طول می کشد!
      *
-     * @param string $text
+     * @param string|array $text
      * @param bool $alert نمایش پنجره هنگام نمایش 
      * @return bool
      */
-    function answer($text = null, $alert = false){
-        if(is_array($text)){
+    function answer($text = null, $alert = false)
+    {
+        if(is_array($text))
+        {
             $text['id'] = $this->id;
             return $this->_base->answerCallback($text);
         }
@@ -98,10 +103,9 @@ class Callback extends MmbBase implements \Mmb\Update\Interfaces\ICallbackID, \M
 	 *
 	 * @return int
 	 */
-	function IMsgID() {
-        
+	function IMsgID()
+    {
         return $this->msg->IMsgID();
-        
 	}
 	
 	/**
@@ -109,10 +113,9 @@ class Callback extends MmbBase implements \Mmb\Update\Interfaces\ICallbackID, \M
 	 *
 	 * @return int
 	 */
-	function IUserID() {
-
+	function IUserID()
+    {
         return $this->from->IUserID();
-
 	}
 	
 	/**
@@ -120,19 +123,17 @@ class Callback extends MmbBase implements \Mmb\Update\Interfaces\ICallbackID, \M
 	 *
 	 * @return int
 	 */
-	function IChatID() {
-
+	function IChatID()
+    {
         return $this->msg->IChatID();
-
 	}
 	/**
 	 * گرفتن آیدی پیام
 	 *
-	 * @return int
+	 * @return string
 	 */
-	function ICallbackID() {
-
+	function ICallbackID()
+    {
         return $this->id;
-
 	}
 }

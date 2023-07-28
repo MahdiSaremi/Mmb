@@ -1,9 +1,9 @@
 <?php
 #auto-name
 namespace Mmb\Pay;
-use Exception;
+use Mmb\Exceptions\MmbException;
 
-class PayException extends Exception
+class PayException extends MmbException
 {
 
     public $error_id;

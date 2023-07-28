@@ -62,25 +62,29 @@ class Member extends MmbBase
      * @var Per
      */
     public $per;
-    /**
-     * @var Mmb
-     */
-    private $_base;
-   public function __construct($v, $base){
-        $this->_base = $base;
-        $this->user = new UserInfo($v['user'], $base);
-        $s = $this->status = $v['status'];
-        $this->title = @$v['custom_title'];
-        $this->untilDate = @$v['until_date'];
-        $this->isJoin = $s == "member" || $s == "creator" || $s == "administrator";
-        $this->isAdmin = $s == "creator" || $s == "administrator";
-        $this->isAnonymous = @$v['is_anonymous'];
+    public function __construct(array $args, ?MMb $mmb = null)
+    {
+        parent::__construct($args, $mmb);
+
+        $this->initFrom($args, [
+            'user' => fn($user) => $this->user = new UserInfo($user, $this->_base),
+            'status' => 'status',
+            'custom_title' => 'title',
+            'until_date' => 'untilDate',
+            'is_anonymous' => 'isAnonymous',
+        ]);;
         
-        if($s == "creator"){
-            $this->per = new Per('*', $this->isAnonymous, $base);
+        $status = $this->status;
+        $this->isJoin = $status == "member" || $status == "creator" || $status == "administrator";
+        $this->isAdmin = $status == "creator" || $status == "administrator";
+        
+        if($status == "creator")
+        {
+            $this->per = new Per('*', $this->isAnonymous, $this->_base);
         }
-        elseif($s == 'restricted'){
-            $this->per = new Per($v, $this->isAnonymous, $base);
+        elseif($status == 'restricted')
+        {
+            $this->per = new Per($args, $this->isAnonymous, $this->_base);
         }
     }
 }

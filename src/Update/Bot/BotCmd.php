@@ -11,28 +11,24 @@ class BotCmd extends MmbBase
     /**
      * متن کامند
      *
-     * @var string
+     * @var ?string
      */
     public $cmd;
 
     /**
      * توضیحات کامند
      *
-     * @var string
+     * @var ?string
      */
     public $des;
 
-    /**
-     * @var Mmb
-     */
-    private $_base;
-
-    public function __construct(array $args, Mmb $base){
-
-        $this->_base = $base;
-        $this->cmd = $args['command'];
-        $this->des = $args['description'];
-
+    public function __construct(array $args, ?Mmb $mmb = null)
+    {
+        parent::__construct($args, $mmb);
+        $this->initFrom($args, [
+            'command' => 'cmd',
+            'description' => 'des',
+        ]);
     }
     
     /**
@@ -40,22 +36,20 @@ class BotCmd extends MmbBase
      *
      * @return array
      */
-    public function toAr(){
-
+    public function toAr()
+    {
         return [
             'command' => $this->cmd,
             'description' => $this->des
         ];
-
     }
 
-    public static function newCmd(Mmb $mmb, $command, $description) {
-
+    public static function newCmd(Mmb $mmb, $command, $description)
+    {
         return new static([
             'command' => $command,
             'description' => $description,
         ], $mmb);
-
     }
 
 }

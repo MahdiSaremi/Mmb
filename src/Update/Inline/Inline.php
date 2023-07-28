@@ -17,12 +17,12 @@ class Inline extends MmbBase implements \Mmb\Update\Interfaces\IInlineID, \Mmb\U
      * @var static
      */
     public static $this;
+    public static function this()
+    {
+        return static::$this;
+    }
 
 
-    /**
-     * @var Mmb
-     */
-    private $_base;
     /**
      * آیدی اینلاین کوئری
      *
@@ -77,21 +77,24 @@ class Inline extends MmbBase implements \Mmb\Update\Interfaces\IInlineID, \Mmb\U
      */
     public $isChannel;
 
-    public function __construct($in, $base) {
+    public function __construct(array $args, ?Mmb $mmb = null)
+    {
+        parent::__construct($args, $mmb);
 
-        if($base->loading_update && !static::$this)
+        if($this->_base->loading_update && !static::$this)
             self::$this = $this;
 
-        $this->_base = $base;
-        $this->id = $in['id'];
-        $this->from = new UserInfo($in['from'], $base);
-        $this->query = $in['query'];
-        $this->offset = $in['offset'];
-        $this->type = @$in['type'];
+        $this->initFrom($args, [
+            'id' => 'id',
+            'from' => fn($from) => $this->from = new UserInfo($from, $this->_base),
+            'query' => 'query',
+            'offset' => 'offset',
+            'type' => 'type',
+        ]);
+
         $this->isPrivate = $this->type == self::TYPE_PRIVATE;
         $this->isGroup = $this->type == self::TYPE_GROUP || $this->type == self::TYPE_SUPERGROUP;
         $this->isChannel = $this->type == self::TYPE_CHANNEL;
-        
     }
     
     /**
@@ -101,7 +104,8 @@ class Inline extends MmbBase implements \Mmb\Update\Interfaces\IInlineID, \Mmb\U
      * @param array $args
      * @return bool
      */
-    function answer($results, $args=[]){
+    function answer(array $results, array $args = [])
+    {
         if(isset($results['results']))
             $args = array_merge($results, $args);
         else
@@ -116,20 +120,18 @@ class Inline extends MmbBase implements \Mmb\Update\Interfaces\IInlineID, \Mmb\U
 	 *
 	 * @return int
 	 */
-	function IUserID() {
-        
+	function IUserID()
+    {
         return $this->from->IUserID();
-
 	}
 	/**
 	 * گرفتن آیدی پیام
 	 *
-	 * @return int
+	 * @return string
 	 */
-	function IInlineID() {
-
+	function IInlineID()
+    {
         return $this->id;
-
 	}
 
 }

@@ -2,23 +2,43 @@
 
 namespace Mmb\Db\Table; #auto
 
-use Mmb\Db\Driver;
+use ArrayAccess;
+use JsonSerializable;
+use Mmb\Calling\DynCall;
 use Mmb\Db\QueryBuilder;
+use Mmb\Db\QueryCol;
+use Mmb\Db\Relation\ManyToMany;
 use Mmb\Db\Relation\OneToMany;
 use Mmb\Db\Relation\OneToOne;
 use Mmb\Db\Relation\Relation;
-use Mmb\Listeners\HasListeners;
-use Mmb\Listeners\HasStaticListeners;
+use Mmb\Exceptions\MmbException;
+use Mmb\Mapping\Arr;
+use Mmb\Mapping\Arrayable;
+use Mmb\Tools\Text;
 
-class Table
+class Table implements JsonSerializable, ArrayAccess
 {
-
+    
     /**
      * دیتای قبلی
      *
      * @var array
      */
     public $oldData;
+
+    /**
+     * کل دیتا
+     *
+     * @var array
+     */
+    public $allData;
+
+    /**
+     * نام های تغییر یافته
+     *
+     * @var array
+     */
+    public $changedCols;
 
     /**
      * آیا تازه ساخته شده است
@@ -29,18 +49,23 @@ class Table
      */
     public $newCreated = false;
     
-    public final function __construct($data)
+    public function __construct($data)
     {
-
+        $this->allData = $data;
         $this->oldData = $data;
-        $this->modifyDataIn($data);
-        
-        foreach($data as $name => $value) {
-            
-            $this->$name = $value;
 
+        $this->modifyDataIn($data);
+
+        foreach($this->getGenerator()->getColumns() as $col)
+        {
+            if(array_key_exists($col->name, $data))
+            {
+                $this->allData[$col->name]
+                    = $col->dataIn($data[$col->name], $this);
+            }
         }
 
+        $this->changedCols = [];
     }
 
     /**
@@ -48,17 +73,21 @@ class Table
      *
      * @return array
      */
-    public final function getNewData() {
-
+    public final function getNewData()
+    {
         $res = [];
 
-        foreach($this->oldData as $name => $value) {
-            $res[$name] = $this->$name;
+        foreach($this->getGenerator()->getColumns() as $col)
+        {
+            if(array_key_exists($col->name, $this->allData))
+            {
+                $res[$col->name]
+                    = $col->dataOut($this->allData[$col->name], $this);
+            }
         }
 
         $this->modifyDataOut($res);
         return $res;
-
     }
 
     /**
@@ -66,19 +95,37 @@ class Table
      *
      * @return array
      */
-    public final function getChangedData() {
+    public final function getChangedData()
+    {
+        $res = [];
 
-        $data = $this->getNewData();
-
-        foreach($this->oldData as $name => $value) {
-            
-            if($data[$name] === $value)
-                unset($data[$name]);
-
+        foreach($this->getGenerator()->getColumns() as $col)
+        {
+            $newExists = array_key_exists($col->name, $this->allData);
+            if($newExists)
+            {
+                $oldExists = array_key_exists($col->name, $this->oldData);
+                // Check if changed with "$model->data = new;"
+                if(!$oldExists || $col->always_save || in_array($col->name, $this->changedCols))
+                {
+                    $res[$col->name]
+                        = $col->dataOut($this->allData[$col->name], $this);
+                }
+                // Check if changed output data
+                elseif($col->hasOutModifier())
+                {
+                    $new = $col->dataOut($this->allData[$col->name], $this);
+                    if($new !== $this->oldData[$col->name])
+                    {
+                        $res[$col->name]
+                            = $col->dataOut($this->allData[$col->name], $this);
+                    }
+                }
+            }
         }
 
-        return $data;
-
+        $this->modifyDataOut($res);
+        return $res;
     }
 
     /**
@@ -86,12 +133,11 @@ class Table
      *
      * @return string
      */
-    public static function getTable() {
-        
+    public static function getTable()
+    {
         $exp = explode("\\", static::class);
 
-        return end($exp) . "s";
-
+        return Text::snake(end($exp)) . "s";
     }
 
     public static final function getTableName()
@@ -108,21 +154,37 @@ class Table
     /**
      * این تابع زمان ایجاد جدول صدا زده می شود تا اطلاعات آن را پر کند
      *
-     * @param \Mmb\Db\QueryCol $table
+     * @param QueryCol $table
      * @return void
      */
-    public static function generate(\Mmb\Db\QueryCol $table) {
+    public static function generate(QueryCol $table)
+    {
     }
 
+    protected static $_generate_query_cols = [];
+    /**
+     * گرفتن جنریتور
+     *
+     * @return QueryCol
+     */
+    public static final function getGenerator()
+    {
+        if(isset(static::$_generate_query_cols[static::class]))
+            return static::$_generate_query_cols[static::class];
+
+        static::$_generate_query_cols[static::class] = $query = new QueryCol;
+        static::generate($query);
+        return $query;
+    }
+    
     /**
      * ایجاد یا ویرایش جدول
      *
      * @return bool
      */
-    public static function createOrEditTable() {
-
+    public static function createOrEditTable()
+    {
        return (new QueryBuilder)->createOrEditTable(static::getTableName(), [ static::class, 'generate' ]);
-
     }
 
     /**
@@ -131,15 +193,14 @@ class Table
      * @param array $tables آرایه ای از نام کلاس های جداول
      * @return bool
      */
-    public static function createOrEditTables($tables) {
-
+    public static function createOrEditTables($tables)
+    {
         foreach($tables as $table) {
             if(!$table::createOrEditTable())
                 return false;
         }
 
         return true;
-
     }
 
     /**
@@ -147,10 +208,20 @@ class Table
      *
      * @return string
      */
-    public static function getPrimaryKey() {
-
+    public static function getPrimaryKey()
+    {
         return 'id';
+    }
 
+    /**
+     * گرفتن مقدار یکتای جدول
+     *
+     * @return mixed
+     */
+    public function getPrimaryValue()
+    {
+        $primary = static::getPrimaryKey();
+        return $this->$primary;
     }
 
 
@@ -160,7 +231,8 @@ class Table
      * @param array $data
      * @return void
      */
-    public function modifyDataIn(array &$data) {
+    public function modifyDataIn(array &$data)
+    {
     }
 
     /**
@@ -169,90 +241,128 @@ class Table
      * @param array $data
      * @return void
      */
-    public function modifyDataOut(array &$data) {
+    public function modifyDataOut(array &$data)
+    {
     }
 
+    /**
+     * ایجاد یک کوئری
+     * 
+     * این تابع، ریشه تمام توابع ایجاد کوئری ست
+     *
+     * @template T of QueryBuilder
+     * @param class-string<T> $class
+     * @return T<static>
+     */
+    public static function createQuery(string $class)
+    {
+        return (new $class)
+                ->table(static::getTableName())
+                ->output(static::class);
+    }
 
     /**
      * ایجاد یک کوئری بیلدر
      *
-     * @return \Mmb\Db\QueryBuilder
+     * @return QueryBuilder<static>
      */
-    public static function query() {
-
-        return (new \Mmb\Db\QueryBuilder)
-                -> table( static::getTableName() )
-                -> output( static::class );
-
+    public static function query()
+    {
+    return static::createQuery(QueryBuilder::class);
     }
 
     /**
      * ایجاد یک کوئری بیلدر با کلاس مورد نظر
      *
-     * @return \Mmb\Db\QueryBuilder
+     * @template T of QueryBuilder
+     * @param class-string<T> $class
+     * @return T<static>|QueryBuilder<static>
      */
-    public static function queryWith($class) {
-
-        return (new $class)
-                -> table( static::getTableName() )
-                -> output( static::class );
-
+    public static function queryWith($class)
+    {
+        return static::createQuery($class);
     }
 
     /**
      * ایجاد یک کوئری بیلدر همراه با شرط این ردیف بودن
      *
-     * @return \Mmb\Db\QueryBuilder
+     * @return QueryBuilder<static>
      */
-    public function queryThis() {
-
+    public function queryThis()
+    {
         $primary = static::getPrimaryKey();
 
         return static::query()
                 ->where($primary, $this->$primary);
+    }
 
+
+
+    use DynCall {
+        __get as private __dyn_get;
+        __set as private __dyn_set;
     }
 
     public static function __callStatic($name, $arguments)
     {
-        
         return static::query()
                 ->$name(...$arguments);
-
     }
 
-    protected $_invokesValue = [];
-
-    public function __get($name)
+    public function &__get($name)
     {
-
-        if(array_key_exists($name, $this->_invokesValue))
+        if(array_key_exists($name, $this->allData))
         {
-            return $this->_invokesValue[$name];
+            return $this->allData[$name];
         }
 
-        if(method_exists($this, $name))
+        return $this->__dyn_get($name);
+
+        // if(in_array($name, $this->getGenerator()->getColumnNames()))
+        // {
+        //     return null;
+        // }
+    }
+
+    public function __set($name, $value)
+    {
+        if(array_key_exists($name, $this->allData) || in_array($name, $this->getGenerator()->getColumnNames()))
         {
-            $result = $this->$name();
-
-            if($result instanceof Relation)
-                $result = $result->getRelationValue();
-
-            return $this->_invokesValue[$name] = $result;
+            $this->allData[$name] = $value;
+            if(!in_array($name, $this->changedCols))
+                $this->changedCols[] = $name;
         }
-
-        error_log("Undefined property '$name'");
-
+        else
+        {
+            $this->__dyn_set($name, $value);
+        }
     }
 
     public function __call($name, $arguments)
     {
-        
         throw new \BadMethodCallException("Method '$name' is not exists in model " . static::class);
-
+    }
+    
+    public function offsetExists($offset) : bool
+    {
+        return isset($this->allData[$offset]);
     }
 
+    public function offsetGet($offset)
+    {
+        return $this->allData[$offset] ?? null;
+    }
     
+    public function offsetSet($offset, $value) : void
+    {
+        $this->__set($offset, $value);
+    }
+
+    public function offsetUnset($offset) : void
+    {
+        unset($this->allData[$offset]);
+    }
+
     /**
      * گرفتن متعلق بودن به ...
      * 
@@ -261,14 +371,14 @@ class Table
      * `class PayHistory: public $user_id; function user() { return $this->belongsTo(User::class); }`
      * `class ServiceInformation: public $service_id; function service() { return $this->belongsTo(Service::class, 'service_id', 'id'); }`
      * 
-     * @param string $class نام کلاس مورد نظر
+     * @template T
+     * @param class-string<T> $class نام کلاس مورد نظر
      * @param mixed $column نام ستونی که شامل آدرس است
      * @param mixed $primary_column نام ستونی در کلاس مورد نظر که آدرس را با آن تطابق میدهد
-     * @return OneToOne|QueryBuilder
+     * @return OneToOne<T>|QueryBuilder<T>
      */
     public function belongsTo($class, $column = null, $primary_column = null)
     {
-
         if($primary_column === null)
         {
             $primary_column = $class::getPrimaryKey();
@@ -276,14 +386,58 @@ class Table
 
         if($column === null)
         {
-            $e = explode("\\", strtolower($class));
-            $column = end($e) . "_" . $primary_column;
+            $column = Text::snake(Text::afterLast($class, "\\")) . "_" . $primary_column;
         }
         
         return $class::queryWith(OneToOne::class)
                 ->where($primary_column, $this->$column);
-
     }
+    
+    /**
+     * گرفتن متعلق بودن به ...
+     * 
+     * رابطه چند به چند
+     * 
+     * در این رابطه دو جدول داریم و یک جدول که آیدی جفت جدول ها را در خود دارد
+     * 
+     * `A: id`
+     * `B: id`
+     * `C: a_id & b_id`
+     * 
+     * @param string $class نام کلاس مورد نظر
+     * @param mixed $currentColumn نام ستونی که به این جدول وصل است
+     * @param mixed $currentPrimary نام ستونی که در این جدول است و به آن ربط داده شده است
+     * @param mixed $targetColumn نام ستونی که به جدول تارگت وصل است
+     * @param mixed $targetPrimary نام ستونی که در جدول تارگت است و به آن ربط داده شده است
+     * @return ManyToMany|QueryBuilder
+     */
+    // public function belongsToMany($class, $middleClass, $currentColumn = null, $currentPrimary = null, $targetColumn, $targetPrimary = null)
+    // {
+
+    //     if($currentPrimary === null)
+    //     {
+    //         $currentPrimary = static::getPrimaryKey();
+    //     }
+    //     if($currentColumn === null)
+    //     {
+    //         $currentColumn = Text::snake(Text::afterLast(static::class, "\\")) . "_" . $currentPrimary;
+    //     }
+
+    //     if($targetPrimary === null)
+    //     {
+    //         $targetPrimary = $class::getPrimaryKey();
+    //     }
+    //     if($targetColumn === null)
+    //     {
+    //         $targetColumn = Text::snake(Text::afterLast($class, "\\")) . "_" . $currentPrimary;
+    //     }
+        
+    //     return $class::queryWith(ManyToMany::class);
+    //     // return static::query()
+    //     //         ->table(static::getTableName())
+    //     //         ->selectCol($class::getTableName() . ".*")
+
+    // }
 
     /**
      * گرفتن ردیف هایی که به این ردیف متصلند
@@ -294,10 +448,11 @@ class Table
      * `class Hashtag: function user() { return $this->hasMany(Article::class); }`
      * `class User: public $service_id; function service() { return $this->hasMany(Service::class, 'author_id', 'id'); }`
      * 
-     * @param string $class نام کلاس مورد نظر
+     * @template T
+     * @param class-string<T> $class نام کلاس مورد نظر
      * @param mixed $column نام ستونی در کلاس مورد نظر که شامل آدرس این کلاس است
      * @param mixed $primary_column نام ستونی در این کلاس که آدرس را با آن تطابق میدهد
-     * @return OneToMany|QueryBuilder
+     * @return OneToMany<T>|QueryBuilder<T>
      */
     public function hasMany($class, $column = null, $primary_column = null)
     {
@@ -309,8 +464,7 @@ class Table
 
         if($column === null)
         {
-            $e = explode("\\", strtolower(static::class));
-            $column = end($e) . "_" . $primary_column;
+            $column = Text::snake(Text::afterLast(static::class, "\\")) . "_" . $primary_column;
         }
         
         return $class::queryWith(OneToMany::class)
@@ -326,14 +480,14 @@ class Table
      * `class User: function userinfo() { return $this->hasOne(UserInfo::class); }`
      * `class UserInfo: public $user_id; function user() { return $this->belongsTo(User::class); }`
      * 
-     * @param string $class نام کلاس مورد نظر
+     * @template T
+     * @param class-string $class نام کلاس مورد نظر
      * @param mixed $column نام ستونی در کلاس مورد نظر که شامل آدرس این کلاس است
      * @param mixed $primary_column نام ستونی در این کلاس که آدرس را با آن تطابق میدهد
-     * @return OneToOne|QueryBuilder
+     * @return OneToOne<T>|QueryBuilder<T>
      */
     public function hasOne($class, $column = null, $primary_column = null)
     {
-
         if($primary_column === null)
         {
             $primary_column = static::getPrimaryKey();
@@ -341,16 +495,58 @@ class Table
 
         if($column === null)
         {
-            $e = explode("\\", strtolower(static::class));
-            $column = end($e) . "_" . $primary_column;
+            $column = Text::snake(Text::afterLast(static::class, "\\")) . "_" . $primary_column;
         }
         
         return $class::queryWith(OneToOne::class)
                 ->where($column, $this->$primary_column);
-
     }
 
 
+    public static function resetCache()
+    {
+        static::$findCaches = [];
+    }
+
+    protected static $findCaches = [];
+    
+    /**
+     * پیدا کردن دیتا
+     * 
+     * این دیتا را در حافظه کوتاه خود ذخیره می کند و تا پایان پروسه اسکریپت به یاد خواهد داشت
+     *
+     * @param mixed $id
+     * @param string $findBy
+     * @return static|false
+     */
+    public static function findCache($id, $findBy = null)
+    {
+        if($findBy)
+        {
+            foreach(static::$findCaches[static::class] ?? [] as $cache)
+            {
+                if($cache->$findBy == $id)
+                {
+                    return $cache;
+                }
+            }
+        }
+        else
+        {
+            if($result = static::$findCaches[static::class][$id] ?? false)
+            {
+                return $result;
+            }
+        }
+
+        $object = static::find($id, $findBy);
+        if(!$object)
+            return false;
+
+        @static::$findCaches[static::class][$object->getPrimaryValue()] = $object;
+        return $object;
+    }
+    
     /**
      * پیدا کردن دیتا
      *
@@ -358,26 +554,26 @@ class Table
      * @param string $findBy
      * @return static|false
      */
-    public static function find($id, $findBy = null) {
-
+    public static function find($id, $findBy = null)
+    {
         if(!$findBy)
             $findBy = static::getPrimaryKey();
 
         return static::query()
                 ->where($findBy, $id)
                 ->get();
-
     }
 
     /**
      * پیدا کردن دیتا
      *
-     * @param mixed $id
-     * @param string $findBy
+     * @param string $col
+     * @param string|mixed $operator
+     * @param mixed $value
      * @return static|false
      */
-    public static function findWhere($col, $operator, $value = null) {
-
+    public static function findWhere($col, $operator, $value = null)
+    {
         $query = static::query();
 
         if(count(func_get_args()) == 2)
@@ -390,25 +586,85 @@ class Table
         }
 
         return $query->get();
+    }
 
+    /**
+     * پیدا کردن دیتا
+     *
+     * @param array|Arrayable $wheres
+     * @return static|false
+     */
+    public static function findWheres(array|Arrayable $wheres)
+    {
+        return static::query()->wheres($wheres)->get();
+    }
+
+    /**
+     * پیدا کردن دیتا و یا اجرا از تابع ورودی در صورت عدم وجود
+     *
+     * @param mixed $id
+     * @param Closure|mixed $callback
+     * @param string $findBy
+     * @return static|mixed
+     */
+    public static function findOr($id, $callback, $findBy = null)
+    {
+        if(!$findBy)
+            $findBy = static::getPrimaryKey();
+
+        return static::query()
+                ->where($findBy, $id)
+                ->getOr($callback);
+    }
+
+    /**
+     * پیدا کردن دیتا و یا ساختن آن در صورت عدم وجود
+     *
+     * @param mixed $id
+     * @param array|Closure $data
+     * @param string $findBy
+     * @return static|false
+     */
+    public static function findOrCreate($id, $data = [], $findBy = null)
+    {
+        if(!$findBy)
+            $findBy = static::getPrimaryKey();
+
+        return static::query()
+                ->where($findBy, $id)
+                ->getOrCreate($data);
+    }
+
+    /**
+     * پیدا کردن دیتا و یا اجرا شدن خطای کاربر در صورت عدم وجود
+     * 
+     * این خطا اگر هندل نشود، بصورت پیام به کاربر ارسال می شود
+     *
+     * @param mixed $id
+     * @param string $message
+     * @param string $findBy
+     * @return static|false
+     */
+    public static function findOrError($id, $message = null, $findBy = null)
+    {
+        if(!$findBy)
+            $findBy = static::getPrimaryKey();
+
+        return static::query()
+                ->where($findBy, $id)
+                ->getOrError($message);
     }
 
 
     /**
      * ساخت ردیف جدید
      *
-     * @param array $data
+     * @param array|Arrayable $data
      * @return static|false
      */
-    public static function create(array $data) {
-
-        $object = static::query()->insert($data);
-
-        if(!$object)
-            return false;
-
-        return $object;
-
+    public static function create(array|Arrayable $data)
+    {
+        return static::query()->insert($data);
     }
 
     /**
@@ -416,15 +672,14 @@ class Table
      *
      * @return static|false
      */
-    public function copy() {
-
+    public function copy()
+    {
         $data = $this->getNewData();
 
         if($primary = static::getPrimaryKey())
             unset($data[$primary]);
 
         return static::create($data);
-
     }
 
     /**
@@ -432,19 +687,24 @@ class Table
      *
      * @return bool
      */
-    public function save($onlyChanges = true) {
-
+    public function save($onlyChanges = true)
+    {
         if($onlyChanges)
             $data = $this->getChangedData();
         else
             $data = $this->getNewData();
-
         if(!$data)
             return true;
 
-        return static::queryThis()
+        $ok = static::queryThis()
                 ->update($data);
-        
+
+        if($ok)
+        {
+            $this->changedCols = [];
+            $this->oldData = $this->allData;
+        }
+        return $ok;
     }
 
     /**
@@ -452,21 +712,54 @@ class Table
      *
      * @return int
      */
-    public static function count() {
-
+    public static function count()
+    {
         return static::query()->count();
-
     }
 
     /**
-     * گرفتن تعداد
+     * گرفتن کل ردیف ها
      *
-     * @return static[]
+     * @return Arr<static>
      */
-    public static function all() {
-
+    public static function all()
+    {
         return static::query()->all();
+    }
 
+    /**
+     * گرفتن کل ردیف ها با شرط مشخص
+     *
+     * @param array $wheres
+     * @return Arr<static>
+     */
+    public static function allWheres($wheres)
+    {
+        return static::query()->wheres($wheres)->all();
+    }
+
+    /**
+     * گرفتن کل ردیف ها با شرط مشخص
+     *
+     * @param string $col
+     * @param string|mixed $operator
+     * @param mixed $value
+     * @return Arr<static>
+     */
+    public static function allWhere($col, $operator, $value = null)
+    {
+        $query = static::query();
+
+        if(count(func_get_args()) == 2)
+        {
+            $query->where($col, $operator);
+        }
+        else
+        {
+            $query->where($col, $operator, $value);
+        }
+
+        return $query->all();
     }
 
     /**
@@ -474,14 +767,33 @@ class Table
      *
      * @return bool
      */
-    public function delete() {
-
+    public function delete()
+    {
         return static::queryThis()
                 ->delete();
+    }
 
+    /**
+     * پاکسازی تمامی ردیف های دیتابیس
+     *
+     * @return boolean
+     */
+    public static function clear()
+    {
+        return static::query()->delete();
     }
 
 
+    public static function modifyOutArray(array &$data)
+    {
+        foreach(static::getGenerator()->getColumns() as $col)
+        {
+            if(isset($data[$col->name]) && $col->hasOutModifier())
+            {
+                $data[$col->name] = $col->dataOut($data[$col->name], static::class);
+            }
+        }
+    }
 
     /**
      * زمانی که یک ردیف جدید قرار است ایجاد شود صدا زده می شود
@@ -522,5 +834,37 @@ class Table
     public static function onCreateTable()
     {
     }
+
+    /**
+     * ساخت کوئری جدید با این شرط
+     *
+     * @param string $col
+     * @param string|mixed $operator
+     * @param mixed $value
+     * @return QueryBuilder<static>
+     */
+    public static function where($col, $operator, $value = null)
+    {
+        $query = static::query();
+
+        if(count(func_get_args()) == 2)
+        {
+            return $query->where($col, $operator);
+        }
+        else
+        {
+            return $query->where($col, $operator, $value);
+        }
+    }
+
+    public static function column($name)
+    {
+        return static::getTable() . '.' . $name;
+    }
+
+	public function jsonSerialize()
+    {
+        return $this->allData;
+	}
 
 }

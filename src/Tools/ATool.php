@@ -2,8 +2,11 @@
 
 namespace Mmb\Tools; #auto
 
+use Closure;
 use Mmb\Exceptions\MmbException;
+use Mmb\Mapping\Arrayable;
 use Mmb\Tools\ATool\Base;
+use Traversable;
 
 /**
  * این کلاس برای آرایه های منظم و غیر کلید دار می باشد
@@ -202,7 +205,10 @@ class ATool
                                 unset($sel[$i][$key]);
                             }
                             elseif($isGet && $sel[$i][$key] instanceof AdvancedValue)
-                                $sel[] = Advanced::getRealValue($sel[$i][$key]);
+                            {
+                                $temp = Advanced::getRealValue($sel[$i][$key]);
+                                $sel[] = &$temp;
+                            }
                             else
                                 $sel[] = &$sel[$i][$key];
                         }
@@ -234,7 +240,10 @@ class ATool
                                 unset($sel[$i][$key]);
                             }
                             elseif($isGet && $sel[$i][$key] instanceof AdvancedValue)
-                                $sel[] = Advanced::getRealValue($sel[$i][$key]);
+                            {
+                                $temp = Advanced::getRealValue($sel[$i][$key]);
+                                $sel[] = &$temp;
+                            }
                             else
                                 $sel[] = &$sel[$i][$key];
                         }
@@ -253,7 +262,10 @@ class ATool
                             unset($sel[$i][$query]);
                         }
                         elseif($isGet && $sel[$i][$query] instanceof AdvancedValue)
-                            $sel[$i] = Advanced::getRealValue($sel[$i][$query]);
+                        {
+                            $temp = Advanced::getRealValue($sel[$i][$query]);
+                            $sel[$i] = &$temp;
+                        }
                         else
                             $sel[$i] = &$sel[$i][$query];
                     }
@@ -274,9 +286,12 @@ class ATool
 
             // Get
             case self::SELECTOR_GET:
-                foreach($sel as $i => $_) {
+                foreach($sel as $i => $_)
+                {
                     return $sel[$i];
                 }
+                if($arg instanceof Closure)
+                    return $arg();
                 return $arg;
 
             // Get list
@@ -314,7 +329,8 @@ class ATool
      * @param mixed $value
      * @return void
      */
-    public static function selectorSet(&$array, $selector, $value) {
+    public static function selectorSet(&$array, $selector, $value)
+    {
         self::selector($array, $selector, self::SELECTOR_SET, $value);
     }
 
@@ -322,13 +338,16 @@ class ATool
      * انتخاب با سلکتور و گرفتن مقدار(تنها یک مقدار)
      * 
      * * `selectorGet($array, 'admins.*.pers.send');` = `$array[admins][همه][pers][send];`
+     * 
+     * * `selectorGet($array, 'tag.mode', fn() => "VIP");`
      *
      * @param array $array
      * @param string $selector
-     * @param mixed $default
+     * @param mixed|Closure $default
      * @return mixed
      */
-    public static function selectorGet(&$array, $selector, $default = null) {
+    public static function selectorGet(&$array, $selector, $default = null)
+    {
         return self::selector($array, $selector, self::SELECTOR_GET, $default);
     }
 
@@ -341,7 +360,8 @@ class ATool
      * @param string $selector
      * @return array
      */
-    public static function selectorGetList(&$array, $selector) {
+    public static function selectorGetList(&$array, $selector)
+    {
         return self::selector($array, $selector, self::SELECTOR_GET_LIST);
     }
 
@@ -354,7 +374,8 @@ class ATool
      * @param string $selector
      * @return array
      */
-    public static function selectorGetSelectors(&$array, $selector) {
+    public static function selectorGetSelectors(&$array, $selector)
+    {
         return self::selector($array, $selector, self::SELECTOR_GET_SELECTORS);
     }
 
@@ -367,7 +388,8 @@ class ATool
      * @param string $selector
      * @return void
      */
-    public static function selectorUnset(&$array, $selector) {
+    public static function selectorUnset(&$array, $selector)
+    {
         self::selector($array, $selector, self::SELECTOR_UNSET);
     }
 
@@ -380,7 +402,8 @@ class ATool
      * @param string $selector
      * @return bool
      */
-    public static function selectorExists(&$array, $selector) {
+    public static function selectorExists(&$array, $selector)
+    {
         return self::selector($array, $selector, self::SELECTOR_EXISTS);
     }
 
@@ -390,7 +413,8 @@ class ATool
      * @param string $selector_name
      * @return bool
      */
-    public static function selectorValidName($selector_name) {
+    public static function selectorValidName($selector_name)
+    {
         foreach(['.', '*', '|'] as $char) {
             if(strpos($selector_name, $char) !== false)
                 return false;
@@ -488,6 +512,42 @@ class ATool
         // }
 
         // return $res;
+    }
+
+    /**
+     * تبدیل آبجکت به آرایه
+     *
+     * @param mixed $value
+     * @return array
+     */
+    public static function toArray($value)
+    {
+        if(is_array($value))
+        {
+            return $value;
+        }
+
+        if(is_string($value))
+        {
+            return str_split($value);
+        }
+
+        if($value instanceof Arrayable)
+        {
+            return $value->toArray();
+        }
+
+        if($value instanceof Traversable)
+        {
+            return iterator_to_array($value);
+        }
+
+        if(!$value || !is_object($value))
+        {
+            return [];
+        }
+
+        return (array) $value;
     }
 
 }

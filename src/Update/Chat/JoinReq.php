@@ -15,13 +15,12 @@ class JoinReq extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\Up
      * @var static
      */
     public static $this;
+    public static function this()
+    {
+        return static::$this;
+    }
 
-
-    /**
-     * @var Mmb
-     */
-    private $_base;
-
+    
     /**
      * چت
      *
@@ -53,20 +52,20 @@ class JoinReq extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\Up
      */
     public $inviteLink;
 
-    public function __construct($a, $base)
+    public function __construct(array $args, ?Mmb $mmb = null)
     {
+        parent::__construct($args, $mmb);
 
-        if($base->loading_update && !static::$this)
+        if($this->_base->loading_update && !static::$this)
             self::$this = $this;
 
-        $this->_base = $base;
-        $this->chat = new Chat($a['chat'], $base);
-        $this->from = new UserInfo($a['from'], $base);
-        $this->date = $a['date'];
-        $this->bio = @$a['bio'];
-        if($_ = $a['invite_link'])
-            $this->inviteLink = new Invite($_, $this->chat->id, $base);
-            
+        $this->initFrom($args, [
+            'chat' => fn($chat) => new Chat($chat, $this->_base),
+            'from' => fn($from) => new UserInfo($from, $this->_base),
+            'date' => 'date',
+            'bio' => 'bio',
+            'invite_link' => fn($inv) => $this->inviteLink = new Invite($inv, $this->chat?->id, $this->_base),
+        ]);
     }
 
     /**
@@ -74,7 +73,8 @@ class JoinReq extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\Up
      *
      * @return bool
      */
-    public function approve(){
+    public function approve()
+    {
         return $this->_base->approveJoinReq($this->chat->id, $this->from->id);
     }
 

@@ -16,12 +16,12 @@ trait HasCustomMethod
      */
     public static function addCustomMethod($name, $callable)
     {
-        static::$_custom_methods[$name] = $callable;
+        static::$_custom_methods[strtolower($name)] = $callable;
     }
 
     protected function invokeCustomMethod($name, array $args, &$value = null)
     {
-        if($callable = static::$_custom_methods[$name] ?? false)
+        if($callable = static::$_custom_methods[strtolower($name)] ?? false)
         {
             $value = $callable($this, ...$args);
             return true;

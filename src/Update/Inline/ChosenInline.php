@@ -16,12 +16,12 @@ class ChosenInline extends MmbBase implements \Mmb\Update\Interfaces\IUserID, \M
      * @var static
      */
     public static $this;
+    public static function this()
+    {
+        return static::$this;
+    }
 
 
-    /**
-     * @var Mmb
-     */
-    private $_base;
     /**
      * آیدی ایتم انتخاب شده
      *
@@ -52,20 +52,24 @@ class ChosenInline extends MmbBase implements \Mmb\Update\Interfaces\IUserID, \M
      * @var string
      */
     public $query;
-    public function __construct($r, Mmb $base)
+    public function __construct(array $args, ?Mmb $mmb = null)
     {
+        parent::__construct($args, $mmb);
 
-        if($base->loading_update && !static::$this)
+        if($this->_base->loading_update && !static::$this)
             self::$this = $this;
 
-        $this->_base = $base;
-        $this->id = $r['result_id'];
-        $this->from = new UserInfo($r['from'], $base);
-        $this->msgID = @$r['inline_message_id'];
+        $this->initFrom($args, [
+            'result_id' => 'id',
+            'from' => fn($from) => $this->from = new UserInfo($from, $this->_base),
+            'inline_message_id' => 'msgID',
+            'query' => 'query',
+        ]);
+        
         if($this->msgID)
-            $this->msg = new Msg($this->msgID, $base, true);
-        $this->query = $r['query'];
-
+        {
+            $this->msg = new Msg([], $this->_base, true, $this->msgID);
+        }
     }
 
 	/**
@@ -73,10 +77,9 @@ class ChosenInline extends MmbBase implements \Mmb\Update\Interfaces\IUserID, \M
 	 *
 	 * @return int
 	 */
-	function IUserID() {
-        
+	function IUserID()
+    {
         return $this->from->IUserID();
-
 	}
 	
 	/**
@@ -84,9 +87,8 @@ class ChosenInline extends MmbBase implements \Mmb\Update\Interfaces\IUserID, \M
 	 *
 	 * @return int
 	 */
-	function IMsgID() {
-        
+	function IMsgID()
+    {
         return $this->msg->IUserID();
-
 	}
 }

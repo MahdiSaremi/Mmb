@@ -10,11 +10,6 @@ class Invite extends MmbBase
 {
     
     /**
-     * @var Mmb
-     */
-    private $_base;
-
-    /**
      * لینک دعوت
      *
      * @var string
@@ -84,17 +79,21 @@ class Invite extends MmbBase
      */
     public $pendings;
 
-    public function __construct($inv, $chat, $base){
-        $this->_base = $base;
-        $this->link = $inv['invite_link'];
+    public function __construct(array $args, $chat, ?Mmb $mmb = null)
+    {
+        parent::__construct($args, $mmb);
+
+        $this->initFrom($args, [
+            'invite_link' => 'link',
+            'creator' => fn($creator) => $this->creator = new UserInfo($creator, $this->_base),
+            'is_primary' => 'primary',
+            'is_revoked' => 'revoked',
+            'name' => 'name',
+            'expire_date' => 'expire',
+            'member_limit' => 'limit',
+            'pending_join_request_count' => 'pendings',
+        ]);
         $this->chatLink = $chat;
-        $this->creator = new UserInfo($inv['creator'], $base);
-        $this->primary = $inv['is_primary'];
-        $this->revoked = $inv['is_revoked'];
-        $this->name = @$inv['name'];
-        $this->expire = @$inv['expire_date'];
-        $this->limit = @$inv['member_limit'];
-        $this->pendings = @$inv['pending_join_request_count'];
     }
 
     /**

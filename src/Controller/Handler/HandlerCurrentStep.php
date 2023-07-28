@@ -8,9 +8,25 @@ use Mmb\Controller\StepHandler\StepHandler;
 class HandlerCurrentStep extends Handler
 {
     
-    public function __construct()
+    // public function __construct()
+    // {
+    //     $this->break();
+    // }
+
+    protected static $ignoreStepBreak = false;
+    public static function ignoreStepBreak()
     {
-        $this->break();
+        static::$ignoreStepBreak = true;
+    }
+
+    public static function cancelIgnoreStepBreak()
+    {
+        static::$ignoreStepBreak = false;
+    }
+
+    public static function getIgnoredStepBreak()
+    {
+        return static::$ignoreStepBreak;
     }
 
     public function check()
@@ -24,9 +40,15 @@ class HandlerCurrentStep extends Handler
 	 */
 	public function handle()
     {
+        static::$ignoreStepBreak = false;
+        $step = StepHandler::get();
+        $result = $step->handle();
 
-        return StepHandler::get()->handle();
-
+        if(!static::$ignoreStepBreak)
+        {
+            $this->stop();
+            return $result;
+        }
 	}
 
 }

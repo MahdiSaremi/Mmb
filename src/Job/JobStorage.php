@@ -1,6 +1,6 @@
 <?php
-
-namespace Mmb\Job; #auto
+#auto-name
+namespace Mmb\Job;
 
 class JobStorage extends \Mmb\Storage\Storage
 {

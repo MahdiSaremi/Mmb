@@ -3,6 +3,7 @@
 namespace Mmb\Db; #auto
 
 use Mmb\Exceptions\MmbException;
+use Mmb\Exceptions\TypeException;
 
 abstract class QueryCompiler {
 
@@ -14,11 +15,25 @@ abstract class QueryCompiler {
     public $table;
 
     /**
+     * جوین ها
+     *
+     * @var array
+     */
+    public $joins;
+
+    /**
      * شرط ها
      *
      * @var array
      */
     public $where;
+
+    /**
+     * شرط ها
+     *
+     * @var array
+     */
+    public $having;
 
     /**
      * محدودیت تعداد
@@ -83,6 +98,13 @@ abstract class QueryCompiler {
      */
     public $groupBy;
 
+    /**
+     * رابطه
+     *
+     * @var Key\Foreign
+     */
+    public $foreign_key;
+
 
     /**
      * پشتیبانی از انواع تابع ها
@@ -144,6 +166,14 @@ abstract class QueryCompiler {
         if($string === false) return 0;
         if($string === true) return 1;
         if($string === null) return 'NULL';
+
+        if(is_int($string) || is_float($string))
+            $string = "$string";
+
+        if(!is_string($string))
+        {
+            throw new TypeException("Query builder given object of '" . typeOf($string) . "', required string");
+        }
 
         return "\"" . addslashes($string) . "\"";
 

@@ -2,9 +2,11 @@
 
 namespace Mmb\Update\Chat; #auto
 
+use Mmb\Mapping\Arrayable;
+use Mmb\Mmb;
 use Mmb\MmbBase;
 
-class Per extends MmbBase implements \JsonSerializable
+class Per extends MmbBase implements \JsonSerializable, Arrayable
 {
     
     /**
@@ -93,13 +95,21 @@ class Per extends MmbBase implements \JsonSerializable
     /**
      * دسترسی ادمین
      *
-     * @var bool
+     * @var bool|null
      */
     public $isAnonymous;
 
-    public function __construct($a, $isAnonymous, $base)
+    public function __construct(array|string $args, bool|null $isAnonymous, ?Mmb $mmb = null)
     {
-        if($a == '*'){
+        parent::__construct(is_array($args) ? $args : [], $mmb);
+
+        if(is_string($args))
+        {
+            if($args != '*')
+            {
+                throw new \InvalidArgumentException("Only '*' accepted by string argument for Permissions");
+            }
+            
             $this->sendMsg = true;
             $this->sendMedia = true;
             $this->sendPoll = true;
@@ -117,23 +127,24 @@ class Per extends MmbBase implements \JsonSerializable
             $this->post = true;
             $this->editPost = true;
         }
-        else{
-            $this->sendMsg = $a['can_send_messages'] ?? null;
-            $this->sendMedia = $a['can_send_media_messages'] ?? null;
-            $this->sendPoll = $a['can_send_polls'] ?? null;
-            $this->sendOther = $a['can_send_other_messages'] ?? null;
-            $this->webPre = $a['can_add_web_page_previews'] ?? null;
-            $this->changeInfo = $a['can_change_info'] ?? null;
-            $this->invite = $a['can_invite_users'] ?? null;
-            $this->pin = $a['can_pin_messages'] ?? null;
+        else
+        {
+            $this->sendMsg = $args['can_send_messages'] ?? null;
+            $this->sendMedia = $args['can_send_media_messages'] ?? null;
+            $this->sendPoll = $args['can_send_polls'] ?? null;
+            $this->sendOther = $args['can_send_other_messages'] ?? null;
+            $this->webPre = $args['can_add_web_page_previews'] ?? null;
+            $this->changeInfo = $args['can_change_info'] ?? null;
+            $this->invite = $args['can_invite_users'] ?? null;
+            $this->pin = $args['can_pin_messages'] ?? null;
 
-            $this->manageChat = $a['can_manage_chat'] ?? null;
-            $this->delete = $a['can_delete_messages'] ?? null;
-            $this->manageVoiceChat = $a['can_manage_voice_chats'] ?? null;
-            $this->restrict = $a['can_restrict_members'] ?? null;
-            $this->promote = $a['can_promote_members'] ?? null;
-            $this->post = $a['can_post_messages'] ?? null;
-            $this->editPost = $a['can_edit_messages'] ?? null;
+            $this->manageChat = $args['can_manage_chat'] ?? null;
+            $this->delete = $args['can_delete_messages'] ?? null;
+            $this->manageVoiceChat = $args['can_manage_voice_chats'] ?? null;
+            $this->restrict = $args['can_restrict_members'] ?? null;
+            $this->promote = $args['can_promote_members'] ?? null;
+            $this->post = $args['can_post_messages'] ?? null;
+            $this->editPost = $args['can_edit_messages'] ?? null;
         }
         $this->isAnonymous = $isAnonymous;
     }
@@ -143,7 +154,8 @@ class Per extends MmbBase implements \JsonSerializable
      *
      * @return array
      */
-    public function toArray(){
+    public function toArray()
+    {
         $list = [
             'sendMsg',
             'sendMedia',
@@ -162,9 +174,11 @@ class Per extends MmbBase implements \JsonSerializable
             'editPost',
         ];
         $ar = [];
-        foreach($list as $i){
+        foreach($list as $i)
+        {
             $value = $this->$i;
-            if($value !== null){
+            if($value !== null)
+            {
                 $ar[$i] = $value;
             }
         }

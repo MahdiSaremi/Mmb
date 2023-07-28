@@ -15,7 +15,8 @@ use Mmb\Update\Message\Data\Poll;
 use Mmb\Update\Message\Msg;
 use Mmb\Update\Message\PollAnswer;
 
-class Upd extends MmbBase implements Interfaces\ICallbackID, Interfaces\IMsgID, Interfaces\IInlineID, Interfaces\IUserID, Interfaces\IChatID {
+class Upd extends MmbBase implements Interfaces\ICallbackID, Interfaces\IMsgID, Interfaces\IInlineID, Interfaces\IUserID, Interfaces\IChatID
+{
     
     /**
      * شی اصلی این کلاس
@@ -23,16 +24,17 @@ class Upd extends MmbBase implements Interfaces\ICallbackID, Interfaces\IMsgID, 
      * @var static
      */
     public static $this;
+    public static function this()
+    {
+        return static::$this;
+    }
 
 
     /**
      * @var array
      */
-    private $_real;
-    /**
-     * @var Mmb
-     */
-    private $_base;
+    // private $_real;
+
     /**
      * آیدی عددی آپدیت
      *
@@ -112,54 +114,64 @@ class Upd extends MmbBase implements Interfaces\ICallbackID, Interfaces\IMsgID, 
      */
     public $joinReq;
     
-    function __construct($upd, Mmb $base){
+    function __construct(array $args, ?Mmb $mmb = null)
+    {
+        parent::__construct($args, $mmb);
 
-        if($base->loading_update && !static::$this)
+        if($this->_base->loading_update && !static::$this)
             self::$this = $this;
-
-        $this->_real = $upd;
-        $this->_base = $base;
-        $this->id = $upd['update_id'];
-        if(isset($upd['message'])){
-            $this->msg = new Msg($upd['message'], $base);
+        $base = $this->_base;
+            
+        // $this->_real = $args;
+        $this->id = @$args['update_id'];
+        if(isset($args['message']))
+        {
+            $this->msg = new Msg($args['message'], $base);
         }
-        elseif(isset($upd['edited_message'])){
-            $this->editedMsg = new Msg($upd['edited_message'], $base);
+        elseif(isset($args['edited_message']))
+        {
+            $this->editedMsg = new Msg($args['edited_message'], $base);
         }
-        elseif(isset($upd['callback_query'])){
-            $this->callback = new Callback($upd['callback_query'], $base);
+        elseif(isset($args['callback_query']))
+        {
+            $this->callback = new Callback($args['callback_query'], $base);
         }
-        elseif(isset($upd['inline_query'])){
-            $this->inline = new Inline($upd['inline_query'], $base);
+        elseif(isset($args['inline_query']))
+        {
+            $this->inline = new Inline($args['inline_query'], $base);
         }
-        elseif(isset($upd['channel_post'])){
-            $this->post = new Msg($upd['channel_post'], $base);
+        elseif(isset($args['channel_post']))
+        {
+            $this->post = new Msg($args['channel_post'], $base);
         }
-        elseif(isset($upd['edited_channel_post'])){
-            $this->editedPost = new Msg($upd['edited_channel_post'], $base);
+        elseif(isset($args['edited_channel_post']))
+        {
+            $this->editedPost = new Msg($args['edited_channel_post'], $base);
         }
-        elseif(isset($upd['chosen_inline_result'])){
-            $this->chosenInline = new ChosenInline($upd['chosen_inline_result'], $base);
+        elseif(isset($args['chosen_inline_result']))
+        {
+            $this->chosenInline = new ChosenInline($args['chosen_inline_result'], $base);
         }
-        elseif(isset($upd['poll'])){
-            $this->poll = new Poll($upd['poll'], $base);
+        elseif(isset($args['poll']))
+        {
+            $this->poll = new Poll($args['poll'], $base);
         }
-        elseif(isset($upd['poll_answer'])){
-            $this->pollAnswer = new PollAnswer($upd['poll_answer'], $base);
+        elseif(isset($args['poll_answer']))
+        {
+            $this->pollAnswer = new PollAnswer($args['poll_answer'], $base);
         }
-        elseif(isset($upd['my_chat_member'])){
-            $this->myChatMember = new MemberUpd($upd['my_chat_member'], $base);
+        elseif(isset($args['my_chat_member']))
+        {
+            $this->myChatMember = new MemberUpd($args['my_chat_member'], $base);
         }
-        elseif(isset($upd['chat_member'])){
-            $this->chatMember = new MemberUpd($upd['chat_member'], $base);
+        elseif(isset($args['chat_member']))
+        {
+            $this->chatMember = new MemberUpd($args['chat_member'], $base);
         }
-        elseif(isset($upd['chat_join_request'])){
-            $this->joinReq = new JoinReq($upd['chat_join_request'], $base);
+        elseif(isset($args['chat_join_request']))
+        {
+            $this->joinReq = new JoinReq($args['chat_join_request'], $base);
         }
-        if(!self::$this){
-            self::$this = $this;
-        }
-        
     }
     
     /**
@@ -167,12 +179,12 @@ class Upd extends MmbBase implements Interfaces\ICallbackID, Interfaces\IMsgID, 
      *
      * @return array
      */
-    public function real() {
-
-        $real = $this->_real;
-        settype($real, "array");
-        return $real;
-
+    public function real()
+    {
+        // $real = $this->_real;
+        // settype($real, "array");
+        // return $real;
+        return $this->getRealData();
     }
 
 
@@ -182,10 +194,9 @@ class Upd extends MmbBase implements Interfaces\ICallbackID, Interfaces\IMsgID, 
 	 *
 	 * @return int
 	 */
-	function ICallbackID() {
-        
+	public function ICallbackID()
+    {
         return $this->callback ? $this->callback->ICallbackID() : 0;
-
 	}
 	
 	/**
@@ -193,8 +204,8 @@ class Upd extends MmbBase implements Interfaces\ICallbackID, Interfaces\IMsgID, 
 	 *
 	 * @return int
 	 */
-	function IMsgID() {
-
+	public function IMsgID()
+    {
         if($this->msg)
             return $this->msg->IMsgID();
 
@@ -202,7 +213,6 @@ class Upd extends MmbBase implements Interfaces\ICallbackID, Interfaces\IMsgID, 
             return $this->editedMsg->IMsgID();
             
         return 0;
-
 	}
 	
 	/**
@@ -210,8 +220,8 @@ class Upd extends MmbBase implements Interfaces\ICallbackID, Interfaces\IMsgID, 
 	 *
 	 * @return int
 	 */
-	function IUserID() {
-
+	public function IUserID()
+    {
         if($this->msg)
             return $this->msg->IUserID();
 
@@ -237,7 +247,6 @@ class Upd extends MmbBase implements Interfaces\ICallbackID, Interfaces\IMsgID, 
             return $this->pollAnswer->IUserID();
 
         return 0;
-
 	}
 	
 	/**
@@ -245,8 +254,8 @@ class Upd extends MmbBase implements Interfaces\ICallbackID, Interfaces\IMsgID, 
 	 *
 	 * @return int
 	 */
-	function IChatID() {
-
+	public function IChatID()
+    {
         if($this->msg)
             return $this->msg->IChatID();
 
@@ -263,7 +272,6 @@ class Upd extends MmbBase implements Interfaces\ICallbackID, Interfaces\IMsgID, 
             return $this->chatMember->IChatID();
 
         return 0;
-
 	}
 
 	/**
@@ -271,10 +279,57 @@ class Upd extends MmbBase implements Interfaces\ICallbackID, Interfaces\IMsgID, 
 	 *
 	 * @return int
 	 */
-	function IInlineID() {
-
+	public function IInlineID()
+    {
         return $this->inline ? $this->inline->IInlineID() : 0;
-
 	}
+
+    public static function convertUpdTypes(array $types)
+    {
+        $res = [];
+        foreach($types as $type)
+        {
+            switch($type)
+            {    
+                case 'msg':
+                    $res[] = 'message';
+                break;
+                case 'editedMsg':
+                    $res[] = 'edited_message';
+                break;
+                case 'callback':
+                    $res[] = 'callback_query';
+                break;
+                case 'joinReq':
+                    $res[] = 'chat_join_request';
+                break;
+                case 'inline':
+                    $res[] = 'inline_query';
+                break;
+                case 'chosenInline':
+                    $res[] = 'chosen_inline_result';
+                break;
+                case 'chatMember':
+                    $res[] = 'chat_member';
+                break;
+                case 'myChatMember':
+                    $res[] = 'my_chat_member';
+                break;
+                case 'post':
+                    $res[] = 'channel_post';
+                break;
+                case 'editedPost':
+                    $res[] = 'edited_channel_post';
+                break;
+                case 'poll':
+                    $res[] = 'poll';
+                break;
+                case 'pollAnswer':
+                    $res[] = 'poll_answer';
+                break;
+            }
+        }
+        return $res;
+    }
 
 }

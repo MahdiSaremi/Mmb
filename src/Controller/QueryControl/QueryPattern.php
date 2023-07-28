@@ -2,6 +2,7 @@
 
 namespace Mmb\Controller\QueryControl; #auto
 
+use Closure;
 use Mmb\Exceptions\MmbException;
 use Mmb\Tools\ATool;
 
@@ -18,6 +19,13 @@ class QueryPattern
     
     public function __construct($pattern)
     {
+        preg_match_all('/\{(\w+)(?:\:(\w+))?\}/', $pattern, $matches);
+        foreach($matches[1] as $index => $name)
+        {
+            $type = $matches[2][$index] ?: "any";
+            $this->$type($name);
+        }
+
         $this->pattern = $pattern;
     }
 
@@ -42,6 +50,40 @@ class QueryPattern
     }
 
     /**
+     * پترن مورد نظر باید یکی از این مقدار ها را داشته باشد
+     *
+     * @param string $name
+     * @param array $value
+     * @return $this
+     */
+    public function filter($name, array $value)
+    {
+        $this->inputs[$name] = [ 'anyOf', $value ];
+        return $this;
+    }
+
+    /**
+     * پترن مورد نظر باید یکی از این مقدار ها را داشته باشد
+     * 
+     * در ساخت کوئری، زمانی که نام کلید را وارد می کنید، مقدار روبروی آن جایگزین می شود
+     * 
+     * `$booter->pattern("test:{method}")->filterAs('method', [ 'create' => 'c', 'delete' => 'd' ]);`
+     * 
+     * `public function create() { }`
+     * 
+     * `Target::keyShareInline("+ New project +", 'create') // "test:c"`
+     *
+     * @param string $name
+     * @param array $value
+     * @return $this
+     */
+    public function filterAs($name, array $name_value)
+    {
+        $this->inputs[$name] = [ 'anyAs', $name_value ];
+        return $this;
+    }
+
+    /**
      * تعریف کردن پترن عدد
      * 
      * @param string $name
@@ -51,6 +93,18 @@ class QueryPattern
     {
         $this->inputs[$name] = ['num'];
         return $this;
+    }
+    /**
+     * تعریف کردن پترن عدد
+     * 
+     * alias to num()
+     * 
+     * @param string $name
+     * @return $this
+     */
+    public function number($name)
+    {
+        return $this->num($name);
     }
 
     /**
@@ -64,16 +118,72 @@ class QueryPattern
         $this->inputs[$name] = ['int'];
         return $this;
     }
+    /**
+     * تعریف کردن پترن عدد صحیح
+     * 
+     * alias to int()
+     *
+     * @param string $name
+     * @return $this
+     */
+    public function integer($name)
+    {
+        return $this->int($name);
+    }
 
     /**
      * تعریف کردن پترن کلمه
+     * 
+     * `[\w\d_\-]+`
      * 
      * @param string $name
      * @return $this
      */
     public function word($name)
     {
-        $this->match($name, '[\w\d]+');
+        $this->match($name, '[\w\-]+');
+        return $this;
+    }
+
+    /**
+     * تعریف کردن پترن کلمه به شکل بیس 64
+     * 
+     * `[a-zA-Z0-9\+\/]+[=]*`
+     * 
+     * @param string $name
+     * @return $this
+     */
+    public function base64($name)
+    {
+        $this->match($name, '[a-zA-Z0-9\+\/]+[=]*');
+        return $this;
+    }
+
+    /**
+     * تعریف کردن پترن کلمه به شکل بیس 16
+     * 
+     * `[0-9a-fA-F]+`
+     * 
+     * @param string $name
+     * @return $this
+     */
+    public function base16($name)
+    {
+        $this->match($name, '[0-9a-fA-F]+');
+        return $this;
+    }
+
+    /**
+     * تعریف کردن پترن کلمه به شکل بیس 2 یا همان باینری
+     * 
+     * `[01]+`
+     * 
+     * @param string $name
+     * @return $this
+     */
+    public function base2($name)
+    {
+        $this->match($name, '[01]+');
         return $this;
     }
 
@@ -84,19 +194,59 @@ class QueryPattern
      * @param string $pattern
      * @return $this
      */
-    public function match ($name, $pattern)
+    public function match($name, $pattern)
     {
         $this->inputs[$name] = ['match', $pattern];
         return $this;
     }
 
 
+    // -- -- -- -- -- --    Pro Methods   -- -- -- -- -- -- \\
+
+    public $hasSub = false;
+    public $subName;
+    public $subCallback;
+    public $subBooter;
+
+    /**
+     * تعریف کردن زیرمجموعه
+     * 
+     * `$booter->pattern("film:{sub}")->sub('sub', function(QueryBooter $booter) { ... });`
+     * 
+     * توجه: تنها یک ساب می توانید تعریف کرد!
+     *
+     * @param string $name
+     * @param Closure $callback
+     * @return $this
+     */
+    public function sub($name, Closure $callback)
+    {
+        $this->any($name);
+        $this->hasSub = true;
+        $this->subName = $name;
+        $this->subCallback = $callback;
+        return $this;
+    }
+
+    private function subBoot()
+    {
+        if(!$this->subBooter)
+        {
+            $subCallback = $this->subCallback;
+            $this->subBooter = new QueryBooter(null);
+            $subCallback($this->subBooter);
+        }
+    }
+
+
     // -- -- -- -- -- --      Method      -- -- -- -- -- -- \\
     
-    private $method;
+    private $method = 'method';
 
     /**
      * تعریف کردن نام متد با نام پترن
+     * 
+     * بصورت پیشفرض روی نام متد تنظیم است `method`
      * 
      * @param string $name
      * @return $this
@@ -104,6 +254,7 @@ class QueryPattern
     public function method($name)
     {
         $this->method = $name;
+        $this->invoke = null;
         return $this;
     }
 
@@ -117,6 +268,7 @@ class QueryPattern
      */
     public function invoke($method)
     {
+        $this->method = null;
         $this->invoke = $method;
         return $this;
     }
@@ -211,13 +363,14 @@ class QueryPattern
      * @throws ArgumentNameException 
      * @return array|bool
      */
-    public function matchQuery($query)
+    public function matchQuery($query, $parentMatch = [], $parentSubIndex = 0)
     {
-        
         $names = [ 'query' ];
+        $recheck_args = [];
+        
 
         // Replace patterns in regex pattern
-        $pattern = preg_replace_callback('/\\\{([\w\d_]+)\\\}/', function($match) use(&$names) {
+        $pattern = preg_replace_callback('/\\\{(\w+)(?:\\\:.*?)?\\\}/', function($match) use(&$names, &$recheck_args) {
 
             $inp = $this->inputs[$match[1]] ?? false;
             if(!$inp)
@@ -230,6 +383,9 @@ class QueryPattern
                 case 'any':
                     return '(.*)';
                 case 'anyOf':
+                    return "(" . join('|', array_map('preg_quote', $inp[1])) . ")";
+                case 'anyAs':
+                    $recheck_args[] = $match[1];
                     return "(" . join('|', array_map('preg_quote', $inp[1])) . ")";
                 case 'num':
                     return '([\-\d][\d\.]*)';
@@ -246,6 +402,30 @@ class QueryPattern
         $attrs = join('', array_keys($this->attrs));
         if(preg_match("/^$pattern$/u$attrs", $query, $match))
         {
+
+            // Recheck filter
+            foreach($recheck_args as $arg)
+            {
+                $index = array_search($arg, $names);
+                $inp = $this->inputs[$arg];
+                switch($inp[0])
+                {
+                    case 'anyAs':
+                        $match[$index] = array_search($match[$index], $inp[1]);
+                    break;
+                }
+            }
+
+            // Sub
+            if($this->hasSub)
+            {
+                $index = array_search($this->subName, $names);
+                $this->subBoot();
+                $sub = $match[$index];
+                unset($match[0]);
+                unset($match[$index]);
+                return $this->subBooter->matchQuery($sub, array_values($match), $index - 1);
+            }
 
             // Method
             $method = false;
@@ -308,12 +488,13 @@ class QueryPattern
                 break;
             }
 
-            return [ $method, $args ];
+            $resArgs = $parentMatch;
+            ATool::insertMulti($resArgs, $parentSubIndex, $args);
 
+            return [ $method, $resArgs ];
         }
         
         return false;
-
     }
 
     /**
@@ -326,7 +507,6 @@ class QueryPattern
      */
     public function makeQuery(array $args)
     {
-
         $namedArgs = [];
         $indexArgs = [];
         foreach($args as $i => $arg)
@@ -337,9 +517,27 @@ class QueryPattern
                 $namedArgs[$i] = $arg;
         }
 
+        [$namedArgs, $indexArgs, $result, $countAll]
+                = $this->makeQueryReplace($namedArgs, $indexArgs, $this->pattern, 0);
+
+        if($indexArgs)
+        {
+            throw new \InvalidArgumentException("Too many arguments, required $countAll, given " . count($args));
+        }
+
+        if($namedArgs)
+        {
+            throw new \InvalidArgumentException("Too many arguments, '" . array_keys($namedArgs)[0] . "' is not exists in pattern");
+        }
+
+        return $result;
+    }
+
+    public function makeQueryReplace($namedArgs, $indexArgs, $result, $countAll)
+    {
         $isJson = $this->argsType == 'json';
 
-        $result = preg_replace_callback('/\{([\w\d_]+)\}/', function ($match) use (&$namedArgs, &$indexArgs, $isJson) {
+        $result = preg_replace_callback('/\{(\w+)(?:\:.*)?\}/', function ($match) use (&$namedArgs, &$indexArgs, &$countAll, $isJson) {
 
             $name = $match[1];
 
@@ -353,6 +551,15 @@ class QueryPattern
             $inp = $this->inputs[$name] ?? false;
             if(!$inp)
                 throw new ArgumentNameException("Argument {".$name."} is not defined with methods");
+
+            // Sub make query
+            if($this->hasSub && $this->subName == $name)
+            {
+                $this->subBoot();
+                [ $namedArgs, $indexArgs, $value, $countAll ] = 
+                        $this->subBooter->makeQueryReplace($namedArgs, $indexArgs, null, $countAll);
+                return $value;
+            }
 
             if(array_key_exists($name, $namedArgs))
             {
@@ -380,10 +587,25 @@ class QueryPattern
                         throw new \InvalidArgumentException("Argument '$name' don't accept value '$value'");
                     }
                 break;
+                case 'anyAs':
+                    if(!isset($inp[1][$value]))
+                    {
+                        throw new \InvalidArgumentException("Argument '$name' don't accept value '$value'");
+                    }
+                    $value = $inp[1][$value];
+                break;
                 case 'num':
+                    if(!is_numeric($value))
+                    {
+                        throw new \InvalidArgumentException("Argument '$name' is not numeric, given '$value'");
+                    }
                     $value = @floatval($value);
                 break;
                 case 'int':
+                    if(!is_numeric($value) && strpos($value, '.') !== false)
+                    {
+                        throw new \InvalidArgumentException("Argument '$name' must be integer, given '$value'");
+                    }
                     $value = @intval($value);
                 break;
                 case 'match':
@@ -396,21 +618,9 @@ class QueryPattern
 
             return $value;
 
-        }, $this->pattern, -1, $countAll);
+        }, $result, -1, $count);
 
-        if($indexArgs)
-        {
-            throw new \InvalidArgumentException("Too many arguments, required $countAll, given " . count($args));
-        }
-
-        if($namedArgs)
-        {
-            throw new \InvalidArgumentException("Too many arguments, '" . array_keys($namedArgs)[0] . "' is not exists in pattern");
-        }
-
-        return $result;
-
+        return [ $namedArgs, $indexArgs, $result, $countAll + $count ];
     }
-
     
 }

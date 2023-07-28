@@ -2,6 +2,8 @@
 
 namespace Mmb\Tools\ATool; #auto
 
+use Mmb\Mapping\Arrayable;
+
 class AEach extends Base
 {
     private $array;
@@ -19,11 +21,16 @@ class AEach extends Base
      * `$nums = aParse([ aEach(range(1,3), function($num) { return $num + 0.5; }) ]); // [1.5, 2.5, 3.5]`
      * `$nums = aParse([ aEach(range(1,3), function($num) { yield $num; yield $num + 0.5; }) ]); // [1, 1.5, 2, 2.5, 3, 3.5]`
      * 
-     * @param array $array
+     * @param array|Arrayable $array
      * @param callable $callback
      */
-    public function __construct($array, $callback = null)
+    public function __construct(array|Arrayable $array, $callback = null)
     {
+        if($array instanceof Arrayable)
+        {
+            $array = $array->toArray();
+        }
+
         $this->array = $array;
         $this->callback = $callback;
     }

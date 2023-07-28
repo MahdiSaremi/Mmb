@@ -2,7 +2,7 @@
 #auto-name
 namespace Mmb\Pay;
 
-use Mmb\Listeners\Listeners;
+use Mmb\Calling\Caller;
 use Mmb\Tools\ATool;
 
 abstract class PayDriver
@@ -65,15 +65,9 @@ abstract class PayDriver
             $id = 0;
             $store::editBase(function (&$data) use (&$id) {
 
-                // if(function_exists('array_key_last'))
-                //     $id = array_key_last($data[static::class] ?? []);
-                // else {
-                //     $keys = array_keys($data[static::class] ?? []);
-                //     $id = @end($keys);
-                // }
                 $id = $data['last_uuid'] ?? 0;
 
-                while (array_key_exists(++$id, $data[static::class])) ;
+                while (array_key_exists(++$id, $data[static::class] ?? [])) ;
 
                 @$data[static::class][$id] = [];
                 $data['last_uuid'] = $id;
@@ -206,37 +200,42 @@ abstract class PayDriver
         if(isset($current['cl']))
         {
             $cl = $current['cl'];
-            $object = method_exists($cl, 'instance') ? $cl::instance() : new $cl;
+            $object = app($cl);
             if($object instanceof PayModifier)
             {
                 if($object->payValidate($info))
                 {
-                    $this->debug ? $this->verifyDebug($info) : $this->verify($info);
-                    $object->paySuccess($info);
-                    return true;
+                    if($this->debug ? $this->verifyDebug($info) : $this->verify($info))
+                    {
+                        $object->paySuccess($info);
+                        return true;
+                    }
                 }
                 else
                 {
-                    if ($object->payFailed($info) === false)
+                    if($object->payFailed($info) === false)
                         return false;
+                    return true;
                 }
             }
             else
             {
-                if(!method_exists($object, 'payValidate') || Listeners::callMethod([$object, 'payValidate'], $args))
+                if(!method_exists($object, 'payValidate') || Caller::call([$object, 'payValidate'], $args))
                 {
-                    $this->debug ? $this->verifyDebug($info) : $this->verify($info);
-                    Listeners::callMethod([$object, 'paySuccess'], $args);
-                    return true;
+                    if($this->debug ? $this->verifyDebug($info) : $this->verify($info))
+                    {
+                        Caller::call([$object, 'paySuccess'], $args);
+                        return true;
+                    }
                 }
                 else
                 {
                     if(method_exists($object, 'payFailed'))
                     {
-                        Listeners::callMethod([$object, 'payFailed']);
+                        if(Caller::call([$object, 'payFailed']) === false)
+                            return false;
                         return true;
                     }
-                    return false;
                 }
             }
         }
@@ -246,19 +245,21 @@ abstract class PayDriver
         {
             if(isset($current['va']))
             {
-                if(!Listeners::invokeMethod2($current['va'], $args))
+                if(!Caller::invoke2($current['va'], $args))
                 {
                     if (isset($current['fa']))
                     {
-                        Listeners::invokeMethod2($current['fa'], [ $info ]);
+                        if(Caller::invoke2($current['fa'], [ $info ]) === false)
+                            return false;
                         return true;
                     }
-                    return false;
                 }
             }
-            $this->debug ? $this->verifyDebug($info) : $this->verify($info);
-            Listeners::invokeMethod2($current['su'], $args);
-            return true;
+            if($this->debug ? $this->verifyDebug($info) : $this->verify($info))
+            {
+                Caller::invoke2($current['su'], $args);
+                return true;
+            }
         }
 
         return false;
@@ -278,7 +279,7 @@ abstract class PayDriver
      * @param mixed ...$args ورودی ها
      * @return string|bool
      */
-    public final function createLink($amount, $options = [], ...$args)
+    public function createLink($amount, $options = [], ...$args)
     {
         return $this->_createLink($amount, $options, $args);
     }
@@ -303,7 +304,7 @@ abstract class PayDriver
      * @param mixed ...$args
      * @return string
      */
-    public final function createLinkByClass($amount, $class, ...$args)
+    public function createLinkByClass($amount, $class, ...$args)
     {
         return $this->_createLink($amount, $this->loadOptionsFromClass($class), $args);
     }
@@ -314,7 +315,7 @@ abstract class PayDriver
      * @param array $args
      * @return string
      */
-    private final function _createLink($amount, $options, $args)
+    protected function _createLink($amount, $options, $args)
     {
         if (isset($options['amount']))
             $amount = $options['amount'];

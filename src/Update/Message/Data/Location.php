@@ -12,13 +12,13 @@ class Location extends MmbBase
 
     public $latitude;
 
-    /**
-     * @var Mmb
-     */
-    private $_base;
-    function __construct($loc, $base){
-        $this->_base = $base;
-        $this->longitude = $loc['longitude'];
-        $this->latitude = $loc['latitude'];
+    function __construct(array $args, ?Mmb $mmb = null)
+    {
+        parent::__construct($args, $mmb);
+
+        $this->initFrom($args, [
+            'longitude' => 'longitude',
+            'latitude' => 'latitude',
+        ]);
     }
 }

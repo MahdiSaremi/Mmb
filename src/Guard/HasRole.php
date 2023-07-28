@@ -2,28 +2,23 @@
 
 namespace Mmb\Guard; #auto
 
+/**
+ * با یوز کردن این تریت، قابلیت هایی مناسب با جدول دارای نقش اضافه می شود
+ * 
+ * توجه کنید که شما باید در جنریت خود ستونی برای نقش بسازید
+ * 
+ * `$table->role();`
+ * 
+ * و اگر از نام متفاوتی استفاده می کنید، تابع زیر را در کلاس تعریف کنید:
+ * 
+ * `static function getRoleColumn() { return 'custom_role'; }`
+ */
 trait HasRole
 {
 
-    public function modifyRoleIn(&$data)
+    public static function getRoleColumn()
     {
-        if($role = Role::getFullConstantOf(@$data['id']))
-        {
-            $data['role'] = $role;
-        }
-
-        Role::modifyIn($data['role']);
-    }
-
-    public function modifyRoleOut(&$data)
-    {
-        if(Role::issetConstant(@$data['id']))
-        {
-            $data['role'] = null;
-            return;
-        }
-
-        Role::modifyOut($data['role']);
+        return 'role';
     }
 
     /**
@@ -34,23 +29,30 @@ trait HasRole
      */
     public function setRole($role)
     {
+        $column = static::getRoleColumn();
         if($role instanceof Role)
         {
-            $this->role = $role;
+            $this->$column = $role;
             return;
         }
 
-        $this->role = Role::role($role);
-    }
-
-    public static function roleColumn(\Mmb\Db\QueryCol $table)
-    {
-        $table->text('role')->nullable();
+        $this->$column = Role::role($role);
     }
 
     public static function whereRole($role)
     {
-        return static::query()->whereRaw("(`role` = ? OR `role` LIKE ?)", $role, "$role:%");
+        $column = static::getRoleColumn();
+        return static::query()->whereHasRole($column, $role);
     }
     
+    public static function findRole($role)
+    {
+        return static::whereRole($role)->get();
+    }
+
+    public static function findRoles($role)
+    {
+        return static::whereRole($role)->all();
+    }
+
 }

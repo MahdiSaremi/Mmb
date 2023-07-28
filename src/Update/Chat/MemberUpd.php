@@ -17,12 +17,11 @@ class MemberUpd extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\
      * @var static
      */
     public static $this;
+    public static function this()
+    {
+        return static::$this;
+    }
 
-
-    /**
-     * @var Mmb
-     */
-    private $_base;
 
     /**
      * چت
@@ -79,30 +78,51 @@ class MemberUpd extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\
      * @var bool
      */
     public $isStop;
+    /**
+     * آیا کاربر در کانال/گروه عضو شده است
+     *
+     * @var boolean
+     */
+    public $isJoined;
+    /**
+     * آیا کاربر از کانال/گروه خارج شده است
+     *
+     * @var boolean
+     */
+    public $isLeft;
 
-    public function __construct($a, $base)
+    public function __construct(array $args, ?Mmb $mmb = null)
     {
+        parent::__construct($args, $mmb);
 
-        if($base->loading_update && !static::$this)
+        if($this->_base->loading_update && !static::$this)
             self::$this = $this;
 
-        $this->_base = $base;
-        $this->chat = new Chat($a['chat'], $base);
-        $this->from = new UserInfo($a['from'], $base);
-        $this->date = $a['date'];
-        $this->old = new Member($a['old_chat_member'], $base);
-        $this->new = new Member($a['new_chat_member'], $base);
-        if($_ = $a['invite_link'])
-            $this->inviteLink = new Invite($_, $this->chat->id, $base);
+        $this->initFrom($args, [
+            'chat' => fn($chat) => $this->chat = new Chat($chat, $this->_base),
+            'from' => fn($from) => $this->from = new UserInfo($from, $this->_base),
+            'date' => 'date',
+            'old_chat_member' => fn($chatMember) => $this->old = new Member($chatMember, $this->_base),
+            'new_chat_member' => fn($chatMember) => $this->new = new Member($chatMember, $this->_base),
+            'invite_link' => fn($inv) => new Invite($inv, $this->_base),
+        ]);
 
-        $this->isPrivate = $this->chat->type == Chat::TYPE_PRIVATE;
-        if($this->isPrivate){
-            $this->isStart = $this->old->status == Member::STATUS_KICKED &&
-                                $this->new->status == Member::STATUS_MEMBER;
-            $this->isStop = $this->old->status == Member::STATUS_MEMBER &&
-                                $this->new->status == Member::STATUS_KICKED;
+        if($this->old && $this->new)
+        {
+            $this->isJoined = ($this->old->status == Member::STATUS_KICKED || $this->old->status == Member::STATUS_LEFT) &&
+                            $this->new->status == Member::STATUS_MEMBER;
+            $this->isLeft = $this->old->status == Member::STATUS_MEMBER &&
+                            ($this->new->status == Member::STATUS_KICKED || $this->new->status == Member::STATUS_LEFT);
         }
-        else{
+
+        $this->isPrivate = $this->chat?->type == Chat::TYPE_PRIVATE;
+        if($this->isPrivate)
+        {
+            $this->isStart = $this->isJoined;
+            $this->isStop = $this->isLeft;
+        }
+        else
+        {
             $this->isStart = false;
             $this->isStop = false;
         }
@@ -115,10 +135,9 @@ class MemberUpd extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\
 	 *
 	 * @return int
 	 */
-	function IChatID() {
-        
+	function IChatID()
+    {
         return $this->chat->id;
-
 	}
 	
 	/**
@@ -126,9 +145,8 @@ class MemberUpd extends MmbBase implements \Mmb\Update\Interfaces\IChatID, \Mmb\
 	 *
 	 * @return int
 	 */
-	function IUserID() {
-        
+	function IUserID()
+    {
         return $this->from->id;
-
 	}
 }
