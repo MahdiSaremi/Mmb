@@ -5,10 +5,10 @@ namespace Mmb\Listeners;
 use Closure;
 use InvalidArgumentException;
 
-trait HasNormalStaticListeners
+trait HasStaticClassListeners
 {
-    
-    private static $listeners_static = [];
+
+    private static $listeners_static_class = [];
 
     /**
      * شونده ای برای این ایونت تعریف می کند
@@ -17,9 +17,9 @@ trait HasNormalStaticListeners
      * @param Closure|array|string $callback
      * @return void
      */
-    public static function listen(string $name, Closure|array|string $callback)
+    public static function listenStatic(string $name, Closure|array|string $callback)
     {
-        @self::$listeners_static[self::class][$name][] = $callback;
+        @static::$listeners_static_class[static::class][$name][] = $callback;
     }
 
     /**
@@ -47,9 +47,9 @@ trait HasNormalStaticListeners
      * @param array $args
      * @return mixed
      */
-    public static function invokeListeners(string $name, array $args = [], string $returnType = 'null')
+    public static function invokeStaticListeners(string $name, array $args = [], string $returnType = 'null')
     {
-        $listeners = self::$listeners_static[self::class][$name] ?? [];
+        $listeners = static::$listeners_static_class[static::class][$name] ?? [];
         return Listeners::invokeCustomListener($listeners, $args, $returnType);
     }
     

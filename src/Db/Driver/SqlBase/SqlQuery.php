@@ -82,6 +82,14 @@ class SqlQuery extends \Mmb\Db\QueryCompiler {
                     $query .= '(' . $this->safeQueryReplace($where[2], ...$where[3]) . ')';
                 break;
 
+                case 'raw-exists':
+                    $query .= 'EXISTS (' . $this->safeQueryReplace($where[2], ...$where[3]) . ')';
+                break;
+
+                case 'raw-operator':
+                    $query .= '(' . $where[2] . ') ' . $where[3] . ' ' . $this->safeString($where[4]);
+                break;
+
                 case 'in':
                     if($where[3])
                     {

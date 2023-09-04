@@ -41,6 +41,8 @@ trait HasListeners
      *
      * `first-not-null` : اولین مقداری که نال نباشد را بر می گرداند
      * 
+     * `last-not-null` : آخرین مقداری که نال نباشد را بر می گرداند
+     * 
      * @param string $name
      * @param array $args
      * @return mixed
@@ -48,77 +50,7 @@ trait HasListeners
     public function invokeListeners(string $name, array $args = [], string $returnType = 'null')
     {
         $listeners = $this->listeners[$name] ?? [];
-
-        switch($returnType)
-        {
-            case 'null':
-                foreach($listeners as $listener)
-                {
-                    Listeners::callMethod($listener, $args);
-                }
-            break;
-
-            case 'last':
-                $last = null;
-                foreach($listeners as $listener)
-                {
-                    $last = Listeners::callMethod($listener, $args);
-                }
-                return $last;
-
-            case 'first-true':
-                foreach($listeners as $listener)
-                {
-                    if($value = Listeners::callMethod($listener, $args))
-                    {
-                        return $value;
-                    }
-                }
-            break;
-
-            case 'first-is-true':
-                foreach($listeners as $listener)
-                {
-                    if(Listeners::callMethod($listener, $args) === true)
-                    {
-                        return true;
-                    }
-                }
-            break;
-
-            case 'first-false':
-                foreach($listeners as $listener)
-                {
-                    if(!($value = Listeners::callMethod($listener, $args)))
-                    {
-                        return $value;
-                    }
-                }
-            break;
-
-            case 'first-is-false':
-                foreach($listeners as $listener)
-                {
-                    if(Listeners::callMethod($listener, $args) === false)
-                    {
-                        return false;
-                    }
-                }
-            break;
-
-            case 'first-not-null':
-                foreach($listeners as $listener)
-                {
-                    if(!is_null($value = Listeners::callMethod($listener, $args)))
-                    {
-                        return $value;
-                    }
-                }
-            break;
-
-            default:
-                throw new InvalidArgumentException("Unknown \$returnType value, given '{$returnType}'");
-        }
+        return Listeners::invokeCustomListener($listeners, $args, $returnType);
     }
     
 }

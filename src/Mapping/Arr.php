@@ -12,6 +12,7 @@ use Mmb\Exceptions\MmbException;
 use Mmb\Tools\ATool;
 use Mmb\Tools\Operator;
 use Mmb\Tools\Type;
+use Traversable;
 
 /**
  * @template V
@@ -63,44 +64,66 @@ class Arr extends ArrayableObject implements JsonSerializable
     // Tools
 
     /**
-     * @return static<V>
+     * @return $this
      */
     public function append(...$value)
     {
-        return new static(array_merge($this->data, $value));
+        array_push($this->data, ...$value);
+        return $this;
     }
 
     /**
-     * @return static<V>
+     * @return $this
      */
     public function remove($index)
     {
-        $data = $this->data;
-        ATool::remove($data, $index);
-        return new static($data);
+        ATool::remove($this->data, $index);
+        return $this;
     }
 
     /**
-     * @return static<V>
+     * @return $this
+     */
+    public function removeValue($value, bool $strict = false)
+    {
+        ATool::remove2($this->data, $value, $strict);
+        return $this;
+    }
+
+    /**
+     * @return $this
      */
     public function insert($index, $value, ...$values)
     {
-        $data = $this->data;
-        ATool::insert($data, $index, $value);
+        ATool::insert($this->data, $index, $value);
         if($values)
-            ATool::insertMulti($data, $index + 1, $values);
+            ATool::insertMulti($this->data, $index + 1, $values);
 
-        return new static($data);
+        return $this;
     }
 
     /**
-     * @return static<V>
+     * @return $this
      */
     public function move($fromIndex, $toIndex)
     {
-        $data = $this->data;
-        ATool::move($data, $fromIndex, $toIndex);
-        return new static($data);
+        ATool::move($this->data, $fromIndex, $toIndex);
+        return $this;
+    }
+
+    /**
+     * @return $this
+     */
+    public function merge(...$arrays)
+    {
+        foreach($arrays as $i => $array)
+        {
+            if($array instanceof Arrayable)
+                $arrays[$i] = $array->toArray();
+        }
+
+        $this->data = array_merge($this->data, ...$arrays);
+        return $this;
     }
 
     public function implode($separator)
@@ -186,6 +209,37 @@ class Arr extends ArrayableObject implements JsonSerializable
         return new Map($result);
     }
 
+    /**
+     * داده ها را بر اساس لیست داده شده مرتب می کند
+     * 
+     * `$arr->sortWith('id', [ 10, 4, 6 ])`
+     * 
+     * نتیجه:
+     * `[ ['id' => 10], ['id' => 4], ['id' => 6] ]`
+     *
+     * @param string $key
+     * @param array|Arrayable $values
+     * @return static<V>
+     */
+    public function sortWith(string $key, array|Traversable|Arrayable $values)
+    {
+        if($values instanceof Arrayable)
+        {
+            $values = $values->toArray();
+        }
+
+        $keyOn = $this->pluck($key);
+        $newArray = [];
+
+        foreach($values as $value)
+        {
+            $index = $keyOn->indexOf($value);
+            $newArray[] = $index === false ? null : $this[$index];
+        }
+
+        return new static($newArray);
+    }
+
 
 
     public function indexOf($value)
@@ -204,19 +258,48 @@ class Arr extends ArrayableObject implements JsonSerializable
 
 
     /**
-     * @return V
+     * @return ?V
      */
     public function first()
     {
         return $this->data ? $this->data[0] : null;
     }
+
+    /**
+     * @return ?int
+     */
+    public function firstKey()
+    {
+        return $this->data ? 0 : null;
+    }
     
     /**
-     * @return V
+     * @return ?V
      */
     public function last()
     {
         return $this->data ? end($this->data) : null;
+    }
+
+    /**
+     * @return ?int
+     */
+    public function lastKey()
+    {
+        return $this->data ? $this->count() - 1 : null;
+    }
+
+    /**
+     * بهم ریختن مقادیر آرایه
+     *
+     * @return static<V>
+     */
+    public function shuffle()
+    {
+        $data = $this->data;
+        shuffle($data);
+        
+        return new static($data);
     }
 
     public function __toString()

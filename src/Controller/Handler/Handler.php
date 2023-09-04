@@ -29,11 +29,14 @@ abstract class Handler
     {
         if ($this->check())
         {
+            $result = $this->handle();
+            
             if ($this->break)
             {
                 $this->stop();
             }
-            return $this->handle();
+
+            return $result;
         }
     }
 

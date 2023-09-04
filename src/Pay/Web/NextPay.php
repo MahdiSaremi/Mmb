@@ -196,7 +196,7 @@ class NextPay extends PayDriver
             case 43:
                 return "درگاه پرداختی برای انجام درخواست یافت نشد";
             case 44:
-                return "پاسخ دریاف شده از بانک نامعتبر است";
+                return "پاسخ دریافت شده از بانک نامعتبر است";
             case 45:
                 return "سیستم پرداخت غیر فعال است";
             case 46:

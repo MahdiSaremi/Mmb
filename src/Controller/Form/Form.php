@@ -394,7 +394,7 @@ abstract class Form implements Handlable
             $this->inputs[$name]->value($value);
             return;
         }
-        elseif(array_key_exists($name, $this->handler->inputs))
+        elseif(array_key_exists($name, $this->handler->inputs ?? []))
         {
             $this->handler->inputs[$name] = $value;
             return;

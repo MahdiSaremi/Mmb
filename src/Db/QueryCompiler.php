@@ -4,8 +4,16 @@ namespace Mmb\Db; #auto
 
 use Mmb\Exceptions\MmbException;
 use Mmb\Exceptions\TypeException;
+use UnitEnum;
 
 abstract class QueryCompiler {
+
+    /**
+     * نوع متد
+     *
+     * @var string
+     */
+    public string $type;
 
     /**
      * جدول موردنظر
@@ -57,6 +65,13 @@ abstract class QueryCompiler {
     public $order;
 
     /**
+     * انتخاب یکتا
+     *
+     * @var boolean
+     */
+    public bool $distinct = false;
+
+    /**
      * انتخاب ها
      *
      * @var array
@@ -76,6 +91,13 @@ abstract class QueryCompiler {
      * @var QueryCol
      */
     public $queryCol;
+
+    /**
+     * ایندکس
+     *
+     * @var SingleIndex
+     */
+    public $singleIndex;
 
     /**
      * ستون
@@ -118,13 +140,14 @@ abstract class QueryCompiler {
      *
      * @return void
      */
-    public function start($type) {
-
+    public function start(string $type)
+    {
         if(!in_array($type, $this->supports))
             throw new MmbException(static::class . " not support '$type' query");
 
-        $this->$type();
+        $this->type = $type;
 
+        $this->$type();
     }
 
 
@@ -170,6 +193,11 @@ abstract class QueryCompiler {
         if(is_int($string) || is_float($string))
             $string = "$string";
 
+        if($string instanceof UnitEnum)
+        {
+            $string = $string->value;
+        }
+    
         if(!is_string($string))
         {
             throw new TypeException("Query builder given object of '" . typeOf($string) . "', required string");

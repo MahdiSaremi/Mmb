@@ -87,6 +87,34 @@ trait DynCall
         return false;
     }
 
+    /**
+     * مقدار داینامیک ذخیره شده را فراموش می کند
+     *
+     * @param string $name
+     * @param string ...$names
+     * @return void
+     */
+    public function dynForgot(string $name, string ...$names)
+    {
+        foreach(func_get_args() as $name)
+        {
+            if(array_key_exists($name, $this->_invokes_var))
+            {
+                unset($this->_invokes_var[$name]);
+            }
+        }
+    }
+
+    /**
+     * تمامی مقادیر داینامیک ذخیره شده را پاک می کند
+     *
+     * @return void
+     */
+    public function dynClear()
+    {
+        $this->_invokes_var = [];
+    }
+
     public function __call($name, $args)
     {
         throw new BadMethodCallException("Method '$name' is not exists in class " . static::class);

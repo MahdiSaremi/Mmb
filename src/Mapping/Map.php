@@ -2,15 +2,7 @@
 
 namespace Mmb\Mapping; #auto
 
-use ArrayAccess;
-use ArrayObject;
-use Countable;
-use IteratorAggregate;
 use JsonSerializable;
-use Mmb\Big\BigNumber;
-use Mmb\Exceptions\MmbException;
-use Mmb\Tools\ATool;
-use Mmb\Tools\Operator;
 
 /**
  * @template V
@@ -63,65 +55,76 @@ class Map extends ArrayableObject implements JsonSerializable
     // Tools
 
     /**
-     * @return static<V>
+     * @return $this
      */
     public function merge(...$maps)
     {
-        $data = $this->data;
         foreach($maps as $i => $map)
         {
-            if($map instanceof Map || $map instanceof Arr)
+            if($map instanceof Arrayable)
                 $maps[$i] = $map->toArray();
         }
-        $data = array_replace($data, ...$maps);
-        return new static($data);
+        $this->data = array_replace($this->data, ...$maps);
+        return $this;
     }
 
     /**
-     * @return static<V>
+     * @return $this
      */
     public function leftMerge(...$maps)
     {
-        $data = $this->data;
         foreach($maps as $map)
         {
-            if($map instanceof Map || $map instanceof Arr)
+            if($map instanceof Arrayable)
                 $map = $map->toArray();
-            $data += $map;
+            $this->data += $map;
         }
-        return new static($data);
+        return $this;
     }
 
     /**
-     * @return static<V>
+     * @return $this
      */
     public function remove($index)
     {
-        $data = $this->data;
-        unset($data[$index]);
-        return new static($data);
+        unset($this->data[$index]);
+        return $this;
     }
 
     /**
-     * @return static<V>
+     * حذف یک مقدار
+     *
+     * @param mixed $value
+     * @return $this
+     */
+    public function removeValue($value, bool $strict = false)
+    {
+        if(($key = array_search($value, $this->data, $strict)) !== false)
+        {
+            unset($this->data[$key]);
+        }
+        
+        return $this;
+    }
+
+    /**
+     * @return $this
      */
     public function set($key, $value)
     {
-        $data = $this->data;
-        $data[$key] = $value;
-        return new static($data);
+        $this->data[$key] = $value;
+        return $this;
     }
 
     /**
-     * @return static<V>
+     * @return $this
      */
     public function move($fromKey, $toKey)
     {
-        $data = $this->data;
-        $temp = $data[$fromKey];
-        $data[$fromKey] = $data[$toKey];
-        $data[$toKey] = $temp;
-        return new static($data);
+        $temp = $this->data[$fromKey];
+        $this->data[$fromKey] = $this->data[$toKey];
+        $this->data[$toKey] = $temp;
+        return $this;
     }
 
     public function implodeValues($separator)
@@ -177,6 +180,19 @@ class Map extends ArrayableObject implements JsonSerializable
         foreach($this->data as $key => $val)
         {
             $res[$callback($key)] = $val;
+        }
+        return new static($res);
+    }
+
+    /**
+     * @return static<V>
+     */
+    public function mapKeyByItem($callback)
+    {
+        $res = [];
+        foreach($this->data as $key => $val)
+        {
+            $res[$callback($val, $key)] = $val;
         }
         return new static($res);
     }
@@ -246,6 +262,14 @@ class Map extends ArrayableObject implements JsonSerializable
     {
         return $this->data ? $this->data[array_key_first($this->data)] : null;
     }
+
+    /**
+     * @return int|string|null
+     */
+    public function firstKey()
+    {
+        return $this->data ? array_key_first($this->data) : null;
+    }
     
     /**
      * @return V
@@ -253,6 +277,35 @@ class Map extends ArrayableObject implements JsonSerializable
     public function last()
     {
         return $this->data ? end($this->data) : null;
+    }
+
+    /**
+     * @return int|string|null
+     */
+    public function lastKey()
+    {
+        return $this->data ? array_key_last($this->data) : null;
+    }
+
+    /**
+     * بهم ریختن مقادیر مپ
+     * 
+     * کلید ها بهم نمیریزند! برای بهم ریختن کلید ها، از روش زیر استفاده کنید.
+     * `$shuffleValues = $map->values()->shuffle();`
+     *
+     * @return static<V>
+     */
+    public function shuffle()
+    {
+        $keys = $this->shuffleKeys();
+
+        $result = [];
+        foreach($keys as $key)
+        {
+            $result[$key] = $this->data[$key];
+        }
+
+        return new static($result);
     }
 
     public function __toString()

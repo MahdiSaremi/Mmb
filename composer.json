@@ -23,7 +23,8 @@
     "require": {
         "ext-curl": "*",
         "ext-json": "*",
-        "php": "^8.2"
+        "php": "^8.2",
+        "illuminate/events": "^10.16"
     },
     "minimum-stability": "stable",
     "prefer-stable": true

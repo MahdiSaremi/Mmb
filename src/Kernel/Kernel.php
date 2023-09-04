@@ -3,6 +3,7 @@
 namespace Mmb\Kernel; #auto
 
 use Mmb\Controller\Controller;
+use Mmb\Controller\Handler\GoToNextHandlerException;
 use Mmb\Controller\Handler\Handler;
 use Mmb\Controller\Handler\HandlerGroup;
 use Mmb\Controller\StepHandler\Handlable;
@@ -68,6 +69,7 @@ class Kernel
             return;
 
         // Handle
+        Handler::$requireStop = false;
         $handlers = $provider->getHandlers();
         $handlable = self::runHandlers($handlers);
 
@@ -113,30 +115,36 @@ class Kernel
         $last = null;
         foreach($handlers as $handler)
         {
-            
             if ($handler == null)
                 continue;
 
             if (is_string($handler))
                 $handler = new $handler;
 
-            if (!($handler instanceof Handler))
-                throw new TypeException("Handler must be Handler object, given " . typeOf($handler));
-
             if($handler instanceof HandlerGroup)
             {
                 $res = static::runHandlers($handler->getHandlers());
             }
+            elseif(!($handler instanceof Handler))
+            {
+                throw new TypeException("Handler must be Handler object, given " . typeOf($handler));
+            }
             else
             {
-                $res = $handler->runHandle();
+                try
+                {
+                    $res = $handler->runHandle();
+                }
+                catch(GoToNextHandlerException $e)
+                {
+                    continue;
+                }
             }
 
             if($res != null && $res instanceof Handlable)
             {
                 $last = $res;
             }
-
         }
         return $last;
     }

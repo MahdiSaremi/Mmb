@@ -4,11 +4,13 @@ namespace Mmb\Mapping;
 
 use ArrayAccess;
 use ArrayObject;
+use Closure;
 use Countable;
 use Iterator;
 use IteratorAggregate;
 use Mmb\Big\BigNumber;
 use Mmb\Exceptions\MmbException;
+use Mmb\Tools\ATool;
 use Mmb\Tools\Operator;
 
 /**
@@ -46,12 +48,22 @@ abstract class ArrayableObject implements Arrayable, Countable, ArrayAccess, Ite
     {
         return $this->data[$offset];
 	}
+
+    /**
+     * @return V|mixed
+     */
+    public function get($key, $default = null)
+    {
+        return array_key_exists($key, $this->data) ?
+                $this->data[$key] :
+                value($default);
+    }
 	
 	public function offsetSet($offset, $value)
     {
         $this->data[$offset] = $value;
 	}
-	
+
 	public function offsetUnset($offset)
     {
         unset($this->data[$offset]);
@@ -220,6 +232,40 @@ abstract class ArrayableObject implements Arrayable, Countable, ArrayAccess, Ite
             }
         }
         return new Map($data);
+    }
+
+    public function wide(...$names)
+    {
+        if(count($names) == 1 && is_array($names[0]))
+            $names = $names[0];
+
+        if(!$names)
+        {
+            $arr = new Arr();
+
+            foreach($this as $item)
+            {
+                $arr->append(...arr(ATool::toArray($item)));
+            }
+
+            return $arr;
+        }
+        elseif(count($names) == 1)
+        {
+            return $this->pluck($names[0]);
+        }
+        else
+        {
+            $plucked = $this->pluck(...$names);
+            $arr = new Arr();
+
+            foreach($plucked as $items)
+            {
+                $arr->append(...$items);
+            }
+
+            return $arr;
+        }
     }
 
     /**
@@ -709,9 +755,45 @@ abstract class ArrayableObject implements Arrayable, Countable, ArrayAccess, Ite
     #endregion
 
 
+    #region Convert
+
+    public function toList()
+    {
+        return new Arr($this);
+    }
+
+    public function toMap()
+    {
+        return new Map($this);
+    }
+
+    public function toMapBy(string|Closure $keyBy)
+    {
+        $map = new Map;
+        if(is_string($keyBy))
+        {
+            foreach($this as $item)
+            {
+                $key = static::getInnerOf($item, $keyBy);
+                $map->set($key, $item);
+            }
+        }
+        else
+        {
+            foreach($this as $key => $item)
+            {
+                $key = $keyBy($item, $key);
+                $map->set($key, $item);
+            }
+        }
+        return $map;
+    }
+
+    #endregion
+
+
     #region Php convert
 
-    
     /**
      * @return array<V>
      */
@@ -722,7 +804,7 @@ abstract class ArrayableObject implements Arrayable, Countable, ArrayAccess, Ite
 
     public function toBoolean()
     {
-        return !$this->isEmpty();
+        return $this->isNotEmpty();
     }
 
     public function isEmpty()
@@ -730,6 +812,15 @@ abstract class ArrayableObject implements Arrayable, Countable, ArrayAccess, Ite
         return !count($this->data);
     }
 
+    public function isNotEmpty()
+    {
+        return !$this->isEmpty();
+    }
+
+    public function bool()
+    {
+        return $this->toBoolean();
+    }
 
     #endregion
 
@@ -817,6 +908,152 @@ abstract class ArrayableObject implements Arrayable, Countable, ArrayAccess, Ite
     #region Where
 
     /**
+     * @param mixed $value
+     * @param string $findBy
+     * @return V
+     */
+    public function find($value, $findBy = 'id')
+    {
+        foreach($this->data as $item)
+        {
+            if(static::getInnerOf($item, $findBy) == $value)
+            {
+                return $item;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return static<V>
+     */
+    public function whereBy(callable $map, $operator, $value = null)
+    {
+        if(func_num_args() == 2)
+        {
+            $value = $operator;
+            $operator = '=';
+        }
+
+        switch(strtolower($operator))
+        {
+            case '=':
+                $filter = function($data) use($map, $value)
+                {
+                    return !is_null($data) && Operator::isEqualsTo($map($data), $value);
+                };
+                break;
+            case '<>':
+            case '!=':
+                $filter = function($data) use($map, $value)
+                {
+                    return !is_null($data) && Operator::isNotEqualsTo($map($data), $value);
+                };
+                break;
+            case 'is':
+                if($value === null)
+                {
+                    $filter = function($data) use($map)
+                    {
+                        return is_null($data) || is_null($map($data));
+                    };
+                }
+                else
+                {
+                    $filter = function($data) use($map, $value)
+                    {
+                        return !is_null($data) && $map($data) === $value;
+                    };
+                }
+                break;
+            case 'not is':
+                if($value === null)
+                {
+                    $filter = function($data) use($map)
+                    {
+                        return !is_null($data) && !is_null($map($data));
+                    };
+                }
+                else
+                {
+                    $filter = function($data) use($map, $value)
+                    {
+                        return !is_null($data) && $map($data) !== $value;
+                    };
+                }
+                break;
+            case '>':
+                $filter = function($data) use($map, $value)
+                {
+                    return !is_null($data) && Operator::isBiggerThan($map($data), $value);
+                };
+                break;
+            case '>=':
+                $filter = function($data) use($map, $value)
+                {
+                    return !is_null($data) && Operator::isEqualsOrBiggerThan($map($data), $value);
+                };
+                break;
+            case '<':
+                $filter = function($data) use($map, $value)
+                {
+                    return !is_null($data) && Operator::isSmallerThan($map($data), $value);
+                };
+                break;
+            case '<=':
+                $filter = function($data) use($map, $value)
+                {
+                    return !is_null($data) && Operator::isEqualsOrSmallerThan($map($data), $value);
+                };
+                break;
+            case 'in':
+                if($value instanceof Arrayable)
+                    $value = $value->toArray();
+
+                $filter = function($data) use($map, $value)
+                {
+                    return !is_null($data) && in_array($map($data), $value);
+                };
+                break;
+            case 'not in':
+            case 'notin':
+                if($value instanceof Arrayable)
+                    $value = $value->toArray();
+
+                $filter = function($data) use($map, $value)
+                {
+                    return !is_null($data) && !in_array($map($data), $value);
+                };
+                break;
+            case 'like':
+                $value = preg_quote($value);
+                $value = str_replace(['_', '%'], ['.', '.*'], $value);
+                $filter = function($data) use($map, $value)
+                {
+                    return !is_null($data) && preg_match('/^'.$value.'$/u', $map($data));
+                };
+                break;
+            case 'regexp':
+                $filter = function($data) use($map, $value)
+                {
+                    return !is_null($data) && preg_match('/'.$value.'/u', $map($data));
+                };
+                break;
+            case 'regex':
+                $filter = function($data) use($map, $value)
+                {
+                    return !is_null($data) && preg_match($value, $map($data));
+                };
+                break;
+            default:
+                throw new MmbException("Operator '{$operator}' is not supported");
+        }
+
+        return $this->filter($filter);
+    }
+
+    /**
      * @return static<V>
      */
     public function where($key, $operator, $value = null)
@@ -832,14 +1069,14 @@ abstract class ArrayableObject implements Arrayable, Countable, ArrayAccess, Ite
             case '=':
                 $filter = function($data) use($key, $value)
                 {
-                    return !is_null($data) && Operator::isEqualsTo($data[$key], $value);
+                    return !is_null($data) && Operator::isEqualsTo(static::getInnerOf($data, $key), $value);
                 };
                 break;
             case '<>':
             case '!=':
                 $filter = function($data) use($key, $value)
                 {
-                    return !is_null($data) && Operator::isNotEqualsTo($data[$key], $value);
+                    return !is_null($data) && Operator::isNotEqualsTo(static::getInnerOf($data, $key), $value);
                 };
                 break;
             case 'is':
@@ -847,14 +1084,14 @@ abstract class ArrayableObject implements Arrayable, Countable, ArrayAccess, Ite
                 {
                     $filter = function($data) use($key)
                     {
-                        return is_null($data) || !isset($data[$key]);
+                        return is_null($data) || is_null(static::getInnerOf($data, $key));
                     };
                 }
                 else
                 {
                     $filter = function($data) use($key, $value)
                     {
-                        return !is_null($data) && $data[$key] === $value;
+                        return !is_null($data) && static::getInnerOf($data, $key) === $value;
                     };
                 }
                 break;
@@ -863,39 +1100,39 @@ abstract class ArrayableObject implements Arrayable, Countable, ArrayAccess, Ite
                 {
                     $filter = function($data) use($key)
                     {
-                        return !is_null($data) && isset($data[$key]);
+                        return !is_null($data) && !is_null(static::getInnerOf($data, $key));
                     };
                 }
                 else
                 {
                     $filter = function($data) use($key, $value)
                     {
-                        return !is_null($data) && $data[$key] !== $value;
+                        return !is_null($data) && static::getInnerOf($data, $key) !== $value;
                     };
                 }
                 break;
             case '>':
                 $filter = function($data) use($key, $value)
                 {
-                    return !is_null($data) && Operator::isBiggerThan($data[$key], $value);
+                    return !is_null($data) && Operator::isBiggerThan(static::getInnerOf($data, $key), $value);
                 };
                 break;
             case '>=':
                 $filter = function($data) use($key, $value)
                 {
-                    return !is_null($data) && Operator::isEqualsOrBiggerThan($data[$key], $value);
+                    return !is_null($data) && Operator::isEqualsOrBiggerThan(static::getInnerOf($data, $key), $value);
                 };
                 break;
             case '<':
                 $filter = function($data) use($key, $value)
                 {
-                    return !is_null($data) && Operator::isSmallerThan($data[$key], $value);
+                    return !is_null($data) && Operator::isSmallerThan(static::getInnerOf($data, $key), $value);
                 };
                 break;
             case '<=':
                 $filter = function($data) use($key, $value)
                 {
-                    return !is_null($data) && Operator::isEqualsOrSmallerThan($data[$key], $value);
+                    return !is_null($data) && Operator::isEqualsOrSmallerThan(static::getInnerOf($data, $key), $value);
                 };
                 break;
             case 'in':
@@ -904,7 +1141,7 @@ abstract class ArrayableObject implements Arrayable, Countable, ArrayAccess, Ite
 
                 $filter = function($data) use($key, $value)
                 {
-                    return !is_null($data) && in_array($data[$key], $value);
+                    return !is_null($data) && in_array(static::getInnerOf($data, $key), $value);
                 };
                 break;
             case 'not in':
@@ -914,7 +1151,7 @@ abstract class ArrayableObject implements Arrayable, Countable, ArrayAccess, Ite
 
                 $filter = function($data) use($key, $value)
                 {
-                    return !is_null($data) && !in_array($data[$key], $value);
+                    return !is_null($data) && !in_array(static::getInnerOf($data, $key), $value);
                 };
                 break;
             case 'like':
@@ -922,19 +1159,19 @@ abstract class ArrayableObject implements Arrayable, Countable, ArrayAccess, Ite
                 $value = str_replace(['_', '%'], ['.', '.*'], $value);
                 $filter = function($data) use($key, $value)
                 {
-                    return !is_null($data) && preg_match('/^'.$value.'$/u', $data[$key]);
+                    return !is_null($data) && preg_match('/^'.$value.'$/u', static::getInnerOf($data, $key));
                 };
                 break;
             case 'regexp':
                 $filter = function($data) use($key, $value)
                 {
-                    return !is_null($data) && preg_match('/'.$value.'/u', $data[$key]);
+                    return !is_null($data) && preg_match('/'.$value.'/u', static::getInnerOf($data, $key));
                 };
                 break;
             case 'regex':
                 $filter = function($data) use($key, $value)
                 {
-                    return !is_null($data) && preg_match($value, $data[$key]);
+                    return !is_null($data) && preg_match($value, static::getInnerOf($data, $key));
                 };
                 break;
             default:
@@ -1014,6 +1251,190 @@ abstract class ArrayableObject implements Arrayable, Countable, ArrayAccess, Ite
     }
 
     /**
+     * @return V|false
+     */
+    public function whereFirstBy(callable $map, $operator, $value = null)
+    {
+        if(func_num_args() == 2)
+        {
+            $value = $operator;
+            $operator = '=';
+        }
+
+        switch(strtolower($operator))
+        {
+            case '=':
+                foreach($this->data as $data)
+                {
+                    if(!is_null($data) && Operator::isEqualsTo($map($data), $value))
+                    {
+                        return $data;
+                    }
+                }
+                break;
+            case '<>':
+            case '!=':
+                foreach($this->data as $data)
+                {
+                    if(!is_null($data) && Operator::isNotEqualsTo($map($data), $value))
+                    {
+                        return $data;
+                    }
+                }
+                break;
+            case 'is':
+                if($value === null)
+                {
+                    foreach($this->data as $data)
+                    {
+                        if(is_null($data) || is_null($map($data)))
+                        {
+                            return $data;
+                        }
+                    }
+                }
+                else
+                {
+                    foreach($this->data as $data)
+                    {
+                        if(!is_null($data) && $map($data) === $value)
+                        {
+                            return $data;
+                        }
+                    }
+                }
+                break;
+            case 'not is':
+                if($value === null)
+                {
+                    foreach($this->data as $data)
+                    {
+                        if(!is_null($data) && !is_null($map($data)))
+                        {
+                            return $data;
+                        }
+                    }
+                }
+                else
+                {
+                    foreach($this->data as $data)
+                    {
+                        if(!is_null($data) && $map($data) !== $value)
+                        {
+                            return $data;
+                        }
+                    }
+                }
+                break;
+            case '>':
+                foreach($this->data as $data)
+                {
+                    if(!is_null($data) && Operator::isBiggerThan($map($data), $value))
+                    {
+                        return $data;
+                    }
+                }
+                break;
+            case '>=':
+                foreach($this->data as $data)
+                {
+                    if(!is_null($data) && Operator::isEqualsOrBiggerThan($map($data), $value))
+                    {
+                        return $data;
+                    }
+                }
+                break;
+            case '<':
+                foreach($this->data as $data)
+                {
+                    if(!is_null($data) && Operator::isSmallerThan($map($data), $value))
+                    {
+                        return $data;
+                    }
+                }
+                break;
+            case '<=':
+                foreach($this->data as $data)
+                {
+                    if(!is_null($data) && Operator::isEqualsOrSmallerThan($map($data), $value))
+                    {
+                        return $data;
+                    }
+                }
+                break;
+            case 'in':
+                if($value instanceof Arrayable)
+                    $value = $value->toArray();
+
+                foreach($this->data as $data)
+                {
+                    if(!is_null($data) && in_array($map($data), $value))
+                    {
+                        return $data;
+                    }
+                }
+                break;
+            case 'not in':
+            case 'notin':
+                if($value instanceof Arrayable)
+                    $value = $value->toArray();
+
+                foreach($this->data as $data)
+                {
+                    if(!is_null($data) && !in_array($map($data), $value))
+                    {
+                        return $data;
+                    }
+                }
+                break;
+            case 'like':
+                $value = preg_quote($value);
+                $value = str_replace(['_', '%'], ['.', '.*'], $value);
+                foreach($this->data as $data)
+                {
+                    if(!is_null($data) && preg_match('/^'.$value.'$/u', $map($data)))
+                    {
+                        return $data;
+                    }
+                }
+                break;
+            case 'regexp':
+                foreach($this->data as $data)
+                {
+                    if(!is_null($data) && preg_match('/'.$value.'/u', $map($data)))
+                    {
+                        return $data;
+                    }
+                }
+                break;
+            case 'regex':
+                foreach($this->data as $data)
+                {
+                    if(!is_null($data) && preg_match($value, $map($data)))
+                    {
+                        return $data;
+                    }
+                }
+                break;
+            default:
+                throw new MmbException("Operator '{$operator}' is not supported");
+        }
+
+        return false;
+    }
+
+    /**
+     * @return V|false
+     */
+    public function whereFirst($key, $operator, $value = null)
+    {
+        $args = func_get_args();
+        $args[0] = fn($data) => static::getInnerOf($data, $key);
+        
+        return $this->whereFirstBy(...$args);
+    }
+
+    /**
      * @return static<V>
      */
     public function whereIn($key, $array)
@@ -1022,11 +1443,123 @@ abstract class ArrayableObject implements Arrayable, Countable, ArrayAccess, Ite
     }
 
     /**
+     * @return V|false
+     */
+    public function whereFirstIn($key, $array)
+    {
+        return $this->whereFirst($key, 'in', $array);
+    }
+
+    /**
      * @return static<V>
      */
     public function whereNotIn($key, $array)
     {
         return $this->where($key, 'not in', $array);
+    }
+
+    /**
+     * @return V|false
+     */
+    public function whereFirstNotIn($key, $array)
+    {
+        return $this->where($key, 'in', $array);
+    }
+
+    /**
+     * مقدار هایی که تعداد دلخواه شما را دارند برگردانده می شوند
+     *
+     * @param string $key
+     * @param string $operator
+     * @param integer $count
+     * @return static<V>
+     */
+    public function whereHas($key, $operator = '>=', $count = 1)
+    {
+        return $this->whereBy(function($data) use($key)
+        {
+            $value = $this->getInnerOf($data, $key);
+            return is_countable($value) ? count($value) : 0;
+        }, $operator, $count);
+    }
+
+    #endregion
+
+
+    #region Random
+
+    /**
+     * یک مقدار رندوم
+     *
+     * @return ?V
+     */
+    public function random()
+    {
+        return $this->data ? $this->data[array_rand($this->data)] : null;
+    }
+
+    /**
+     * چند مقدار رندوم
+     *
+     * @param int $num
+     * @return static<V>
+     */
+    public function randoms($num)
+    {
+        $rands = [];
+        foreach(array_rand($this->data, $num) as $key)
+        {
+            $rands[$key] = $this->data[$key];
+        }
+        return new static($rands);
+    }
+
+    /**
+     * کلید های بهم ریخته بر می گرداند
+     *
+     * @return Arr<V>
+     */
+    public function shuffleKeys()
+    {
+        $data = array_keys($this->data);
+        shuffle($data);
+
+        return new Arr($data);
+    }
+
+    #endregion
+
+
+    #region Only
+
+    /**
+     * @param mixed ...$keys
+     * @return static<V>
+     */
+    public function only(...$keys)
+    {
+        $data = [];
+        foreach($keys as $key)
+        {
+            $data[$key] = $this->data[$key];
+        }
+
+        return new static($data);
+    }
+
+    /**
+     * @param mixed ...$keys
+     * @return static<V>
+     */
+    public function forgot(...$keys)
+    {
+        $data = $this->data;
+        foreach($keys as $key)
+        {
+            unset($data[$key]);
+        }
+
+        return new static($data);
     }
 
     #endregion

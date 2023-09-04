@@ -19,7 +19,7 @@ trait HasStaticListeners
      */
     public static function listenStatic(string $name, Closure|array|string $callback)
     {
-        @static::$listeners_static[static::class][$name][] = $callback;
+        @self::$listeners_static[self::class][$name][] = $callback;
     }
 
     /**
@@ -41,84 +41,16 @@ trait HasStaticListeners
      *
      * `first-not-null` : اولین مقداری که نال نباشد را بر می گرداند
      * 
+     * `last-not-null` : آخرین مقداری که نال نباشد را بر می گرداند
+     * 
      * @param string $name
      * @param array $args
      * @return mixed
      */
     public static function invokeStaticListeners(string $name, array $args = [], string $returnType = 'null')
     {
-        $listeners = static::$listeners_static[static::class][$name] ?? [];
-
-        switch($returnType)
-        {
-            case 'null':
-                foreach($listeners as $listener)
-                {
-                    Listeners::callMethod($listener, $args);
-                }
-            break;
-
-            case 'last':
-                $last = null;
-                foreach($listeners as $listener)
-                {
-                    $last = Listeners::callMethod($listener, $args);
-                }
-                return $last;
-
-            case 'first-true':
-                foreach($listeners as $listener)
-                {
-                    if($value = Listeners::callMethod($listener, $args))
-                    {
-                        return $value;
-                    }
-                }
-            break;
-
-            case 'first-is-true':
-                foreach($listeners as $listener)
-                {
-                    if(Listeners::callMethod($listener, $args) === true)
-                    {
-                        return true;
-                    }
-                }
-            break;
-
-            case 'first-false':
-                foreach($listeners as $listener)
-                {
-                    if(!($value = Listeners::callMethod($listener, $args)))
-                    {
-                        return $value;
-                    }
-                }
-            break;
-
-            case 'first-is-false':
-                foreach($listeners as $listener)
-                {
-                    if(Listeners::callMethod($listener, $args) === false)
-                    {
-                        return false;
-                    }
-                }
-            break;
-
-            case 'first-not-null':
-                foreach($listeners as $listener)
-                {
-                    if(!is_null($value = Listeners::callMethod($listener, $args)))
-                    {
-                        return $value;
-                    }
-                }
-            break;
-
-            default:
-                throw new InvalidArgumentException("Unknown \$returnType value, given '{$returnType}'");
-        }
+        $listeners = self::$listeners_static[self::class][$name] ?? [];
+        return Listeners::invokeCustomListener($listeners, $args, $returnType);
     }
     
 }

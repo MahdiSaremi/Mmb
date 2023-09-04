@@ -2,6 +2,7 @@
 
 namespace Mmb\Controller\QueryControl; #auto
 
+use Mmb\Calling\Caller;
 use Mmb\Exceptions\MmbException;
 use Mmb\Exceptions\TypeException;
 use Mmb\Tools\ATool;
@@ -75,6 +76,25 @@ class QueryBooter
         if($this->else)
             return [ $this->else, [] ];
 
+        return false;
+    }
+
+    /**
+     * پیدا کردن و صدا زدن پترنی که با کوئری مچ شود
+     *
+     * @param string $query
+     * @param ?bool $foundMatch
+     * @return array|bool
+     */
+    public function invokeQuery($query, ?bool &$foundMatch = false)
+    {
+        if($call = $this->matchQuery($query))
+        {
+            $foundMatch = true;
+            return Caller::invoke($this->class, $call[0], $call[1] ?: []);
+        }
+
+        $foundMatch = false;
         return false;
     }
 

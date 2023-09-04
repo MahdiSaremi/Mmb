@@ -4,6 +4,7 @@ namespace Mmb\Controller\InlineMenu;
 
 use Closure;
 use Exception;
+use Mmb\Listeners\HasListeners;
 use Mmb\Tools\ATool;
 use Mmb\Update\Message\Msg;
 
@@ -13,6 +14,25 @@ class InlineMenu
     public function __construct()
     {
         
+    }
+
+    private $args = [];
+
+    public function addArgs(array $args)
+    {
+        $this->args = array_replace($this->args, $args);
+        return $this;
+    }
+
+    public function setArg(string $name, $value)
+    {
+        $this->args[$name] = $value;
+        return $this;
+    }
+
+    public function getArgs(array $append = [])
+    {
+        return $append + $this->args;
     }
 
     private $key;
@@ -43,6 +63,34 @@ class InlineMenu
         }
 
         return $this->key;
+    }
+
+    use HasListeners;
+
+    /**
+     * قبل از نمایش منو صدا زده می شود
+     * 
+     * می توانید برای تنظیم متن و دکمه ها استفاده کنید
+     *
+     * @param Closure $callback `fn(InlineMenu $menu)`
+     * @return $this
+     */
+    public function requesting(Closure $callback)
+    {
+        $this->listen('requesting', $callback);
+        return $this;
+    }
+
+    /**
+     * بعد از نمایش منو صدا زده می شود
+     *
+     * @param Closure $callback `fn(InlineMenu $menu, Msg $msg)`
+     * @return $this
+     */
+    public function requested(Closure $callback)
+    {
+        $this->listen('requested', $callback);
+        return $this;
     }
 
     private $message;
@@ -98,23 +146,41 @@ class InlineMenu
     /**
      * منو را ارسال می کند
      *
-     * @param array|string|null|null $message
+     * @param mixed $message
      * @return Msg|null
      */
-    public function send(array|string|null $message = null, string $method = 'response')
+    public function send(array|string|null $message = null, $method = 'response', ?Msg $on = null)
     {
-        if(!is_null($message))
+        $this->invokeListeners('requesting', [ $this ]);
+
+        if(is_null($message))
         {
             $message = $this->getRequest();
-            if(!is_null($message))
+            if(is_null($message))
             {
                 return;
             }
         }
 
-        return $method($message, [
+        if(!is_array($message))
+        {
+            $message = [ 'text' => $message ];
+        }
+
+        if($on)
+        {
+            $method = $on->$method(...);
+        }
+
+        $result = $method($this->getArgs($message + [
             'key' => $this->getKey(),
-        ]);
+        ]));
+
+        if($result instanceof Msg)
+        {
+            $this->invokeListeners('requested', [ $this, $result ]);
+        }
+        return $result;
     }
     
     /**
@@ -123,39 +189,60 @@ class InlineMenu
      * @param array|string|null|null $message
      * @return Msg|null
      */
-    public function edit(array|string|null $message = null)
+    public function edit(array|string|null $message = null, ?Msg $on = null)
     {
+        $this->invokeListeners('requesting', [ $this ]);
+
+        if(is_null($on))
+        {
+            $on = msg();
+        }
+
         if(!msg())
         {
             return;
         }
         
-        if(!is_null($message))
+        if(is_null($message))
         {
             $message = $this->getRequest();
+        }
+
+        if(!is_null($message) && !is_array($message))
+        {
+            $message = [ 'text' => $message ];
         }
 
         try
         {
             if(is_null($message))
             {
-                return msg()->editKey($this->getKey());
+                $result = $on->editKey($this->getKey());
             }
             else
             {
-                return msg()->editText($message, [
+                $result = $on->editText($this->getArgs($message + [
                     'key' => $this->getKey(),
-                ]);
+                ]));
             }
         }
         catch(Exception $e)
         {
             if(str_contains($e->getMessage(), 'same as a current content'))
             {
-                return msg();
+                $result = $on;
             }
-            throw $e;
+            else
+            {
+                throw $e;
+            }
         }
+
+        if($result instanceof Msg)
+        {
+            $this->invokeListeners('requested', [ $this, $result ]);
+        }
+        return $result;
     }
     
 }

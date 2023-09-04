@@ -3,10 +3,12 @@
 namespace Mmb\Storage;
 
 use Closure;
+use InvalidArgumentException;
 use Mmb\Exceptions\MmbException;
+use Mmb\Mapping\Arr;
 use Mmb\Mapping\Arrayable;
 
-class FrameStore implements Arrayable
+class FrameArrayStore implements Arrayable
 {
 
     /**
@@ -23,7 +25,7 @@ class FrameStore implements Arrayable
     /**
      * آدرس سلکتوری که در آن ذخیره می شود را بر می گرداند
      * 
-     * به عنوان مثال اگر `settings.bot` وارد شود، وارد آن آدرس می شود و از اطلاعات آنجا استفاده می کند
+     * به عنوان مثال اگر `settings.channels` وارد شود، وارد آن آدرس می شود و از اطلاعات آنجا استفاده می کند
      *
      * @return ?string
      */
@@ -39,9 +41,9 @@ class FrameStore implements Arrayable
      * 
      * این تابع تنها یک بار دیتا را لود می کند
      *
-     * @return static
+     * @return Arr<static>
      */
-    public static function data()
+    public static function all()
     {
         if(!isset(static::$datas[static::class]))
         {
@@ -54,18 +56,27 @@ class FrameStore implements Arrayable
     /**
      * دیتا را لود می کند و بر می گرداند
      *
-     * @return static
+     * @return Arr<static>
      */
     public static function load()
     {
-        return new static;
-    }
+        $all = [];
 
-    public function __construct()
-    {
         $storage = static::getStorage();
         $address = static::getAddress();
         $data = is_null($address) ? $storage::getBase() : $storage::get($address, []);
+
+        foreach($data as $index => $item)
+        {
+            if(is_array($item))
+                $all[] = new static($item);
+        }
+
+        return arr($all);
+    }
+
+    public function __construct(array $data)
+    {
         foreach(get_object_vars($this) as $name => $value)
         {
             if($name[0] == '_') continue;
@@ -94,7 +105,43 @@ class FrameStore implements Arrayable
     }
 
     /**
-     * دیتا را ذخیره می کند
+     * دیتا ها را ذخیره می کند
+     *
+     * @return void
+     */
+    public static function saveAll(array|Arr $all)
+    {
+        $storage = static::getStorage();
+        $address = static::getAddress();
+
+        if($all instanceof Arr)
+        {
+            static::$datas[static::class] = $all;
+        }
+
+        $result = [];
+        foreach($all as $item)
+        {
+            if($item instanceof FrameArrayStore)
+            {
+                $item = $item->toArray();
+            }
+
+            $result[] = $item;
+        }
+
+        if(is_null($address))
+        {
+            $storage::setBase($result);
+        }
+        else
+        {
+            $storage::set($address, $result);
+        }
+    }
+
+    /**
+     * دیتای این ایندکس را ذخیره می کند
      *
      * @return $this
      */
@@ -102,25 +149,21 @@ class FrameStore implements Arrayable
     {
         $storage = static::getStorage();
         $address = static::getAddress();
+
+        $vars = $this->toArray();
+
+        $index = static::all()->indexOf($this);
+        if($index == -1) $index = '+';
+
         if(is_null($address))
         {
-            $storage::editBase(function(&$data)
-            {
-                $data = array_replace($data, $this->toArray());
-            });
+            $address = $index;
         }
         else
         {
-            if(!Storage::exists($address))
-            {
-                Storage::set($address, []);
-            }
-
-            $storage::edit($address, function(&$data)
-            {
-                $data = array_replace($data, $this->toArray());
-            });
+            $address .= '.' . $index;
         }
+        $storage::set($address, $vars);
 
         return $this;
     }
@@ -144,7 +187,7 @@ class FrameStore implements Arrayable
         if(method_exists($this, "set$name"))
         {
             $callback = "set$name";
-            $this->$callback($value);
+            $this->$callback($value, $fromLoad);
             return $this;
         }
         
@@ -189,6 +232,59 @@ class FrameStore implements Arrayable
         }
         
         return $this->$name;
+    }
+
+    /**
+     * یک شی جدید می سازد
+     *
+     * @param array $data
+     * @return static
+     */
+    public static function new(array $data)
+    {
+        return new static($data);
+    }
+
+    /**
+     * به آزایه یک مقدار را اضافه می کند و ذخیره اش می کند
+     *
+     * @param array|FrameArrayStore $data
+     * @return void
+     */
+    public static function add(array|FrameArrayStore $data)
+    {
+        $newList = static::all()->append(is_array($data) ? static::new($data) : $data);
+        static::saveAll($newList);
+    }
+
+    /**
+     * این شی را از لیست حذف می کند و دیتای جدید را ذخیره می کند
+     *
+     * @return $this
+     */
+    public function delete()
+    {
+        $all = static::all();
+        $index = $all->indexOf($this);
+
+        if($index == -1)
+            return $this;
+
+        static::saveAll($all->remove($index));
+
+        return $this;
+    }
+
+    /**
+     * پیدا کردن شی مورد نظر
+     *
+     * @param mixed $id
+     * @param string $findBy
+     * @return static|false
+     */
+    public static function find($id, string $findBy = 'id')
+    {
+        return static::all()->where($findBy, $id)->first() ?? false;
     }
 
 }

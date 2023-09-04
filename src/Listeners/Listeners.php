@@ -3,6 +3,7 @@
 namespace Mmb\Listeners; #auto
 
 use Closure;
+use InvalidArgumentException;
 use Mmb\Calling\Caller;
 use Mmb\Exceptions\TypeException;
 use Mmb\Kernel\Instance;
@@ -121,5 +122,125 @@ class Listeners
     //     }
     //     return $continue;
     // }
+
+    public const R_NULL = 'null';
+    public const R_LAST = 'last';
+    public const R_FIRST_TRUE = 'first-true';
+    public const R_FIRST_IS_TRUE = 'first-is-true';
+    public const R_FIRST_FALSE = 'first-false';
+    public const R_FIRST_IS_FALSE = 'first-is-false';
+    public const R_FIRST_NOT_NULL = 'first-not-null';
+    public const R_LAST_NOT_NULL = 'last-not-null';
+
+    /**
+     * آرایه ای از شنونده ها را صدا می زند
+     *
+     * نوع های پشتیبانی شده:
+     * 
+     * `null` : هیچ مقداری را بر نمی گرداند
+     * 
+     * `last` : آخرین مقدار را بر می گرداند
+     * 
+     * `first-true` : اولین مقداری که ترو (یا مشابه) باشد را بر می گرداند
+     * 
+     * `first-is-true` : اولین مقداری که دقیقا ترو باشد را بر می گرداند
+     *
+     * `first-false` : اولین مقداری که فالس (یا مشابه) باشد را بر می گرداند
+     * 
+     * `first-is-false` : اولین مقداری که دقیقا فالس باشد را بر می گرداند
+     *
+     * `first-not-null` : اولین مقداری که نال نباشد را بر می گرداند
+     * 
+     * `last-not-null` : آخرین مقداری که نال نباشد را بر می گرداند
+     * 
+     * @param array $listeners
+     * @param array $args
+     * @param string $returnType
+     * @return mixed
+     */
+    public static function invokeCustomListener(array $listeners, array $args = [], string $returnType = 'null')
+    {
+        switch($returnType)
+        {
+            case 'null':
+                foreach($listeners as $listener)
+                {
+                    Listeners::callMethod($listener, $args);
+                }
+            break;
+
+            case 'last':
+                $last = null;
+                foreach($listeners as $listener)
+                {
+                    $last = Listeners::callMethod($listener, $args);
+                }
+                return $last;
+
+            case 'last-not-null':
+                $last = null;
+                foreach($listeners as $listener)
+                {
+                    if(($value = Listeners::callMethod($listener, $args)) !== null)
+                    {
+                        $last = $value;
+                    }
+                }
+                return $last;
+    
+            case 'first-true':
+                foreach($listeners as $listener)
+                {
+                    if($value = Listeners::callMethod($listener, $args))
+                    {
+                        return $value;
+                    }
+                }
+            break;
+
+            case 'first-is-true':
+                foreach($listeners as $listener)
+                {
+                    if(Listeners::callMethod($listener, $args) === true)
+                    {
+                        return true;
+                    }
+                }
+            break;
+
+            case 'first-false':
+                foreach($listeners as $listener)
+                {
+                    if(!($value = Listeners::callMethod($listener, $args)))
+                    {
+                        return $value;
+                    }
+                }
+            break;
+
+            case 'first-is-false':
+                foreach($listeners as $listener)
+                {
+                    if(Listeners::callMethod($listener, $args) === false)
+                    {
+                        return false;
+                    }
+                }
+            break;
+
+            case 'first-not-null':
+                foreach($listeners as $listener)
+                {
+                    if(!is_null($value = Listeners::callMethod($listener, $args)))
+                    {
+                        return $value;
+                    }
+                }
+            break;
+
+            default:
+                throw new InvalidArgumentException("Unknown \$returnType value, given '{$returnType}'");
+        }
+    }
 
 }

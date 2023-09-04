@@ -151,12 +151,19 @@ abstract class Form2 implements Handlable
      *
      * @return void
      */
-    public function startForm()
+    public function startForm(?string $input = null)
     {
         $this->requiredPermissions();
         try
         {
-            $this->requestFirst();
+            if(is_null($input))
+            {
+                $this->requestFirst();
+            }
+            else
+            {
+                $this->requestInput($input);
+            }
         }
         catch(FormForceFinish $e)
         {
@@ -1069,6 +1076,10 @@ abstract class Form2 implements Handlable
         {
             return $this->get($name);
         }
+        elseif(in_array($name, $this->getFormListNames()))
+        {
+            return null;
+        }
         else
         {
             return $this->__dyn_get($name);
@@ -1190,7 +1201,7 @@ abstract class Form2 implements Handlable
     {
         return [
             $options,
-            static::opsCancel("لغو"),
+            static::opsCancel(__('form2.key.cancel')),
         ];
     }
 
@@ -1213,11 +1224,11 @@ abstract class Form2 implements Handlable
      * @param array $datas
      * @return void
      */
-    public static function request(array $datas = [])
+    public static function request(array $datas = [], ?string $startInput = null)
     {
         $form = new static(new Form2Handler);
         $form->handler->addValues($datas);
-        $form->startForm();
+        $form->startForm($startInput);
     }
 
     #region Options shortcut

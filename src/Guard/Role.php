@@ -2,9 +2,14 @@
 
 namespace Mmb\Guard; #auto
 
+use Mmb\Db\Db;
+use Mmb\Db\Table\Table;
+use Mmb\Mapping\Arr;
+use Mmb\Mapping\Arrayable;
 use Mmb\Tools\ATool;
+use Stringable;
 
-class Role
+class Role implements Arrayable, Stringable
 {
 
     private static $roles = [];
@@ -140,49 +145,41 @@ class Role
     }
 
     /**
-     * گرفتن کاربری که این نقش ثابت را دارد
+     * گرفتن کاربری که این نقش را شامی می شوند
      * 
      * `Role::getConstantFor('developer')`
      * 
-     * `Role::getConstantFor('developer|manager|test') // Role=developer AdvRoles=manager,test`
+     * `Role::getConstantFor('debugger|admin')` // در واقع باید هر دو نقش را دارا باشد
+     * 
+     * `Role::getConstantFor('debugger|admin', true)` // به ترتیب بررسی می کند و اگر اولین نقش را کسی نداشت، سراغ دومین نقش می رود! این بدین معنیست که اگر دیباگر وجود داشته باشد، صد در صد دیباگر به شما بر می گردد
      * 
      * @param string $role
-     * @return int|bool
+     * @return int|string|bool
      */
-    public static function getConstantFor($role)
+    public static function getConstantFor(string $role, bool $orOperator = false)
     {
         $exp = explode('|', $role);
-        $expc = count($exp);
-        // Search for role
-        if($expc == 1)
+
+        if($orOperator)
         {
-            foreach(self::$constants as $id => $rl)
+            foreach($exp as $subRole)
             {
-                if($role == $rl)
-                    return $id;
-                elseif(($pos = strpos($rl, '|')) && substr($rl, 0, $pos) == $role)
-                    return $id;
+                foreach(self::$constants as $id => $crole)
+                {
+                    if(static::stringExtends($crole, [$subRole]))
+                    {
+                        return $id;
+                    }
+                }
             }
         }
-        // Search for role & 
         else
         {
-            foreach(self::$constants as $id => $rl)
+            foreach(self::$constants as $id => $crole)
             {
-                $exp2 = explode('|', $rl);
-                if($expc <= count($exp2) && $exp2[0] == $exp[0])
+                if(static::stringExtends($crole, $exp))
                 {
-                    $ok = true;
-                    for($i = 1; $i < $expc; $i++)
-                    {
-                        if(!array_search($exp[$i], $exp2))
-                        {
-                            $ok = false;
-                            break;
-                        }
-                    }
-                    if($ok)
-                        return $id;
+                    return $id;
                 }
             }
         }
@@ -191,57 +188,190 @@ class Role
     }
 
     /**
-     * گرفتن کاربرانی که این نقش ثابت را دارند
+     * گرفتن کاربرانی که این نقش را شامی می شوند
      * 
      * `Role::getConstantsFor('developer')`
      * 
-     * `Role::getConstantsFor('developer|manager|test') // Role=developer AdvRoles=manager,test`
+     * `Role::getConstantsFor('debugger|admin')` // در واقع باید هر دو نقش را دارا باشد
+     * 
+     * `Role::getConstantsFor('debugger|admin', true)` // کافیست یکی از این نقش ها را داشته باشد
      * 
      * @param string $role
-     * @return array
+     * @return array<int|string>
      */
-    public static function getConstantsFor($role)
+    public static function getConstantsFor(string $role, bool $orOperator = false)
     {
         $result = [];
         $exp = explode('|', $role);
-        $expc = count($exp);
-        // Search for role
-        if($expc == 1)
+        
+        if($orOperator)
         {
-            foreach(self::$constants as $id => $rl)
+            foreach($exp as $subRole)
             {
-                if($role == $rl)
-                    $result[] = $id;
-                elseif(($pos = strpos($rl, '|')) && substr($rl, 0, $pos) == $role)
-                    $result[] = $id;
+                foreach(self::$constants as $id => $crole)
+                {
+                    if(static::stringExtends($crole, [$subRole]))
+                    {
+                        return $id;
+                    }
+                }
             }
         }
-        // Search for role & 
         else
         {
-            foreach(self::$constants as $id => $rl)
+            foreach(self::$constants as $id => $crole)
             {
-                $exp2 = explode('|', $rl);
-                if($expc <= count($exp2) && $exp2[0] == $exp[0])
+                if(static::stringExtends($crole, $exp))
                 {
-                    $ok = true;
-                    for($i = 1; $i < $expc; $i++)
-                    {
-                        if(!array_search($exp[$i], $exp2))
-                        {
-                            $ok = false;
-                            break;
-                        }
-                    }
-                    if($ok)
-                        $result[] = $id;
+                    $result[] = $id;
                 }
+            }
+        }
+        
+
+        return $result;
+    }
+
+    /**
+     * گرفتن کاربری که این ویژگی را در نقش خود دارد
+     * 
+     * `Role::getConstantHas('access_panel')`
+     *
+     * @param string $attribute
+     * @return int|string|bool
+     */
+    public static function getConstantHas(string $attribute)
+    {
+        foreach(self::$constants as $id => $role)
+        {
+            if((new static($role))->get($attribute))
+            {
+                return $id;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * گرفتن کاربرانی که این ویژگی را در نقش خود دارد
+     * 
+     * `Role::getConstantsHas('access_panel')`
+     *
+     * @param string $attribute
+     * @return array<int|string>
+     */
+    public static function getConstantsHas(string $attribute)
+    {
+        $result = [];
+
+        foreach(self::$constants as $id => $role)
+        {
+            if((new static($role))->get($attribute))
+            {
+                $result[] = $id;
             }
         }
 
         return $result;
     }
 
+    /**
+     * بررسی می کند یک نقش شامل تمامی نقش های دومی می باشد
+     *
+     * @param string|array $base
+     * @param string|array $role
+     * @return bool
+     */
+    public static function stringExtends(string|array $base, string|array $role)
+    {
+        $baseRoles = is_string($base) ? explode('|', $base) : $base;
+        foreach(is_string($role) ? explode('|', $role) : $role as $subRole)
+        {
+            if(!in_array($subRole, $baseRoles))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * پیدا کردن کاربری که این نقش را دارد
+     * 
+     * با این کار هم در مقدار های ثابت دنبال می گردد و هم در دیتابیس
+     *
+     * @template R
+     * 
+     * @param class-string<R>|null $model
+     * @return int|string|Table|R|false
+     */
+    public static function find(string $role, string $model = null, bool $getAsModel = false, bool $orOperator = false)
+    {
+        $model ??= Db::getDefaultUserClass();
+
+        if(($resultId = static::getConstantFor($role, $orOperator)) !== false)
+        {
+            if($getAsModel)
+            {
+                return $model::findCache($resultId);
+            }
+            else
+            {
+                return $resultId;
+            }
+        }
+
+        if($orOperator)
+        {
+            return $model::query()->whereHasRole($role)->get();
+        }
+        else
+        {
+            return $model::query()->whereIsRole($role)->get();
+        }
+    }
+
+    /**
+     * پیدا کردن کاربرانی که این نقش را دارد
+     * 
+     * با این کار هم در مقدار های ثابت دنبال می گردد و هم در دیتابیس
+     *
+     * @template R
+     * 
+     * @param class-string<R>|null $model
+     * @return Arr<int|string|Table|R>
+     */
+    public static function findAll(string $role, string $model = null, bool $getAsModel = false, bool $orOperator = false)
+    {
+        $model ??= Db::getDefaultUserClass();
+
+        $result = [];
+
+        foreach(static::getConstantsFor($role, $orOperator) as $resultId)
+        {
+            if($getAsModel)
+            {
+                $result[] = $model::findCache($resultId);
+            }
+            else
+            {
+                $result[] = $resultId;
+            }
+        }
+
+        if($orOperator)
+        {
+            array_push($result, ...$model::query()->whereHasRole($role)->all());
+        }
+        else
+        {
+            array_push($result, ...$model::query()->whereIsRole($role)->all());
+        }
+
+        return arr($result);
+    }
 
 
     public $name;
@@ -289,9 +419,9 @@ class Role
      * گرفتن مقدار
      *
      * @param string $attribute
-     * @return bool
+     * @return mixed
      */
-    public function get($attribute)
+    public function get($attribute, $default = false)
     {
         if(($val = $this->setValues[$attribute] ?? null) !== null)
             return $val;
@@ -305,7 +435,7 @@ class Role
         if(($val = self::$roles[$this->name][$attribute] ?? null) !== null)
             return $val;
             
-        return false;
+        return value($default);
     }
 
     /**
@@ -314,7 +444,7 @@ class Role
      * @param string $name
      * @return boolean
      */
-    public function addRole($name)
+    public function addRole(string $name)
     {
         if($name != $this->name && !in_array($name, $this->advNames))
         {  
@@ -331,7 +461,7 @@ class Role
      * @param string $name
      * @return boolean
      */
-    public function removeRole($name)
+    public function removeRole(string $name)
     {
         if(in_array($name, $this->advNames) && $name != $this->name)
         {  
@@ -348,7 +478,7 @@ class Role
      * @param string $name
      * @return boolean
      */
-    public function hasRole($name)
+    public function hasRole(string $name)
     {
         return $name == $this->name || in_array($name, $this->advNames);
     }
@@ -359,9 +489,20 @@ class Role
      * @param string $name
      * @return boolean
      */
-    public function isRole($name)
+    public function isRole(string $name)
     {
         return $name == $this->name;
+    }
+
+    /**
+     * بررسی می کند تمامی نقش ها را دارد
+     *
+     * @param string|array|Role $role
+     * @return boolean
+     */
+    public function isExtends(string|array|Role $role)
+    {
+        return static::stringExtends($this->toArray(), $role->toArray());
     }
 
     /**
@@ -388,6 +529,16 @@ class Role
     public function __unset($name)
     {
         $this->unset($name);
+    }
+
+    public function toArray()
+    {
+        return [ $this->name, ...$this->advNames ];
+    }
+
+    public function __toString()
+    {
+        return $this->name . ($this->advNames ? '|' . implode('|', $this->advNames) : '');
     }
     
 }

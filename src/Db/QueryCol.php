@@ -2,20 +2,36 @@
 
 namespace Mmb\Db; #auto
 
+use Closure;
+use Generator;
 use Mmb\Big\BigNumber;
 use Mmb\Controller\StepHandler\StepHandler;
+use Mmb\Db\Relation\Morph;
 use Mmb\Guard\Role;
 use Mmb\Listeners\HasCustomMethod;
+use Mmb\Mapping\Arr;
+use Mmb\Mapping\Arrayable;
+use Mmb\Tools\ATool;
 use Mmb\Tools\Text;
 use Mmb\Update\User\UserInfo;
+use Traversable;
+use UnitEnum;
 
 class QueryCol
 {
 
     use HasCustomMethod;
 
-    private $cols = [];
-    private $col_names = null;
+    protected string $tableName;
+    public function __construct(string $table)
+    {
+        $this->tableName = $table;
+    }
+
+    private array $cols = [];
+    private ?array $col_names = null;
+
+    private array $indexs = [];
 
     /**
      * افزودن یک ستون جدید
@@ -107,7 +123,6 @@ class QueryCol
     {
         return $this->keys;
     }
-
 
 
     /**
@@ -372,9 +387,55 @@ class QueryCol
      * @param string $name
      * @return SingleCol
      */
-    public function longtext($name)
+    public function longtext(string $name)
     {
         return $this->createColumn($name, 'longtext');
+    }
+
+    /**
+     * ستون جدید با مقدار های ثابت
+     * 
+     * هر ردیف باید از بین این مقادیر، مقدار خود را تنظیم کند
+     * 
+     * اگر به عنوان ورودی دوم، نام کلاس ای-نامی را وارد کنید، مقدار آن به یک مقدار داینامیک ای-نام پی اچ پی تبدیل می شود.
+     * توجه کنید که اگر مقادیر ثابت را تغییر دهید، باید یکبار دیتابیس را نصب کنید.
+     * 
+     * `$table->enum('language', ['Persian', 'English']);`.
+     * `$table->enum('method', MethodEnum::class);`.
+     *
+     * @param string $name
+     * @param array|Arrayable|Traversable|string $values
+     * @return SingleCol
+     */
+    public function enum(string $name, array|Arrayable|Traversable|string $values)
+    {
+        if(is_string($values) && enum_exists($values))
+        {
+            $enum = $values;
+            $vals = [];
+            foreach($enum::cases() as $case)
+            {
+                $vals[] = $case->value;
+            }
+
+            return $this->createColumn($name, 'enum')
+                    ->inner($vals)
+                    ->modifyIn(function($data) use($enum)
+                    {
+                        return is_null($data) ? null : $enum::tryFrom($data);
+                    })
+                    ->modifyOut(function($data)
+                    {
+                        return is_null($data) ? null : (
+                            $data instanceof UnitEnum ? $data->value : "$data"
+                        );
+                    });
+        }
+        else
+        {
+            $values = ATool::toArray($values);
+            return $this->createColumn($name, 'enum')->inner($values);
+        }
     }
 
     /**
@@ -582,26 +643,130 @@ class QueryCol
     /**
      * افزودن ستونی که با آیدی کلاس مورد نظر رابطه داشته باشد
      * 
-     * نام این ستون، به این شکل است:
+     * نام پیشفرض این ستون، به این شکل است.
      * `Text::snake($class) . "_" . $primary`
      * 
      * نوع این ستون: `unsignedBigInt`
      * 
      * **Example:**
      * 
-     * `$this->relatedTo(User::class)->nullable()->foreign_key->onDeleteCascade();`
+     * `$table->relatedTo(User::class)->nullable()->foreign_key->onDeleteCascade();`
      *
      * @param string $class
+     * @param string $name
      * @return SingleCol
      */
-    public function relatedTo($class)
+    public function relatedTo(string $class, string $name = null)
     {
-        $class = Text::afterLast($class, "\\");
-        $name = Text::snake($class) . "_" . $class::getPrimaryKey();
+        $name ??= Text::snake(Text::afterLast($class, "\\")) . "_" . $class::getPrimaryKey();
 
         $col = $this->unsignedBigint($name);
         $col->foreign($class);
         return $col;
+    }
+
+    /**
+     * افزودنی ستونی که با آیدی کلاس مورد نظر رابطه داشته باشد
+     * 
+     * این تابع، ویژگی اجباری بودن رابطه را اضافه می کند، به این صورت که اگر مقدار رابطه حذف شود، این ردیف نیز حذف می شود
+     * 
+     * نام پیشفرض ستون به این شکل است.
+     * `Text::snake($class) . "_" . $primary`
+     *
+     * نوع این ستون: `unsignedBigInt`
+     * 
+     * **Examples:**
+     * 
+     * `$table->forceRelatedTo(Post::class);`.
+     * 
+     * @param string $class
+     * @param string|null $name
+     * @return SingleCol
+     */
+    public function forceRelatedTo(string $class, string $name = null)
+    {
+        $col = $this->relatedTo($class, $name);
+        $col->foreign_key->onDeleteCascade();
+        return $col;
+    }
+
+    /**
+     * افزودنی ستونی که با آیدی کلاس مورد نظر رابطه داشته باشد
+     * 
+     * این تابع، ویژگی قابل نال بودن رابطه را اضافه می کند، به این صورت که مقدار پیشفرض این ستون نال است و اگر مقدار رابطه حذف شود، مقدار این ستون نال می شود
+     * 
+     * نام پیشفرض ستون به این شکل است.
+     * `Text::snake($class) . "_" . $primary`
+     *
+     * نوع این ستون: `unsignedBigInt`
+     * 
+     * `$table->nullableRelatedTo(Cover::class);`
+     * 
+     * @param string $class
+     * @param string|null $name
+     * @return SingleCol
+     */
+    public function nullableRelatedTo(string $class, string $name = null)
+    {
+        $col = $this->relatedTo($class, $name);
+        $col->nullable()->foreign_key->onDeleteNull();
+        return $col;
+    }
+
+    /**
+     * ستون نوع برای رابطه مورف اضافه می کند
+     *
+     * @param string $name
+     * @param array|Arrayable|Traversable|string|null $classes
+     * @return SingleCol
+     */
+    protected function addMorphType(string $name, array|Arrayable|Traversable|string $classes = null)
+    {
+        if(is_null($classes))
+        {
+            return $this->string($name, 128);
+        }
+        else
+        {
+            if(!is_string($classes))
+                $classes = array_map(Morph::getGlobalTypeInsteadOf(...), ATool::toArray($classes));
+            
+            return $this->enum($name, $classes);
+        }
+    }
+
+    /**
+     * افزودن ستون های مربوط به رابطه مورف
+     *
+     * @param string $name
+     * @param array|Arrayable|Traversable|string|null $classes
+     * @param string|null $indexName
+     * @return void
+     */
+    public function morphs(string $name, array|Arrayable|Traversable|string $classes = null, string $indexName = null)
+    {
+        $this->addMorphType("{$name}_type", $classes);
+
+        $this->unsignedBigint("{$name}_id");
+
+        $this->index(["{$name}_type", "{$name}_id"], $indexName);
+    }
+
+    /**
+     * افزودن ستون های مربوط به رابطه مورف
+     *
+     * @param string $name
+     * @param array|Arrayable|Traversable|string|null $classes
+     * @param string|null $indexName
+     * @return void
+     */
+    public function nullableMorphs(string $name, array|Arrayable|Traversable|string $classes = null, string $indexName = null)
+    {
+        $this->addMorphType("{$name}_type", $classes)->nullable();
+
+        $this->unsignedBigint("{$name}_id")->nullable();
+
+        $this->index(["{$name}_type", "{$name}_id"], $indexName);
     }
 
     /**
@@ -628,5 +793,219 @@ class QueryCol
         $col->foreign($class);
         return $col;
     }
+
+    /**
+     * افزودن ایندکس
+     *
+     * @param string $type
+     * @param string|array $columns
+     * @param ?string $name
+     * @return void
+     */
+    public function addIndex(string $type, string|array $columns, ?string $name)
+    {
+        if(!is_array($columns))
+        {
+            $columns = [ $columns ];
+        }
+
+        $name ??= $this->createIndexName($type, $columns);
+
+        $this->indexs[] = new SingleIndex($type, $columns, $name);
+    }
+
+    /**
+     * افزودن یک ایندکس کلید اصلی
+     *
+     * @param string|array $columns
+     * @param ?string $name
+     * @return void
+     */
+    public function primary(string|array $columns, ?string $name = null)
+    {
+        $this->addIndex('PRIMARY', $columns, $name);
+    }
+
+    /**
+     * افزودن یک ایندکس کلید یکتا
+     *
+     * @param string|array $columns
+     * @param ?string $name
+     * @return void
+     */
+    public function unique(string|array $columns, ?string $name = null)
+    {
+        $this->addIndex('UNIQUE', $columns, $name);
+    }
+
+    /**
+     * افزودن یک ایندکس معمولی
+     *
+     * @param string|array $columns
+     * @param ?string $name
+     * @return void
+     */
+    public function index(string|array $columns, ?string $name = null)
+    {
+        $this->addIndex('', $columns, $name);
+    }
+
+    /**
+     * افزودن یک ایندکس کلید فول تکست
+     *
+     * @param string|array $columns
+     * @param ?string $name
+     * @return void
+     */
+    public function fullText(string|array $columns, ?string $name = null)
+    {
+        $this->addIndex('FULLTEXT', $columns, $name);
+    }
+
+    /**
+     * افزودن یک ایندکس spatial
+     *
+     * @param string|array $columns
+     * @param ?string $name
+     * @return void
+     */
+    public function spatialIndex(string|array $columns, ?string $name = null)
+    {
+        $this->addIndex('SPATIALINDEX', $columns, $name);
+    }
+
+    /**
+     * یک نام برای ایندکس ایجاد می کند
+     *
+     * @param string $type
+     * @param array $columns
+     * @return string
+     */
+    protected function createIndexName(string $type, array $columns)
+    {
+        $index = strtolower($this->tableName . '_' . implode('_', $columns) . '_' . strtolower($type));
+
+        return str_replace(['-', '.'], '_', $index);
+    }
+
+    /**
+     * ایندکس ها را بر می گرداند
+     *
+     * @return Arr<SingleIndex>
+     */
+    public function getIndexs()
+    {
+        return arr($this->indexs);
+    }
+
+    private array $onInstallEvents = [];
+
+    /**
+     * @param Closure $callback `function(QueryCol $old, QueryCol $new) { echo 'Before'; yield true; echo 'After'; }`
+     * @return void
+     */
+    public function onInstall(Closure $callback, bool $runAfterInstall = false)
+    {
+        if($runAfterInstall)
+        {
+            $callback = function() use($callback)
+            {
+                yield true;
+                return $callback();
+            };
+        }
+
+        $this->onInstallEvents[] = $callback;
+    }
+
+    public function fireInstallBefore(QueryCol $before)
+    {
+        $after = [];
+
+        foreach($this->onInstallEvents as $event)
+        {
+            $result = $event($before, $this);
+            if($result instanceof Generator)
+            {
+                $after[] = $result;
+            }
+        }
+
+        return $after;
+    }
+
+    public function fireInstallAfter(array $events)
+    {
+        foreach($events as $event)
+        {
+            if($event instanceof Generator)
+            {
+                $event->next();
+            }
+        }
+    }
+
+    // public int $versionValue = 0;
+
+    // /**
+    //  * تنظیم ورژن
+    //  *
+    //  * @param integer $version
+    //  * @return void
+    //  */
+    // public function version(int $version)
+    // {
+    //     $this->versionValue = $version;
+    // }
+
+    // public array $upgradeEvents = [];
+
+    // /**
+    //  * تنظیم می کند زمانی که این جدول در حال بروزرسانی به این ورژن می باشد این تابع اجرا شود
+    //  * 
+    //  * هر جا که کد زیر را بنویسید، در آن بخش عملیات ارتقای دیتابیس اجرا می شود:.
+    //  * `yield true;`
+    //  * 
+    //  * همیشه متد شما قبل از ارتقای دیتابیس صدا زده می شود مگر ورودی آخر این تابع را ترو کنید
+    //  *
+    //  * @param integer $version
+    //  * @param Closure $callback
+    //  * @param bool $runAfterUpgrade
+    //  * @return void
+    //  */
+    // public function upgrade(int $version, Closure $callback, bool $runAfterUpgrade = false)
+    // {
+    //     $this->upgradeEvents[] = [
+    //         'version' => $version,
+    //         'callback' => $callback,
+    //         'after' => $runAfterUpgrade,
+    //     ];
+    // }
+
+    // public function runUpgradeBefore(int $oldVersion)
+    // {
+    //     $events = arr($this->upgradeEvents)
+    //             ->where('version', '>', $oldVersion)
+    //             ->sortBy('version');
+
+    //     foreach($events as $i => $event)
+    //     {
+    //         if(!$event['after'])
+    //         {
+    //             $callback = $event['callback'];
+    //             $result = $callback();
+
+    //             if(!($result instanceof Generator))
+    //             {
+    //                 $events->
+    //             }
+    //         }
+    //     }
+    // }
+
+    // public function runUpgradeAfter(Arr $events)
+    // {
+        
+    // }
 
 }

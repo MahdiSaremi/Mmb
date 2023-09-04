@@ -2,12 +2,14 @@
 
 namespace Mmb\Db\Driver\MySql; #auto
 
+use Mmb\Db\QueryBuilder;
 use Mmb\Exceptions\TypeException;
+use UnitEnum;
 
 class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery
 {
 
-    protected $supports = [ 'select', 'delete', 'update', 'insert', 'insert_multi', 'createTable', 'getTable', 'editColumn', 'editColumn2', 'addColumn', 'removeColumn', 'removePrimaryKey', 'removeForeignKey', 'removeIndex', 'addForeignKey' ];
+    protected $supports = [ 'select', 'delete', 'update', 'insert', 'insert_multi', 'createTable', 'showColumns', 'showIndexs', 'editColumn', 'editColumn2', 'addColumn', 'removeColumn', 'removePrimaryKey', 'removeForeignKey', 'removeIndex', 'addIndex', 'addForeignKey' ];
 
     /**
      * Select
@@ -19,6 +21,10 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery
         $this->query = '';
 
         $this->query .= 'SELECT ';
+
+        // Unique select
+        if($this->distinct)
+            $this->query .= "DISTINCT ";
 
         // Select items
         $this->query .= join(", ", $this->select);
@@ -164,7 +170,7 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery
         // Columns
         $cols = "";
         $first = true;
-        foreach($this->insert[0] as $key => $value)
+        foreach(first($this->insert) as $key => $value)
         {
             if($first) $first = false;
             else {
@@ -236,6 +242,10 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery
         if($col->len)
             $this->query .= "({$col->len})";
 
+        // Inner
+        elseif($inner = $col->getInnerValues())
+            $this->query .= '(' . implode(', ', array_map($this->safeString(...), $inner)) . ')';
+
         // Unsigned
         if($col->unsigned)
             $this->query .= " UNSIGNED";
@@ -283,9 +293,19 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery
      *
      * @return void
      */
-    public function getTable()
+    public function showColumns()
     {
         $this->query = "SHOW COLUMNS FROM {$this->table}";
+    }
+
+    /**
+     * Get table columns
+     *
+     * @return void
+     */
+    public function showIndexs()
+    {
+        $this->query = "SHOW INDEXES FROM {$this->table}";
     }
 
     /**
@@ -332,6 +352,17 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery
     public function removeColumn()
     {
         $this->query = "ALTER TABLE {$this->table} DROP {$this->colName}";
+    }
+
+    /**
+     * Add index
+     *
+     * @return void
+     */
+    public function addIndex()
+    {
+        $this->query = "CREATE {$this->singleIndex->type} INDEX " . QueryBuilder::stringColumn($this->singleIndex->name);
+        $this->query .= " ON {$this->table} (" . implode(", ", QueryBuilder::stringColumnMap($this->singleIndex->columns)) . ")";
     }
 
     /**
@@ -397,7 +428,7 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery
     /**
      * ایمن کردن رشته
      *
-     * @param string $string
+     * @param mixed $string
      * @return string
      */
     public function safeString($string)
@@ -408,6 +439,11 @@ class Query extends \Mmb\Db\Driver\SqlBase\SqlQuery
 
         if(is_int($string) || is_float($string))
             $string = "$string";
+
+        if($string instanceof UnitEnum)
+        {
+            $string = $string->value;
+        }
 
         if(!is_string($string))
         {

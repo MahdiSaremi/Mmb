@@ -82,12 +82,41 @@ class Compiler
         static::compileClass($target, $file, $group);
 
         // Method attributes
+        $condition = true;
+        $conditionEnd = false;
         foreach($target->getMethods() as $method)
         {
             foreach($method->getAttributes() as $attribute)
             {
                 $attr = $attribute->newInstance();
-                if($attr instanceof Attributes\CompilerAttribute)
+                if($attr instanceof Attributes\AttrIf)
+                {
+                    $condition = $attr->getValue();
+                    $conditionEnd = false;
+                }
+                elseif(!$conditionEnd && $attr instanceof Attributes\AttrElse)
+                {
+                    $condition = !$condition;
+                    $conditionEnd = true;
+                }
+                elseif(!$conditionEnd && $attr instanceof Attributes\AttrElseIf)
+                {
+                    if($condition)
+                    {
+                        $condition = false;
+                        $conditionEnd = true;
+                    }
+                    else
+                    {
+                        $condition = $attr->getValue();
+                    }
+                }
+                elseif(!$condition)
+                {
+                    // Block
+                }
+                
+                elseif($attr instanceof Attributes\CompilerAttribute)
                 {
                     $attr->setReference($file, $target, $method, $group)->apply();
                     @$group[$attr->getGroup()][] = $attr;
@@ -107,11 +136,40 @@ class Compiler
     private static function compileClass(ReflectionClass $target, $file, array &$group, ?ReflectionClass $base = null)
     {
         $cancelParent = false;
+        $condition = true;
+        $conditionEnd = false;
         // Class attributes
         foreach($target->getAttributes() as $attribute)
         {
             $attr = $attribute->newInstance();
-            if($attr instanceof Attributes\CancelParent)
+            if($attr instanceof Attributes\AttrIf)
+            {
+                $condition = $attr->getValue();
+                $conditionEnd = false;
+            }
+            elseif(!$conditionEnd && $attr instanceof Attributes\AttrElse)
+            {
+                $condition = !$condition;
+                $conditionEnd = true;
+            }
+            elseif(!$conditionEnd && $attr instanceof Attributes\AttrElseIf)
+            {
+                if($condition)
+                {
+                    $condition = false;
+                    $conditionEnd = true;
+                }
+                else
+                {
+                    $condition = $attr->getValue();
+                }
+            }
+            elseif(!$condition)
+            {
+                // Block
+            }
+            
+            elseif($attr instanceof Attributes\CancelParent)
             {
                 $cancelParent = true;
             }

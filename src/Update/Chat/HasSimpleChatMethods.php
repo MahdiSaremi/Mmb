@@ -9,6 +9,16 @@ use Mmb\Update\Message\Msg;
  */
 trait HasSimpleChatMethods
 {
+
+    /**
+     * گرفتن آیدی چت
+     *
+     * @return string|int
+     */
+    public function getChatID()
+    {
+        return $this->id;
+    }
     
     /**
      * ارسال حالت چت
@@ -18,7 +28,7 @@ trait HasSimpleChatMethods
      */
     public function action($action)
     {
-        return mmb()->action($this->id, $action);
+        return mmb()->action($this->getChatID(), $action);
     }
 
     /**
@@ -28,10 +38,10 @@ trait HasSimpleChatMethods
      * @param array $args
      * @return Msg|false
      */
-    public function sendMsg($text, $args = [])
+    public function sendMsg($text, array $args = [])
     {
         $args = maybeArray([
-            'chat' => $this->id,
+            'chat' => $this->getChatID(),
             'text' => $text,
             'args' => $args
         ]);
@@ -45,9 +55,9 @@ trait HasSimpleChatMethods
      * @param array $args
      * @return Msg|false
      */
-    public function send($type, $args = [])
+    public function send($type, array $args = [])
     {
-        $args['chat'] = $this->id;
+        $args['chat'] = $this->getChatID();
         return mmb()->send($type, $args);
     }
 

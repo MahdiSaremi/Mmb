@@ -73,6 +73,29 @@ class SingleCol {
         return $this;
     }
 
+    /**
+     * مقدار درونی
+     *
+     * @var array|null
+     */
+    public $inner = null;
+
+    /**
+     * مقدار درونی
+     *
+     * @param array $inner
+     * @return $this
+     */
+    public function inner($inner)
+    {
+        $this->inner = $inner;
+        return $this;
+    }
+
+    public function getInnerValues()
+    {
+        return $this->inner;
+    }
 
     /**
      * می تواند نال باشد
@@ -120,7 +143,7 @@ class SingleCol {
     /**
      * تنظیم پیشفرض
      *
-     * @param string $default
+     * @param mixed $default
      * @return $this
      */
     public function default($default)
@@ -400,6 +423,49 @@ class SingleCol {
     {
         $this->always_save = true;
         return $this;
+    }
+
+    private array $fromNames = [];
+
+    /**
+     * تنظیم می کند نام های قبلی این ستون چه بوده است
+     * 
+     * در صورتی که در زمان نصب دیتابیس، این ستون برای تغییر یافت نشود، به نام های قبلی آن مراجعه می کند و نام آنها را تغییر می دهد
+     *
+     * @param string ...$names
+     * @return $this
+     */
+    public function fromName(...$names)
+    {
+        array_push($this->fromNames, ...$names);
+        return $this;
+    }
+
+    /**
+     * نام های قدیمی
+     *
+     * @return string[]
+     */
+    public function getOldNames()
+    {
+        return $this->fromNames;
+    }
+
+    public function searchNameIn(array $columnsMap)
+    {
+        if(array_key_exists($this->name, $columnsMap))
+        {
+            return $this->name;
+        }
+        foreach($this->getOldNames() as $name)
+        {
+            if(array_key_exists($name, $columnsMap))
+            {
+                return $name;
+            }
+        }
+
+        return false;
     }
 
 }

@@ -550,4 +550,50 @@ class ATool
         return (array) $value;
     }
 
+    /**
+     * مرج کردن چند مپ
+     * 
+     * اگر مقداری در این آرایه، آرایه باشد، مقدار درون آن مرج می شود
+     * 
+     * `$a = [ 'errors' => [ 'a' => 'A' ] ];`.
+     * `$b = [ 'errors' => [ 'b' => 'B' ] ];`.
+     * `$res = ATool::mergeInner($a, $b);`.
+     *
+     * @param array $array
+     * @param array $array2
+     * @param array ...$arrays
+     * @return array
+     */
+    public static function mergeInner(array $array, array $array2, array ...$arrays)
+    {
+        $arrays = [$array2, ...$arrays];
+
+        foreach($arrays as $array2)
+        {
+            static::mergeArrayItem($array, $array2);
+        }
+
+        return $array;
+    }
+
+    private static function mergeArrayItem(array &$array, array $array2)
+    {
+        foreach($array2 as $key => $item)
+        {
+            if(is_array($item))
+            {
+                if(!is_array($array[$key] ?? null))
+                {
+                    $array[$key] = [];
+                }
+
+                static::mergeArrayItem($array[$key], $item);
+            }
+            else
+            {
+                $array[$key] = $item;
+            }
+        }
+    }
+
 }

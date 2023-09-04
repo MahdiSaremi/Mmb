@@ -3,7 +3,8 @@
 // Copyright (C): t.me/MMBlib
 
 use Mmb\Assets\Assets;
-use Mmb\Controller\Menu;
+use Mmb\Calling\Caller;
+use Mmb\Controller\Handler\GoToNextHandlerException;
 use Mmb\Controller\MenuBase;
 use Mmb\Controller\Response;
 use Mmb\Controller\StepHandler\StepHandler;
@@ -1648,7 +1649,9 @@ if(!function_exists('userid'))
 if(!function_exists('lang'))
 {
     /**
-     * گرفتن متن با زبان پیشفرض
+     * گرفتن متن با زبان تنظیم شده یا پیشفرض
+     * 
+     * @throws LangValueNotFound
      * 
      * @param string $name
      * @param array|mixed $args
@@ -1664,7 +1667,7 @@ if(!function_exists('lang'))
 if(!function_exists('tryLang'))
 {
     /**
-     * گرفتن متن با زبان پیشفرض - اگر مقدار وجود نداشت نال برمیگرداند
+     * گرفتن متن با زبان تنظیم شده یا پیشفرض - اگر مقدار وجود نداشت نال برمیگرداند
      * 
      * @param string $name
      * @param array|mixed $args
@@ -1673,21 +1676,16 @@ if(!function_exists('tryLang'))
      */
     function tryLang($name, $args = [], ...$_args)
     {
-        try
-        {
-            return Lang::text($name, $args, ...$_args);
-        }
-        catch(LangValueNotFound $e)
-        {
-            return null;
-        }
+        return Lang::tryText($name, $args, ...$_args);
     }
 }
 
 if(!function_exists('langFrom'))
 {
     /**
-     * گرفتن متن با زبان پیشفرض
+     * گرفتن متن با زبان مورد نظر یا پیشفرض
+     * 
+     * @throws LangValueNotFound
      * 
      * @param string $name
      * @param string $lang
@@ -1704,7 +1702,7 @@ if(!function_exists('langFrom'))
 if(!function_exists('tryLangFrom'))
 {
     /**
-     * گرفتن متن با زبان پیشفرض - اگر مقدار وجود نداشت نال برمیگرداند
+     * گرفتن متن با زبان مورد نظر یا پیشفرض - اگر مقدار وجود نداشت نال برمیگرداند
      * 
      * @param string $name
      * @param string $lang
@@ -1714,14 +1712,202 @@ if(!function_exists('tryLangFrom'))
      */
     function tryLangFrom($name, $lang, $args = [], ...$_args)
     {
-        try
+        return Lang::tryTextFrom($name, $lang, $args, ...$_args);
+    }
+}
+
+if(!function_exists('getLang'))
+{
+    /**
+     * گرفتن متن با زبان تنظیم شده
+     * 
+     * @throws LangValueNotFound
+     * 
+     * @param string $name
+     * @param array|mixed $args
+     * @param mixed ...$_args
+     * @return string
+     */
+    function getLang($name, $args = [], ...$_args)
+    {
+        return Lang::get($name, $args, ...$_args);
+    }
+}
+
+if(!function_exists('tryGetLang'))
+{
+    /**
+     * گرفتن متن با زبان تنظیم شده - اگر مقدار وجود نداشت نال برمیگرداند
+     * 
+     * @param string $name
+     * @param array|mixed $args
+     * @param mixed ...$_args
+     * @return string|null
+     */
+    function tryGetLang($name, $args = [], ...$_args)
+    {
+        return Lang::tryGet($name, $args, ...$_args);
+    }
+}
+
+if(!function_exists('getLangFrom'))
+{
+    /**
+     * گرفتن متن با زبان مورد نظر
+     * 
+     * @throws LangValueNotFound
+     * 
+     * @param string $name
+     * @param string $lang
+     * @param array|mixed $args
+     * @param mixed ...$_args
+     * @return string
+     */
+    function getLangFrom($name, $lang, $args = [], ...$_args)
+    {
+        return Lang::getFrom($name, $lang, $args, ...$_args);
+    }
+}
+
+if(!function_exists('tryGetLangFrom'))
+{
+    /**
+     * گرفتن متن با زبان مورد نظر - اگر مقدار وجود نداشت نال برمیگرداند
+     * 
+     * @param string $name
+     * @param string $lang
+     * @param array|mixed $args
+     * @param mixed ...$_args
+     * @return string|null
+     */
+    function tryGetLangFrom($name, $lang, $args = [], ...$_args)
+    {
+        return Lang::tryGetFrom($name, $lang, $args, ...$_args);
+    }
+}
+
+if(!function_exists('__'))
+{
+    /**
+     * متن از زبان فعلی
+     * 
+     * @param string|array|null $text
+     * @param array|mixed $args
+     * @param mixed ...$_args
+     * @return string|null
+     */
+    function __($text = null, $args = [], ...$_args)
+    {
+        if(is_null($text))
         {
-            return Lang::textFromLang($name, $lang, $args, ...$_args);
+            $_args['args'] = $args;
+            return ___(...$_args);
         }
-        catch(LangValueNotFound $e)
+
+        if(is_array($text))
         {
-            return null;
+            if(!isset($text['args']))
+                $text['args'] = Lang::convertArgs($args, ...$_args);
+            
+            return ___(...$text);
         }
+
+        return Lang::tryText($text, $args, ...$_args) ?? $text;
+    }
+}
+
+if(!function_exists('___'))
+{
+    /**
+     * گرفتن متن بر اساس زبان تنظیم شده
+     * 
+     * `$text = ___(fa: "تعداد: %x%", en: "Count: %x%", args: [ 'x' => count($x) ]);`
+     * 
+     * @param mixed ...$texts
+     * @return string|null
+     */
+    function ___(...$texts)
+    {
+        $args = $texts['args'] ?? [];
+        if(!is_array($args))
+        {
+            $args = [$args];
+        }
+
+        return Lang::convertFromText(byLang($texts), Lang::getLang(), $args);
+    }
+}
+
+if(!function_exists('byLang'))
+{
+    /**
+     * گرفتن آبجکت بر اساس زبان تنظیم شده
+     * 
+     * `$class = byLang(fa: Farsi::class, en: English::class, default: Other::class);`
+     * 
+     * @param mixed ...$objects
+     * @return mixed
+     */
+    function byLang(...$objects)
+    {
+        if(count($objects) == 1 && is_array($objects[0]))
+        {
+            $objects = $objects[0];
+        }
+
+        if(array_key_exists(Lang::getLang(), $objects))
+        {
+            return $objects[Lang::getLang()];
+        }
+
+        if(array_key_exists('default', $objects))
+        {
+            return $objects['default'];
+        }
+
+        return @$objects[Lang::getDefault()];
+    }
+}
+
+if(!function_exists('getCurrentLang'))
+{
+    /**
+     * گرفتن اسم زبان تنظیم شده
+     * 
+     * @return string
+     */
+    function getCurrentLang()
+    {
+        return Lang::getLang();
+    }
+}
+
+if(!function_exists('setCurrentLang'))
+{
+    /**
+     * تنظیم زبان فعلی
+     * 
+     * @param string $lang
+     * @return void
+     */
+    function setCurrentLang($lang)
+    {
+        Lang::setLang($lang);
+    }
+}
+
+if(!function_exists('changeLang'))
+{
+    /**
+     * تغییر زبان برای کالبک مورد نظر
+     *
+     * @param string $lang
+     * @param Closure $callback `fn()`
+     * @return void
+     */
+    function changeLang($lang, Closure $callback)
+    {
+        Lang::changeLang($lang, $callback);
     }
 }
 
@@ -1853,21 +2039,153 @@ if(!function_exists('map'))
     }
 }
 
+if(!function_exists('first'))
+{
+    /**
+     * اولین المان را بر می گرداند
+     *
+     * @template T
+     * @param array<T>|string|Arrayable<T> $data
+     * @return T|string
+     */
+    function first($data)
+    {
+        if(is_array($data))
+        {
+            return reset($data);
+        }
+        elseif(is_string($data))
+        {
+            return $data[0];
+        }
+        elseif($data instanceof Arr)
+        {
+            return $data->first();
+        }
+        elseif($data instanceof Map)
+        {
+            return $data->first();
+        }
+        elseif($data instanceof Arrayable)
+        {
+            $array = $data->toArray();
+            return reset($array);
+        }
+        else
+        {
+            return null;
+        }
+    }
+}
 
+if(!function_exists('last'))
+{
+    /**
+     * آخرین المان را بر می گرداند
+     *
+     * @template T
+     * @param array<T>|string|Arrayable<T> $data
+     * @return T|string
+     */
+    function last($data)
+    {
+        if(is_array($data))
+        {
+            return end($data);
+        }
+        elseif(is_string($data))
+        {
+            return substr($data, -1);
+        }
+        elseif($data instanceof Arr)
+        {
+            return $data->last();
+        }
+        elseif($data instanceof Map)
+        {
+            return $data->last();
+        }
+        elseif($data instanceof Arrayable)
+        {
+            $array = $data->toArray();
+            return end($array);
+        }
+        else
+        {
+            return null;
+        }
+    }
+}
 
-/**
- * این متغیر یک تابع است که مقدار ورودی خود را بر می گرداند
- * 
- * از این متغیر در بین رشته ها استفاده کنید
- * * `"Hello {$f('World')}"`
- * * `"List: {$f(join($array))}"`
- * 
- * @var Closure
- */
-global $f;
-$f = function(...$values) {
-    return join(' ', $values);
-};
+if(!function_exists('value'))
+{
+    /**
+     * مقدار اصلی
+     * 
+     * اگر نوع تابع باشد، آن را صدا می زند
+     *
+     * @param Closure|mixed $mixed
+     * @param mixed ...$args
+     * @return mixed
+     */
+    function value($mixed, ...$args)
+    {
+        if($mixed instanceof Closure)
+        {
+            return Caller::call($mixed, $args);
+        }
+
+        return $mixed;
+    }
+}
+
+if(!function_exists('nextHandler'))
+{
+    /**
+     * رفتن به هندلر بعدی
+     *
+     * @throws GoToNextHandlerException
+     */
+    function nextHandler()
+    {
+        throw new GoToNextHandlerException;
+    }
+}
+
+if(!function_exists('b'))
+{
+    /**
+     * تبدیل شی به بولین
+     * 
+     * این تابع، متن "0" را ترو محسوب می کند
+     *
+     * @param mixed $value
+     * @return bool
+     */
+    function b($value)
+    {
+        if(is_object($value))
+        {
+            if(method_exists($value, 'toBoolean'))
+            {
+                return $value->toBoolean();
+            }
+            else
+            {
+                return $value ? true : false;
+            }
+        }
+        elseif(is_string($value))
+        {
+            return $value !== '';
+        }
+        else
+        {
+            return $value ? true : false;
+        }
+    }
+}
+
 
 set_exception_handler(function ($exception)
 {

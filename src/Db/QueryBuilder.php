@@ -5,13 +5,18 @@ namespace Mmb\Db; #auto
 use BadMethodCallException;
 use Closure;
 use Exception;
+use InvalidArgumentException;
 use Mmb\Exceptions\MmbException;
+use Mmb\Exceptions\TypeException;
 use Mmb\ExtraThrow\ExtraErrorMessage;
 use Mmb\Listeners\HasCustomMethod;
+use Mmb\Listeners\HasNormalStaticListeners;
 use Mmb\Mapping\Arr;
 use Mmb\Mapping\Arrayable;
 use Mmb\Mapping\Map;
+use Mmb\Tools\ATool;
 use Mmb\Tools\Text;
+use Traversable;
 
 /**
  * @template R
@@ -31,7 +36,7 @@ class QueryBuilder
      *
      * @var string
      */
-    private $table;
+    protected $table;
     /**
      * تنظیم جدول موردنظر
      *
@@ -45,6 +50,20 @@ class QueryBuilder
         return $this;
     }
 
+    /**
+     * انتخاب از یک کوئری دیگر
+     *
+     * @param QueryBuilder $from
+     * @param string $as
+     * @return $this
+     */
+    public function from(QueryBuilder $from, string $as)
+    {
+        $this->table = '(' . $from->createQuery() . ') as ' . static::stringColumn($as);
+
+        return $this;
+    }
+
     use QueryHasWhere;
     use QueryHasHaving;
 
@@ -53,7 +72,7 @@ class QueryBuilder
      *
      * @var array
      */
-    private $order = [];
+    protected $order = [];
     /**
      * مرتب سازی بر اساس
      *
@@ -102,18 +121,18 @@ class QueryBuilder
      *
      * @var int|false
      */
-    private $limit = false;
+    protected $limit = false;
     /**
      * محل شروع
      *
      * @var int|false
      */
-    private $offset = false;
+    protected $offset = false;
 
     /**
      * محدود کردن تعداد انتخاب
      *
-     * @param int $limit
+     * @param ?int $limit
      * @param int $offset
      * @return $this
      */
@@ -130,7 +149,7 @@ class QueryBuilder
     /**
      * محل شروع انتخاب
      *
-     * @param int $offset
+     * @param ?int $offset
      * @return $this
      */
     public function offset($offset)
@@ -166,7 +185,7 @@ class QueryBuilder
      *
      * @var string
      */
-    private $output = Table\Unknown::class;
+    protected $output = Table\Unknown::class;
     /**
      * تنظیم کلاس خروجی
      *
@@ -181,17 +200,76 @@ class QueryBuilder
     }
 
 
-    private $db_driver;
+    protected $db_driver;
     /**
      * تنظیم دیتابیس مربوطه
      *
      * @param Driver $driver
      * @return $this
      */
-    public function db(Driver $driver)
+    public function db(?Driver $driver)
     {
         $this->db_driver = $driver;
         return $this;
+    }
+
+    use HasNormalStaticListeners;
+
+    /**
+     * افزودن شنونده قبل از اجرای یک کوئری
+     * 
+     * اگر چیزی را ریترن کنید، آن مقدار جایگزین می شود
+     *
+     * @param Closure $callback `function(QueryCompiler $query)`
+     * @return void
+     */
+    public static function queryExecuting(Closure $callback)
+    {
+        static::listen('queryExecuting', $callback);
+    }
+    /**
+     * افزودن شنونده بعد از اجرای یک کوئری
+     * 
+     * اگر چیزی را ریترن کنید، آن مقدار جایگزین می شود
+     *
+     * @param Closure $callback `function(QueryResult $result)`
+     * @return void
+     */
+    public static function queryExecuted(Closure $callback)
+    {
+        static::listen('queryExecuted', $callback);
+    }
+
+    public function fireQueryExecuting(QueryCompiler $query)
+    {
+        $result = static::invokeListeners('queryExecuting', [ $query ], 'last-not-null') ?? $query;
+        if(!($result instanceof QueryCompiler))
+        {
+            throw new TypeException("Query listener, must return QueryCompiler, returned " . typeOf($result));
+        }
+
+        return $result;
+    }
+
+    public function fireQueryExecuted(QueryResult $query)
+    {
+        $result = static::invokeListeners('queryExecuted', [ $query ], 'last-not-null') ?? $query;
+        if(!($result instanceof QueryResult))
+        {
+            throw new TypeException("Query listener, must return QueryResult, returned " . typeOf($result));
+        }
+
+        return $result;
+    }
+
+    /**
+     * گرفتن تمامی متغیر ها برای ارسال به کامپایلر
+     *
+     * @return array
+     */
+    protected function getObjectVars()
+    {
+        return get_object_vars($this);
     }
 
     /**
@@ -200,14 +278,14 @@ class QueryBuilder
      * @param string $type
      * @return QueryResult|string
      */
-    private function run($type, $local = [], $exportStringQuery = false)
+    protected function run($type, $local = [], $exportStringQuery = false)
     {
         $driver = $this->db_driver ?: Driver::defaultStatic();
 
         $compilerClass = $driver->queryCompiler;
-        $compiler = new $compilerClass($type);
+        $compiler = new $compilerClass;
 
-        foreach (get_object_vars($this) as $name => $value)
+        foreach ($this->getObjectVars() as $name => $value)
             $compiler->$name = $value;
         foreach ($local as $name => $value)
             $compiler->$name = $value;
@@ -219,10 +297,14 @@ class QueryBuilder
             return $compiler->query;
         }
 
-        return $driver->runQuery($compiler);
+        $compiler = $this->fireQueryExecuting($compiler);
+        $result = $driver->runQuery($compiler);
+        $result = $this->fireQueryExecuted($result);
+
+        return $result;
     }
 
-    private $joins = [];
+    protected $joins = [];
 
     protected function _join($type, $isSub, $class, $condition = null, $operator = null, $colValue = null)
     {
@@ -476,20 +558,33 @@ class QueryBuilder
         unset($args[0], $args[1]);
         return $this->_join('CROSS', true, [ $query, $as ], ...$args);
     }
+
+    protected bool $distinct = false;
+
+    /**
+     * انتخاب ها را یکتا می کند
+     *
+     * @return $this
+     */
+    public function distinct()
+    {
+        $this->distinct = true;
+        return $this;
+    }
     
     /**
      * دیتا های مورد نظر برای انتخاب
      *
      * @var string[]
      */
-    private $selects = [];
+    protected $selects = [];
     
     /**
      * ستون های مورد نظر برای انتخاب
      *
      * @var string[]
      */
-    private $select = [];
+    protected $select = [];
 
     /**
      * افزودن مقدار انتخابی
@@ -574,6 +669,88 @@ class QueryBuilder
     }
 
     /**
+     * افزودن مقدار انتخابی
+     *
+     * @param string $raw
+     * @param string $as
+     * @return $this
+     */
+    public function selectBefore($raw, $as = null)
+    {
+        if($as !== null)
+            $raw .= " as " . $this->stringColumn($as);
+        ATool::insert($this->selects, 0, $raw);
+
+        return $this;
+    }
+
+    /**
+     * افزودن ستون انتخابی
+     *
+     * @param string $col
+     * @param string $as
+     * @return $this
+     */
+    public function selectColBefore($col, $as = null)
+    {
+        $raw = $this->stringColumn($col);
+        if($as !== null)
+            $raw .= " as " . $this->stringColumn($as);
+        ATool::insert($this->selects, 0, $raw);
+
+        return $this;
+    }
+
+    /**
+     * افزودن چندتایی ستون ها
+     * 
+     * می توانید از آرایه کلید و مقدار دار نیز برای تعریف نام خروجی ستون نیز استفاده کنید
+     * 
+     * `User::selectCols('id', 'score')->all();`
+     * 
+     * `User::selectCols([ 'id', 'name' => 'first_name_in_db', 'score' ])->all();`
+     *
+     * @param string|array $cols
+     * @return $this
+     */
+    public function selectColsBefore($cols)
+    {
+        if(!is_array($cols))
+        {
+            $cols = func_get_args();
+        }
+        
+        foreach($cols as $as => $col)
+        {
+            if(is_string($as))
+                $this->selectColBefore($col, $as);
+            else
+                $this->selectColBefore($col);
+        }
+        
+        return $this;
+    }
+
+    /**
+     * افزودن ستون انتخابی
+     *
+     * @param string|QueryBuilder $query
+     * @param string $as
+     * @return $this
+     */
+    public function selectSubBefore($query, $as)
+    {
+        if($query instanceof QueryBuilder)
+        {
+            $query = $query->createQuery(true);
+        }
+
+        ATool::insert($this->selects, 0, "($query) as " . $this->stringColumn($as, false));
+        
+        return $this;
+    }
+
+    /**
      * حذف مقدار های ثبت شده انتخابی
      *
      * @return $this
@@ -584,6 +761,292 @@ class QueryBuilder
         return $this;
     }
 
+    protected array $with = [];
+    /**
+     * افزودن رابطه برای بارگیری
+     * 
+     * با افزودن رابطه، تمامی داده ها همزمان و با یک کوئری لود می شوند که باعث بهینگی عملکرد کد ها می شود
+     *
+     * @param string ...$relation
+     * @return $this
+     */
+    public function with(string ...$relation)
+    {
+        array_push($this->with, ...$relation);
+        return $this;
+    }
+
+    /**
+     * حذف بارگیری خودکار رابطه
+     *
+     * @param string ...$relation
+     * @return $this
+     */
+    public function without(string ...$relation)
+    {
+        foreach($relation as $rel)
+        {
+            ATool::remove2($this->with, $rel);
+        }
+        return $this;
+    }
+
+    /**
+     * تنظیم رابطه برای بارگیری
+     * 
+     * با افزودن رابطه، تمامی داده ها همزمان و با یک کوئری لود می شوند که باعث بهینگی عملکرد کد ها می شود
+     *
+     * @param string ...$relation
+     * @return $this
+     */
+    public function withOnly(string ...$relation)
+    {
+        $this->with = $relation;
+        return $this;
+    }
+
+    /**
+     * افزودن رابطه ها به کوئری
+     * 
+     * این کار باعث می شود شما بتوانید از شرط ها برای جدول های رابطه استفاده کنید
+     * 
+     * توجه: این کوئری، گروه بندی را اضافه می کند، بنابر این شرط هایتان را بر اساس آن اضافه کنید
+     * 
+     * `Post::withQuery('comments')->having(Comment::column('user_id'), $user_id)->select(Post::column('*'))->all();`
+     * 
+     * @param string ...$relation
+     * @return $this
+     */
+    public function withQuery(string ...$relation)
+    {
+        if(!$this->selects)
+        {
+            $this->selectCol($this->output::column('*'));
+        }
+
+        foreach($relation as $rel)
+        {
+            $target = $this->getRelation($rel)->addWithQuery($this);
+            if($target)
+            {
+                $this->selectColBefore($target::column('*'));
+            }
+        }
+
+        $this->groupBy($this->output::column($this->output::getPrimaryKey()));
+        return $this;
+    }
+
+    protected $auto_load_relation = true;
+    /**
+     * بارگیری خودکار رابطه ها را غیرفعال می کند
+     *
+     * @return $this
+     */
+    public function disableAutoLoadRelations()
+    {
+        $this->auto_load_relation = false;
+        return $this;
+    }
+
+    // /**
+    //  * کد های درون تابع شما اجرا می شود و سپس در آخر، رابطه ها لود می شوند
+    //  *
+    //  * @param Closure $callback
+    //  * @return mixed
+    //  */
+    // public function lazyLoadRelations(Closure $callback)
+    // {
+    //     $this->disableAutoLoadRelations();
+    //     $value = $callback($this);
+
+    //     if($value instanceof Table\Table)
+    //     {
+    //         $this->loadRelationsFor([$value]);
+    //     }
+    //     elseif(is_array($value))
+    //     {
+    //         $this->loadRelationsFor($value);
+    //     }
+    //     elseif($value instanceof Arr)
+    //     {
+    //         $this->loadRelationsFor($value->toArray());
+    //     }
+
+    //     return $value;
+    // }
+
+
+    /**
+     * بارگیری کردن رابطه ها
+     *
+     * @param array $models
+     * @return void
+     */
+    public function loadRelationsFor(array $models, ?array $with = null, bool $split = true)
+    {
+        // Split models by types
+        if($split)
+        {
+            $models = $this->splitModelsByType($models);
+            if(count($models) != 1)
+            {
+                foreach($models as $modelGroup)
+                {
+                    $this->loadRelationsFor($modelGroup, $with, false);
+                }
+                return;
+            }
+            else
+            {
+                $models = first($models) ?? [];
+            }
+        }
+
+        $subs = [];
+        if(is_null($with)) $with = $this->with;
+        foreach($with as $name)
+        {
+            // Sub relation
+            if(Text::contains($name, '.'))
+            {
+                $rel = Text::before($name, '.');
+                $sub = Text::after($name, '.');
+                @$subs[$rel][] = $sub;
+                if(in_array($rel, $with))
+                {
+                    continue;
+                }
+                $name = $rel;
+            }
+
+            $this->loadRelationFor($name, $models);
+        }
+
+        // Sub with
+        foreach($subs as $rel => $subNames)
+        {
+            $subModels = [];
+            foreach($models as $model)
+            {
+                if($model->$rel instanceof Arr)
+                {
+                    array_push($subModels, ...$model->$rel);
+                }
+                else
+                {
+                    $subModels[] = $model->$rel;
+                }
+            }
+
+            $this->loadRelationsFor($subModels, $subNames);
+        }
+    }
+    /**
+     * بارگیری کردن یک رابطه
+     *
+     * @param string $name
+     * @param array $models
+     * @return void
+     */
+    public function loadRelationFor(string $name, array $models)
+    {
+        foreach($models as $i => $model)
+        {
+            if(isset($model->$name))
+            {
+                unset($models[$i]);
+            }
+        }
+
+        if($models)
+        {
+            $this->getRelation($name, first($models))->getRelationsFor($name, array_values($models));
+        }
+    }
+
+    /**
+     * جدا سازی مدل ها بر اساس نوع آنها
+     *
+     * @param array $models
+     * @return array
+     */
+    protected function splitModelsByType(array $models)
+    {
+        $split = [];
+        foreach($models as $model)
+        {
+            @$split[get_class($model)][] = $model;
+        }
+
+        return $split;
+    }
+
+    /**
+     * گرفتن رابطه از مدل خروجی
+     *
+     * @param string $name
+     * @return Relation\Relation
+     */
+    public function getRelation(string $name, ?Table\Table $model = null)
+    {
+        $out = $model ?? app($this->output);
+        if(!method_exists($out, $name) || !(($relation = $out->$name()) instanceof Relation\Relation))
+        {
+            throw new InvalidArgumentException("Relation '$name' not found for '" . typeOf($model) . "'");
+        }
+
+        return $relation;
+    }
+
+    /**
+     * گرفتن انتخاب ها
+     *
+     * @param string|array|null $select
+     * @return array
+     */
+    protected function getSelects($select = null)
+    {
+        if(is_null($select))
+        {
+            return $this->selects ?: ['*'];
+        }
+        elseif(is_array($select))
+        {
+            return array_map([$this, 'stringColumn'], $select);
+        }
+        else
+        {
+            return [ $this->stringColumn($select) ];
+        }
+    }
+
+    protected function getSingleModelFrom(Table\Table $model)
+    {
+        return $model;
+    }
+    protected function getModelFrom(Table\Table $model)
+    {
+        if($this->auto_load_relation)
+        {
+            $this->loadRelationsFor([ $model ]);
+        }
+        return $this->getSingleModelFrom($model);
+    }
+    protected function getModelsFrom(array $models)
+    {
+        if($this->auto_load_relation)
+        {
+            $this->loadRelationsFor($models);
+        }
+        foreach($models as $i => $model)
+        {
+            $models[$i] = $this->getSingleModelFrom($model);
+        }
+        
+        return $models;
+    }
+
     /**
      * گرفتن کل مقدار ها
      *
@@ -592,20 +1055,14 @@ class QueryBuilder
      */
     public function all($select = null)
     {
-        if($select === null)
-            $select = $this->selects ?: ['*'];
-        elseif(!is_array($select))
-            $select = [ $this->stringColumn($select) ];
-        else
-            $select = array_map([$this, 'stringColumn'], $select);
-        $this->select = $select;
-
-        $res = $this->run('select');
+        $res = $this->run('select', [
+            'select' => $this->getSelects($select),
+        ]);
 
         if(!$res->ok)
             return arr([]);
 
-        return arr($res->fetchAllAs($this->output));
+        return arr($this->getModelsFrom($res->fetchAllAs($this->output)));
     }
 
     /**
@@ -623,13 +1080,6 @@ class QueryBuilder
         }
 
         return $this->all()->assocBy($key);
-        // $result = [];
-        // foreach($all as $row)
-        // {
-        //     $result[$row->$key] = $row;
-        // }
-
-        // return map($result);
     }
 
     /**
@@ -638,11 +1088,11 @@ class QueryBuilder
      * @param string $select
      * @return Arr
      */
-    public function pluck($select)
+    public function pluck(string $select)
     {
-        $this->select = [ $this->stringColumn($select) ];
-
-        $res = $this->run('select');
+        $res = $this->run('select', [
+            'select' => $this->getSelects($select),
+        ]);
 
         if(!$res->ok)
             return arr([]);
@@ -657,11 +1107,11 @@ class QueryBuilder
      * @param string $value
      * @return Map
      */
-    public function pluckAssoc($key, $value)
+    public function pluckAssoc(string $key, string $value)
     {
-        $this->select = [ $this->stringColumn($key), $this->stringColumn($value) ];
-
-        $res = $this->run('select');
+        $res = $this->run('select', [
+            'select' => $this->getSelects([ $key, $value ]),
+        ]);
 
         if(!$res->ok)
             return map([]);
@@ -674,12 +1124,23 @@ class QueryBuilder
      * 
      * `$usersHasPost = Post::pluckGroup('user_id');`
      *
+     * @deprecated
      * @param string $select
      * @return Arr
      */
-    public function pluckGroup($select)
+    public function pluckGroup(string $select)
     {
         return $this->groupBy($select)->pluck($select);
+    }
+
+    /**
+     * مقدار های یکتای یک ستون را می گیرد
+     *
+     * @return Arr
+     */
+    public function pluckUnique(string $select)
+    {
+        return $this->distinct()->pluck($select);
     }
 
     /**
@@ -689,11 +1150,15 @@ class QueryBuilder
      */
     public function createQuery($oneRow = false)
     {
-        $this->select = $this->selects ?: ['*'];
         if($oneRow)
-            return $this->run('select', [ 'limit' => $oneRow ], true);
+            return $this->run('select', [
+                'select' => $this->getSelects(null),
+                'limit' => 1,
+            ], true);
         else
-            return $this->run('select', [], true);
+            return $this->run('select', [
+                'select' => $this->getSelects(null),
+            ], true);
     }
 
     /**
@@ -705,15 +1170,10 @@ class QueryBuilder
      */
     public function getCell($select = null, $default = false)
     {
-        if($select === null)
-            $select = $this->selects ?: ['*'];
-        elseif(!is_array($select))
-            $select = [ $this->stringColumn($select) ];
-        else
-            $select = array_map([$this, 'stringColumn'], $select);
-        $this->select = $select;
-
-        $res = $this->run('select', [ 'limit' => 1 ]);
+        $res = $this->run('select', [
+            'select' => $this->getSelects($select),
+            'limit' => 1,
+        ]);
 
         if(!$res->ok)
             return $default;
@@ -735,6 +1195,59 @@ class QueryBuilder
     }
 
     /**
+     * پیدا کردن یک مقدار
+     *
+     * @param mixed $value
+     * @param string $findBy
+     * @return R|Table\Table|false
+     */
+    public function find($value, $findBy = null)
+    {
+        if(is_null($findBy))
+        {
+            $findBy = $this->output::getPrimaryKey();
+        }
+
+        return $this->newQuery()->where($findBy, $value)->get();
+    }
+
+    /**
+     * پیدا کردن یک مقدار
+     *
+     * @param mixed $value
+     * @param mixed $default
+     * @param string $findBy
+     * @return R|Table\Table|false
+     */
+    public function findOr($value, $default, $findBy = null)
+    {
+        if(is_null($findBy))
+        {
+            $findBy = $this->output::getPrimaryKey();
+        }
+
+        return $this->newQuery()->where($findBy, $value)->getOr($default);
+    }
+
+    /**
+     * پیدا کردن یک مقدار
+     *
+     * @param mixed $value
+     * @param string $error
+     * @param string $findBy
+     * @return R|Table\Table|false
+     */
+    public function findOrError($value, string $error, $findBy = null)
+    {
+        if(is_null($findBy))
+        {
+            $findBy = $this->output::getPrimaryKey();
+        }
+
+        return $this->newQuery()->where($findBy, $value)->getOrError($error);
+    }
+
+    /**
      * گرفتن اولین ردیف
      *
      * @param array|string $select
@@ -742,20 +1255,16 @@ class QueryBuilder
      */
     public function get($select = null)
     {
-        if($select === null)
-            $select = $this->selects ?: ['*'];
-        elseif(!is_array($select))
-            $select = [ $this->stringColumn($select) ];
-        else
-            $select = array_map([$this, 'stringColumn'], $select);
-        $this->select = $select;
-
-        $res = $this->run('select', [ 'limit' => 1 ]);
+        $res = $this->run('select', [
+            'select' => $this->getSelects($select),
+            'limit' => 1,
+        ]);
 
         if(!$res->ok)
             return false;
 
-        return $res->fetchAs($this->output);
+        $model = $res->fetchAs($this->output);
+        return $model ? $this->getModelFrom($model) : $model;
     }
 
     /**
@@ -808,35 +1317,51 @@ class QueryBuilder
     /**
      * گرفتن اولین ردیف و یا اجرا از تابع ورودی در صورت عدم وجود
      *
-     * @param Closure|mixed $callback
+     * @param Closure|mixed $default
      * @return R|Table\Table|mixed
      */
-    public function getOr($callback)
+    public function getOr($default)
     {
         if($result = $this->get())
         {
             return $result;
         }
 
-        if($callback instanceof Closure)
-        {
-            $callback = $callback();
-        }
-
-        return $callback;
+        return value($default);
     }
 
     /**
      * کرفتن تعداد نتایج
+     * 
+     * اگر گروه بندی شده باشد، تعداد گروه ها را بر می گرداند
      *
      * @param string $of
      * @return int
      */
     public function count($of = '*')
     {
-        $this->select = [ "COUNT($of) as `count`" ];
+        if($this->groupBy)
+        {
+            return $this->newQuery()
+                ->select("COUNT($of)")
+                ->run('select', [
+                    'select' => $this->getSelects(),
+                ])
+                ->fetchCount();
+            // return Db::query()
+            //     ->db($this->db_driver)
+            //     ->from(
+            //         $this
+            //             ->newQuery()
+            //             ->select("COUNT($of) as `inner_count`"),
+            //         'query'
+            //     )
+            //     ->count();
+        }
 
-        $res = $this->run('select');
+        $res = $this->run('select', [
+            'select' => [ "COUNT($of) as `count`" ],
+        ]);
 
         if(!$res->ok)
             return 0;
@@ -851,9 +1376,10 @@ class QueryBuilder
      */
     public function exists()
     {
-        $this->select = [ 'COUNT(*) as `count`' ];
-
-        $res = $this->run('select', [ 'limit' => 1 ]);
+        $res = $this->run('select', [
+            'select' => [ "COUNT(*) as `count`" ],
+            'limit' => 1,
+        ]);
 
         if(!$res->ok)
             return false;
@@ -886,15 +1412,16 @@ class QueryBuilder
      *
      * @var array
      */
-    private $insert;
+    protected $insert;
 
     /**
      * بروزرسانی ردیف ها
      *
      * @param array|Arrayable $data آرایه ای شامل کلید=نام ستون و مقدار=مقدار
+     * @param bool $modify اگر ترو باشد، داده ها را با توحه به نوع ستون های مدل تبدیل می کند
      * @return bool
      */
-    public function update(array|Arrayable $data)
+    public function update(array|Arrayable $data, bool $modify = true)
     {
         if($data instanceof Arrayable)
         {
@@ -905,7 +1432,10 @@ class QueryBuilder
             return false;
 
         $output = $this->output;
-        $output::modifyOutArray($data);
+        if($modify)
+        {
+            $output::modifyOutArray($data);
+        }
         $data = $output::onUpdateQueryStatic($data);
         $this->insert = $this->stringColumnMap($data);
 
@@ -916,9 +1446,10 @@ class QueryBuilder
      * ایجاد ردیف
      *
      * @param array|Arrayable|QueryBuilder $data آرایه ای شامل کلید=نام ستون و مقدار=مقدار
+     * @param bool $modify اگر ترو باشد، داده ها را با توحه به نوع ستون های مدل تبدیل می کند
      * @return R|Table\Table|boolean
      */
-    public function insert($data = [])
+    public function insert($data = [], bool $modify = true)
     {
         if($data instanceof Arrayable)
         {
@@ -932,7 +1463,10 @@ class QueryBuilder
         elseif(is_array($data))
         {
             // Listener
-            $output::modifyOutArray($data);
+            if($modify)
+            {
+                $output::modifyOutArray($data);
+            }
             $data = $output::onCreateQuery($data);
             $this->insert = $this->stringColumnMap($data);
         }
@@ -973,9 +1507,10 @@ class QueryBuilder
      * `$user->posts()->create([ 'title' => "TITLE", 'text' => "TEXT" ]); // For relations`
      * 
      * @param array|Arrayable $data
+     * @param bool $modify اگر ترو باشد، داده ها را با توحه به نوع ستون های مدل تبدیل می کند
      * @return R|Table\Table|false
      */
-    public function create(array|Arrayable $data = [])
+    public function create(array|Arrayable $data = [], bool $modify = true)
     {
         if($data instanceof Arrayable)
         {
@@ -985,20 +1520,71 @@ class QueryBuilder
         {
             if($where[0] == 'col' && $where[1] == 'AND' && $where[3] == '=')
             {
-                $data[str_replace('`', '', $where[2])] = $where[4];
+                if(!isset($data[$name = str_replace('`', '', $where[2])]))
+                {
+                    $data[$name] = $where[4];
+                }
             }
         }
 
-        return $this->insert($data);
+        return $this->insert($data, true);
+    }
+
+    /**
+     * ایجاد چند ردیف همرمان
+     * 
+     * این تابع مقدار های شرطی ثابت را هم به دیتا اضافه می کند
+     * 
+     * `User::where('age', 10)->create([ ['name' => 'A'], ['name' => 'B'] ]);`
+     * 
+     * @param array|Arrayable $rows
+     * @param bool $modify اگر ترو باشد، داده ها را با توحه به نوع ستون های مدل تبدیل می کند
+     * @return bool
+     */
+    public function createMulti(array|Arrayable $rows = [], bool $modify = true)
+    {
+        if($rows instanceof Arrayable)
+        {
+            $rows = $rows->toArray();
+        }
+
+        $append = [];
+        foreach($this->where as $where)
+        {
+            if($where[0] == 'col' && $where[1] == 'AND' && $where[3] == '=')
+            {
+                $append[str_replace('`', '', $where[2])] = $where[4];
+            }
+        }
+
+        if($append)
+        {
+            foreach($rows as $i => $row)
+            {
+                if($row instanceof Arrayable)
+                {
+                    $row = $row->toArray();
+                }
+                elseif(!is_array($row))
+                {
+                    throw new InvalidArgumentException("Required array of array, given " . typeOf($row));
+                }
+
+                $rows[$i] = $row + $append;
+            }
+        }
+
+        return $this->insertMulti($rows, $modify);
     }
 
     /**
      * ایجاد ردیف
      *
      * @param array|Arrayable $datas آرایه از `آرایه ای شامل کلید=نام ستون و مقدار=مقدار`
+     * @param bool $modify اگر ترو باشد، داده ها را با توحه به نوع ستون های مدل تبدیل می کند
      * @return bool
      */
-    public function insertMulti(array|Arrayable $datas)
+    public function insertMulti(array|Arrayable $datas, bool $modify = true)
     {
         if($datas instanceof Arrayable)
         {
@@ -1021,22 +1607,57 @@ class QueryBuilder
                 throw new Exception("insertMulti() required array<array>");
             }
 
+            if($modify)
+            {
+                $output::modifyOutArray($data);
+            }
             $data = $output::onCreateQuery($data);
             $datas[$index] = $this->stringColumnMap($data);
         }
 
-        $this->insert = $datas;
+        $this->insert = array_values($datas);
         
         return $this->run('insert_multi')->ok;
     }
 
+    /**
+     * صفحه بندی
+     *
+     * @param integer $page
+     * @param integer $perPage
+     * @param string|null $error
+     * @return Paginate<R>
+     */
+    public function paginate(int $page, int $perPage = 20, ?string $error = "صفحه یافت نشد")
+    {
+        return new Paginate($this, $page, $perPage, $error);
+    }
+
+    /**
+     * ایندکس
+     *
+     * @var SingleIndex
+     */
+    protected $singleIndex;
+
+    /**
+     * افزودن ایندکس
+     *
+     * @param SingleIndex $index
+     * @return bool
+     */
+    public function addIndex(SingleIndex $index)
+    {
+        $this->singleIndex = $index;
+        return $this->run('addIndex')->ok;
+    }
 
     /**
      * ستون ها
      *
      * @var QueryCol
      */
-    private $queryCol;
+    protected $queryCol;
 
     /**
      * ساخت جدول جدید
@@ -1048,7 +1669,7 @@ class QueryBuilder
     public function createTable($name, $column_initialize = null)
     {
         $this->table = static::stringColumn($name);
-        $this->queryCol = new QueryCol;
+        $this->queryCol = new QueryCol($name);
         if($column_initialize)
             $column_initialize($this->queryCol);
 
@@ -1061,6 +1682,12 @@ class QueryBuilder
                 {
                     $this->addForeignKey($name, $col->name, $col->foreign_key);
                 }
+            }
+
+            // Add index
+            foreach($this->queryCol->getIndexs() as $index)
+            {
+                $this->addIndex($index);
             }
 
             $output = $this->output;
@@ -1079,8 +1706,8 @@ class QueryBuilder
      * @param callable $column_initialize `function(\Mmb\Db\QueryCol $query) { }`
      * @return bool
      */
-    public function createOrEditTable($name, $column_initialize = null) {
-
+    public function createOrEditTable($name, $column_initialize = null)
+    {
         try
         {
             $before = $this->getTable($name);
@@ -1090,9 +1717,12 @@ class QueryBuilder
             return $this->createTable($name, $column_initialize);
         }
 
-        $after = new QueryCol;
+        $after = new QueryCol($name);
         if($column_initialize)
             $column_initialize($after);
+
+        // Upgrade events (Before)
+        $defaultAfterEvents = $after->fireInstallBefore($before);
 
         // Get old
         $before_cols = [];
@@ -1102,35 +1732,45 @@ class QueryBuilder
         }
 
         // Find changes
-        $last = false;
-        foreach($after->getColumns() as $col)
+        $lastColumn = false;
+        foreach($after->getColumns() as $newColumn)
         {
-            if($col2 = $before_cols[$col->name] ?? false) {
+            if($oldColumn = $before_cols[$newColumn->name] ?? false)
+            {
                 // Exists
-                unset($before_cols[$col->name]);
+                unset($before_cols[$newColumn->name]);
             }
-            else {
+            elseif($oldName = $newColumn->searchNameIn($before_cols))
+            {
+                $oldColumn = $before_cols[$oldName];
+                unset($before_cols[$oldName]);
+            }
+            else
+            {
                 // Not exists
-                if($last)
-                    $col->after($last->name);
+                if($lastColumn)
+                {
+                    $newColumn->after($lastColumn->name);
+                }
                 else
-                    $col->first();
-                $this->addColumn($name, $col);
-                $last = $col;
+                {
+                    $newColumn->first();
+                }
+                $this->addColumn($name, $newColumn);
+                $lastColumn = $newColumn;
                 continue;
             }
 
-            if(json_encode($col) != json_encode($col2)) {
-                
+            if(json_encode($newColumn) != json_encode($oldColumn))
+            {
                 // Can't handle
-                // if($col->autoIncrement || $col->primaryKey) continue; // !
+                // if($newColumn->autoIncrement || $newColumn->primaryKey) continue;
 
                 // Edited
-                $this->editColumn2($name, $col2, $col);
-
+                $this->editColumn2($name, $oldColumn, $newColumn);
             }
 
-            $last = $col;
+            $lastColumn = $col;
         }
 
         // Removed columns
@@ -1138,6 +1778,9 @@ class QueryBuilder
         {
             $this->removeColumn($name, $col->name);
         }
+
+        // Upgrade events (After)
+        $after->fireInstallAfter($defaultAfterEvents);
 
         return true;
     }
@@ -1152,12 +1795,12 @@ class QueryBuilder
     {
         $this->table = $this->stringColumn($name);
 
-        return $this->run('getTable')->toQueryCol($name);
+        return $this->run('showColumns')->toQueryCol($name, $this->run('showIndexs'));
     }
 
-    private $colName;
+    protected $colName;
 
-    private $col;
+    protected $col;
 
     
     /**
@@ -1220,29 +1863,32 @@ class QueryBuilder
         else
             $newCloned->unique = null;
 
-        // Foreign key
-        if($old->foreign_key && !$new->foreign_key)
+        if($result = $this->editColumn($table, $old->name, $newCloned))
         {
-            $this->removeForeignKeyAndIndex($table, $old->foreign_key->constraint);
-        }
-        elseif(!$old->foreign_key && $new->foreign_key)
-        {
-            $this->addForeignKey($table, $new->name, $new->foreign_key);
-        }
-        elseif($old->foreign_key && $new->foreign_key)
-        {
-            if(
-                $old->foreign_key->table != $new->foreign_key->table ||
-                $old->foreign_key->column != $new->foreign_key->column ||
-                $old->foreign_key->constraint != $new->foreign_key->constraint
-            )
+            // Foreign key
+            if($old->foreign_key && !$new->foreign_key)
             {
                 $this->removeForeignKeyAndIndex($table, $old->foreign_key->constraint);
+            }
+            elseif(!$old->foreign_key && $new->foreign_key)
+            {
                 $this->addForeignKey($table, $new->name, $new->foreign_key);
             }
+            elseif($old->foreign_key && $new->foreign_key)
+            {
+                if(
+                    $old->foreign_key->table != $new->foreign_key->table ||
+                    $old->foreign_key->column != $new->foreign_key->column ||
+                    $old->foreign_key->constraint != $new->foreign_key->constraint
+                )
+                {
+                    $this->removeForeignKeyAndIndex($table, $old->foreign_key->constraint);
+                    $this->addForeignKey($table, $new->name, $new->foreign_key);
+                }
+            }
         }
-    
-        return $this->editColumn($table, $old->name, $newCloned);
+
+        return $result;
     }
 
     /**
@@ -1344,7 +1990,7 @@ class QueryBuilder
     public $foreign_key;
 
     /**
-     * حذف رابطه
+     * افزودن رابطه
      * 
      * @param string $table
      * @param string $name
@@ -1377,6 +2023,74 @@ class QueryBuilder
                 ->where('TABLE_NAME', $table)
                 ->where('COLUMN_NAME', $col)
                 ->get();
+    }
+
+    /**
+     * ایجاد یک کوئری خالی جدید با درایور این کوئری
+     *
+     * @return static<R>
+     */
+    public function newBlankQuery()
+    {
+        return Db::query()->db($this->db_driver);
+    }
+
+    /**
+     * ایجاد یک کوئری جدید با ویژگی های این کوئری
+     *
+     * @return static<R>
+     */
+    public function newQuery()
+    {
+        return clone $this;
+    }
+
+    /**
+     * ایجاد یک کوئری جدید با ویژگی های این کوئری
+     *
+     * @template Q
+     * @param class-string<Q> $class
+     * @return Q<R>
+     */
+    public function newQueryAs(string $class)
+    {
+        $query = new $class;
+        foreach(get_object_vars($this) as $key => $value)
+        {
+            $query->$key = $value;
+        }
+
+        return $query;
+    }
+
+    /**
+     * ایجاد یک کوئری جدید با ویژگی های این کوئری
+     * 
+     * نام یک کلاس مدل را می دهید و با آن کوئری می سازد
+     *
+     * @template Q
+     * @param class-string<Q> $class
+     * @return QueryBuilder<Q>
+     */
+    public function newQueryFrom(string $class)
+    {
+        $query = $class::query();
+        foreach(get_object_vars($this) as $key => $value)
+        {
+            if(in_array($key, [ 'where', 'select', 'having' ]))
+            {
+                array_push($query->$key, ...$value);
+            }
+            else
+            {
+                $query->$key = $value;
+            }
+        }
+        $query
+            ->table($class::getTableName())
+            ->output($class);
+
+        return $query;
     }
 
     public function __call($name, $args)
@@ -1415,7 +2129,14 @@ class QueryBuilder
         throw new BadMethodCallException("Call to undefined method '$name' on " . static::class);
     }
 
-    public function stringColumn($column, $splitTables = true)
+    /**
+     * افزودن ` و ایمن سازی نام ستون
+     *
+     * @param string $column
+     * @param boolean $splitTables
+     * @return string
+     */
+    public static function stringColumn(string $column, bool $splitTables = true)
     {
         $column = str_replace('`', '``', $column);
         if($splitTables)
@@ -1426,12 +2147,18 @@ class QueryBuilder
         return $column;
     }
 
-    public function stringColumnMap($map)
+    /**
+     * افزودن ` به کلید های آرایه
+     *
+     * @param array|Traversable $map
+     * @return array
+     */
+    public static function stringColumnMap(array|Traversable $map)
     {
         $res = [];
         foreach($map as $key => $value)
         {
-            $res[$this->stringColumn($key)] = $value;
+            $res[static::stringColumn($key)] = $value;
         }
         return $res;
     }

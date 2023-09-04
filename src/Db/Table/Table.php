@@ -3,15 +3,23 @@
 namespace Mmb\Db\Table; #auto
 
 use ArrayAccess;
+use Closure;
 use JsonSerializable;
 use Mmb\Calling\DynCall;
 use Mmb\Db\QueryBuilder;
 use Mmb\Db\QueryCol;
+use Mmb\Db\Relation\BelongsTo;
+use Mmb\Db\Relation\BelongsToMany;
 use Mmb\Db\Relation\ManyToMany;
-use Mmb\Db\Relation\OneToMany;
-use Mmb\Db\Relation\OneToOne;
+use Mmb\Db\Relation\HasMany;
+use Mmb\Db\Relation\HasOne;
+use Mmb\Db\Relation\MorphMany;
+use Mmb\Db\Relation\MorphOne;
+use Mmb\Db\Relation\MorphTo;
+use Mmb\Db\Relation\MorphToMany;
 use Mmb\Db\Relation\Relation;
 use Mmb\Exceptions\MmbException;
+use Mmb\ExtraThrow\ExtraErrorMessage;
 use Mmb\Mapping\Arr;
 use Mmb\Mapping\Arrayable;
 use Mmb\Tools\Text;
@@ -49,7 +57,7 @@ class Table implements JsonSerializable, ArrayAccess
      */
     public $newCreated = false;
     
-    public function __construct($data)
+    public function __construct(array $data = [])
     {
         $this->allData = $data;
         $this->oldData = $data;
@@ -67,6 +75,13 @@ class Table implements JsonSerializable, ArrayAccess
 
         $this->changedCols = [];
     }
+
+    /**
+     * مشخص می کند چه چیز هایی به متد ویت اضافه شوند
+     *
+     * @var array
+     */
+    protected $with = [];
 
     /**
      * گرفتن دیتای جدید
@@ -172,7 +187,7 @@ class Table implements JsonSerializable, ArrayAccess
         if(isset(static::$_generate_query_cols[static::class]))
             return static::$_generate_query_cols[static::class];
 
-        static::$_generate_query_cols[static::class] = $query = new QueryCol;
+        static::$_generate_query_cols[static::class] = $query = new QueryCol(static::getTableName());
         static::generate($query);
         return $query;
     }
@@ -246,6 +261,22 @@ class Table implements JsonSerializable, ArrayAccess
     }
 
     /**
+     * گرفتن شی عمومی
+     *
+     * @return static
+     */
+    public static function getInstance()
+    {
+        $instance = app(static::class);
+        if(!$instance)
+        {
+            $instance = new static;
+        }
+
+        return $instance;
+    }
+
+    /**
      * ایجاد یک کوئری
      * 
      * این تابع، ریشه تمام توابع ایجاد کوئری ست
@@ -258,7 +289,8 @@ class Table implements JsonSerializable, ArrayAccess
     {
         return (new $class)
                 ->table(static::getTableName())
-                ->output(static::class);
+                ->output(static::class)
+                ->with(...static::getInstance()->with);
     }
 
     /**
@@ -268,7 +300,7 @@ class Table implements JsonSerializable, ArrayAccess
      */
     public static function query()
     {
-    return static::createQuery(QueryBuilder::class);
+        return static::createQuery(QueryBuilder::class);
     }
 
     /**
@@ -342,25 +374,57 @@ class Table implements JsonSerializable, ArrayAccess
     {
         throw new \BadMethodCallException("Method '$name' is not exists in model " . static::class);
     }
+
+    /**
+     * حذف تمامی متغیر های کش محلی - مانند رابطه ها
+     *
+     * @return void
+     */
+    public function refresh()
+    {
+        $this->dynClear();
+    }
     
     public function offsetExists($offset) : bool
     {
-        return isset($this->allData[$offset]);
+        return @$this->$offset !== null;
     }
 
     public function offsetGet($offset)
     {
-        return $this->allData[$offset] ?? null;
+        return $this->$offset ?? null;
     }
     
     public function offsetSet($offset, $value) : void
     {
-        $this->__set($offset, $value);
+        $this->$offset = $value;
     }
 
     public function offsetUnset($offset) : void
     {
-        unset($this->allData[$offset]);
+        $this->forgot("$offset");
+    }
+
+    /**
+     * فراموش کردن / نال کردن مقداری
+     *
+     * @param string $name
+     * @param string ...$names
+     * @return void
+     */
+    public function forgot(string $name, string ...$names)
+    {
+        foreach(func_get_args() as $name)
+        {
+            if(isset($this->allData[$name]))
+            {
+                $this->allData[$name] = null;
+            }
+            else
+            {
+                $this->dynForgot($name);
+            }
+        }
     }
 
     /**
@@ -375,22 +439,11 @@ class Table implements JsonSerializable, ArrayAccess
      * @param class-string<T> $class نام کلاس مورد نظر
      * @param mixed $column نام ستونی که شامل آدرس است
      * @param mixed $primary_column نام ستونی در کلاس مورد نظر که آدرس را با آن تطابق میدهد
-     * @return OneToOne<T>|QueryBuilder<T>
+     * @return BelongsTo<T>
      */
-    public function belongsTo($class, $column = null, $primary_column = null)
+    public function belongsTo(string $class, string $column = null, string $primary_column = null)
     {
-        if($primary_column === null)
-        {
-            $primary_column = $class::getPrimaryKey();
-        }
-
-        if($column === null)
-        {
-            $column = Text::snake(Text::afterLast($class, "\\")) . "_" . $primary_column;
-        }
-        
-        return $class::queryWith(OneToOne::class)
-                ->where($primary_column, $this->$column);
+        return BelongsTo::makeRelation($this, $class, $column, $primary_column);
     }
     
     /**
@@ -404,40 +457,20 @@ class Table implements JsonSerializable, ArrayAccess
      * `B: id`
      * `C: a_id & b_id`
      * 
-     * @param string $class نام کلاس مورد نظر
-     * @param mixed $currentColumn نام ستونی که به این جدول وصل است
-     * @param mixed $currentPrimary نام ستونی که در این جدول است و به آن ربط داده شده است
-     * @param mixed $targetColumn نام ستونی که به جدول تارگت وصل است
-     * @param mixed $targetPrimary نام ستونی که در جدول تارگت است و به آن ربط داده شده است
-     * @return ManyToMany|QueryBuilder
+     * @template R
+     * @template M
+     * @param class-string<R> $class
+     * @param class-string<M> $middleClass
+     * @param string $thisColumn
+     * @param string|null $targetColumn
+     * @param string|null $thisPrimary
+     * @param string|null $targetPrimary
+     * @return BelongsToMany<R,M>
      */
-    // public function belongsToMany($class, $middleClass, $currentColumn = null, $currentPrimary = null, $targetColumn, $targetPrimary = null)
-    // {
-
-    //     if($currentPrimary === null)
-    //     {
-    //         $currentPrimary = static::getPrimaryKey();
-    //     }
-    //     if($currentColumn === null)
-    //     {
-    //         $currentColumn = Text::snake(Text::afterLast(static::class, "\\")) . "_" . $currentPrimary;
-    //     }
-
-    //     if($targetPrimary === null)
-    //     {
-    //         $targetPrimary = $class::getPrimaryKey();
-    //     }
-    //     if($targetColumn === null)
-    //     {
-    //         $targetColumn = Text::snake(Text::afterLast($class, "\\")) . "_" . $currentPrimary;
-    //     }
-        
-    //     return $class::queryWith(ManyToMany::class);
-    //     // return static::query()
-    //     //         ->table(static::getTableName())
-    //     //         ->selectCol($class::getTableName() . ".*")
-
-    // }
+    public function belongsToMany(string $class, string $middleClass, string $thisColumn = null, string $targetColumn = null, string $thisPrimary = null, string $targetPrimary = null)
+    {
+        return BelongsToMany::makeRelation($this, $class, $middleClass, $thisColumn, $targetColumn, $thisPrimary, $targetPrimary);
+    }
 
     /**
      * گرفتن ردیف هایی که به این ردیف متصلند
@@ -452,24 +485,11 @@ class Table implements JsonSerializable, ArrayAccess
      * @param class-string<T> $class نام کلاس مورد نظر
      * @param mixed $column نام ستونی در کلاس مورد نظر که شامل آدرس این کلاس است
      * @param mixed $primary_column نام ستونی در این کلاس که آدرس را با آن تطابق میدهد
-     * @return OneToMany<T>|QueryBuilder<T>
+     * @return HasMany<T>
      */
-    public function hasMany($class, $column = null, $primary_column = null)
+    public function hasMany(string $class, string $column = null, string $primary_column = null)
     {
-
-        if($primary_column === null)
-        {
-            $primary_column = static::getPrimaryKey();
-        }
-
-        if($column === null)
-        {
-            $column = Text::snake(Text::afterLast(static::class, "\\")) . "_" . $primary_column;
-        }
-        
-        return $class::queryWith(OneToMany::class)
-                ->where($column, $this->$primary_column);
-
+        return HasMany::makeRelation($this, $class, $column, $primary_column);
     }
 
     /**
@@ -481,25 +501,79 @@ class Table implements JsonSerializable, ArrayAccess
      * `class UserInfo: public $user_id; function user() { return $this->belongsTo(User::class); }`
      * 
      * @template T
-     * @param class-string $class نام کلاس مورد نظر
+     * @param class-string<T> $class نام کلاس مورد نظر
      * @param mixed $column نام ستونی در کلاس مورد نظر که شامل آدرس این کلاس است
      * @param mixed $primary_column نام ستونی در این کلاس که آدرس را با آن تطابق میدهد
-     * @return OneToOne<T>|QueryBuilder<T>
+     * @return HasOne<T>
      */
-    public function hasOne($class, $column = null, $primary_column = null)
+    public function hasOne(string $class, string $column = null, string $primary_column = null)
     {
-        if($primary_column === null)
-        {
-            $primary_column = static::getPrimaryKey();
-        }
+        return HasOne::makeRelation($this, $class, $column, $primary_column);
+    }
 
-        if($column === null)
-        {
-            $column = Text::snake(Text::afterLast(static::class, "\\")) . "_" . $primary_column;
-        }
-        
-        return $class::queryWith(OneToOne::class)
-                ->where($column, $this->$primary_column);
+    /**
+     * ایجاد رابطه مورف
+     * 
+     * رابطه یک به یک
+     *
+     * @param string $name
+     * @param string|null $type
+     * @param string|null $id
+     * @return MorphTo<Table>
+     */
+    public function morphTo(string $name, string $type = null, string $id = null)
+    {
+        return MorphTo::makeRelation($this, $name, $type, $id);
+    }
+
+    /**
+     * ایجاد رابطه مورف
+     * 
+     * رابطه یک به چند
+     *
+     * @param string $class
+     * @param string $name
+     * @param string|null $type
+     * @param string|null $id
+     * @return MorphMany<Table>
+     */
+    public function morphMany(string $class, string $name, string $type = null, string $id = null)
+    {
+        return MorphMany::makeRelation($this, $class, $name, $type, $id);
+    }
+
+    /**
+     * ایجاد رابطه مورف
+     * 
+     * رابطه یک به یک
+     *
+     * @template T
+     * @param class-string<T> $class
+     * @param string $name
+     * @param string|null $type
+     * @param string|null $id
+     * @return MorphOne<T>
+     */
+    public function morphOne(string $class, string $name, string $type = null, string $id = null)
+    {
+        return MorphOne::makeRelation($this, $class, $name, $type, $id);
+    }
+
+    /**
+     * ایجاد رابطه مورف
+     * 
+     * رابطه چند به چند
+     *
+     * @param string $class
+     * @param string $name
+     * @param string $localColumn
+     * @param string|null $type
+     * @param string|null $id
+     * @return MorphToMany<Table>
+     */
+    public function morphToMany(string $class, string $name, string $localColumn = null, string $type = null, string $id = null)
+    {
+        return MorphToMany::makeRelation($this, $class, $name, $localColumn, $type, $id);
     }
 
 
@@ -545,6 +619,47 @@ class Table implements JsonSerializable, ArrayAccess
 
         @static::$findCaches[static::class][$object->getPrimaryValue()] = $object;
         return $object;
+    }
+
+    /**
+     * پیدا کردن دیتا - یا مقدار دلخواه
+     * 
+     * این دیتا را در حافظه کوتاه خود ذخیره می کند و تا پایان پروسه اسکریپت به یاد خواهد داشت
+     *
+     * @param mixed $id
+     * @param mixed $or
+     * @param string $findBy
+     * @return static|mixed
+     */
+    public static function findCacheOr($id, $or, $findBy = null)
+    {
+        if($result = static::findCache($id, $findBy))
+        {
+            return $result;
+        }
+
+        return value($or);
+    }
+
+    /**
+     * پیدا کردن دیتا - یا خطا
+     * 
+     * این دیتا را در حافظه کوتاه خود ذخیره می کند و تا پایان پروسه اسکریپت به یاد خواهد داشت
+     *
+     * @param mixed $id
+     * @param string $message
+     * @param string $findBy
+     * @throws ExtraErrorMessage
+     * @return static
+     */
+    public static function findCacheOrError($id, string $message, $findBy = null)
+    {
+        if($result = static::findCache($id, $findBy))
+        {
+            return $result;
+        }
+
+        error($message);
     }
     
     /**
@@ -660,11 +775,12 @@ class Table implements JsonSerializable, ArrayAccess
      * ساخت ردیف جدید
      *
      * @param array|Arrayable $data
+     * @param bool $modify اگر ترو باشد، داده ها را با توحه به نوع ستون های مدل تبدیل می کند
      * @return static|false
      */
-    public static function create(array|Arrayable $data)
+    public static function create(array|Arrayable $data, bool $modify = true)
     {
-        return static::query()->insert($data);
+        return static::query()->create($data, $modify);
     }
 
     /**
@@ -679,7 +795,7 @@ class Table implements JsonSerializable, ArrayAccess
         if($primary = static::getPrimaryKey())
             unset($data[$primary]);
 
-        return static::create($data);
+        return static::create($data, false);
     }
 
     /**
@@ -697,7 +813,7 @@ class Table implements JsonSerializable, ArrayAccess
             return true;
 
         $ok = static::queryThis()
-                ->update($data);
+                ->update($data, false);
 
         if($ok)
         {
@@ -783,6 +899,20 @@ class Table implements JsonSerializable, ArrayAccess
         return static::query()->delete();
     }
 
+    /**
+     * مقدار رابطه نسب شده را تنظیم می کند
+     *
+     * @param Table $model
+     * @param string|null $column
+     * @return void
+     */
+    public function setRelatedTo(Table $model, string $column = null)
+    {
+        $column ??= Text::snake(Text::afterLast(get_class($model), "\\")) . "_" . $model::getPrimaryKey();
+
+        $this->$column = $model->getPrimaryValue();
+    }
+
 
     public static function modifyOutArray(array &$data)
     {
@@ -866,5 +996,25 @@ class Table implements JsonSerializable, ArrayAccess
     {
         return $this->allData;
 	}
+
+    /**
+     * بررسی می کند که آیا این مدل با مدل دیگری برابر است یا خیر
+     * 
+     * این بررسی بر اساس کلید اصلی انجام می شود
+     *
+     * @param Table|mixed $model_or_id
+     * @return boolean
+     */
+    public function is($model_or_id)
+    {
+        if($model_or_id instanceof Table)
+        {
+            return $this === $model_or_id || $this->getPrimaryValue() == $model_or_id->getPrimaryValue();
+        }
+        else
+        {
+            return $this->getPrimaryValue() == $model_or_id;
+        }
+    }
 
 }

@@ -127,7 +127,7 @@ class MySql extends \Mmb\Db\Driver
     {
         if(!$this->db)
             $this->connectForce();
-        
+
         $state = $this->db->prepare($queryCompiler->query);
         
         if(!$state)
